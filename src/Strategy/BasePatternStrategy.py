@@ -14,7 +14,7 @@ from PanderaDFM.SignalDf import SignalDf
 from Strategy.ExtendedStrategy import ExtendedStrategy
 from Model.TechnicalAnalysis.atr import read_multi_timeframe_ohlcva
 from helper.helper import log_d, measure_time
-from ohlcv import read_base_timeframe_ohlcv
+from Model.Data.ohlcv import read_base_timeframe_ohlcv
 
 
 class BasePatternStrategy(ExtendedStrategy):

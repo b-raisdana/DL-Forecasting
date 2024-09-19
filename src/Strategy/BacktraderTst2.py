@@ -2,7 +2,7 @@ import backtrader as bt
 
 from Config import config
 from helper.helper import date_range_to_string
-from ohlcv import read_base_timeframe_ohlcv
+from Model.Data.ohlcv import read_base_timeframe_ohlcv
 
 
 # Create a subclass of SignaStrategy to define the indicators and signals

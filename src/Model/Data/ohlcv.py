@@ -6,9 +6,9 @@ import pytz
 from pandera import typing as pt
 
 from Config import config
-from MetaTrader import MT
+# from MetaTrader import MT
 from PanderaDFM.OHLCV import MultiTimeframeOHLCV, OHLCV
-from fetch_ohlcv import fetch_ohlcv_by_range
+from Model.Data.fetch_ohlcv import fetch_ohlcv_by_range
 from helper.data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
     after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df, concat
 from helper.helper import measure_time, date_range, date_range_to_string
@@ -189,15 +189,15 @@ def core_generate_ohlcv(date_range_str: str = None, file_path: str = None, base_
     cast_and_validate(df, OHLCV, zero_size_allowed=after_under_process_date(date_range_str))
     assert times_tester(df, date_range_str, timeframe=config.timeframes[0])
     df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'), compression='zip')
-    if config.load_data_to_meta_trader:
-        MT.extract_to_data_path(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'))
-        MT.load_rates()
+    # if config.load_data_to_meta_trader:
+    #     MT.extract_to_data_path(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'))
+    #     MT.load_rates()
 
 
-@measure_time
-def load_ohlcv_to_meta_trader(date_range_str: str = None, file_path: str = None):
-    if file_path is None:
-        file_path = config.path_of_data
-    if config.load_data_to_meta_trader:
-        MT.extract_to_data_path(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'))
-        MT.load_rates()
+# @measure_time
+# def load_ohlcv_to_meta_trader(date_range_str: str = None, file_path: str = None):
+#     if file_path is None:
+#         file_path = config.path_of_data
+#     if config.load_data_to_meta_trader:
+#         MT.extract_to_data_path(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'))
+#         MT.load_rates()

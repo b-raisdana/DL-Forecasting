@@ -153,7 +153,7 @@ def date_range_to_string(end: datetime = None, days: float = 60, start: datetime
     if end is None:
         if start is None:
             end = today_morning()
-        else:
+        elif days is not None:
             end = start + timedelta(days=days) - timedelta(minutes=1)
     if start is None:
         start = end - timedelta(days=days) + timedelta(minutes=1)

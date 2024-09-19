@@ -17,7 +17,7 @@ from atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import read_file, single_timeframe, to_timeframe, cast_and_validate, empty_df, concat, \
     date_range_of_data
 from helper.helper import log, measure_time, LogSeverity
-from ohlcv import read_multi_timeframe_ohlcv
+from Model.Data.ohlcv import read_multi_timeframe_ohlcv
 
 
 def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys: pt.DataFrame[PeakValley], ohlcv: pt.DataFrame[OHLCV]) \

@@ -14,7 +14,7 @@ from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
 from helper.data_preparation import read_file, trim_to_date_range, single_timeframe, expand_date_range, \
     multi_timeframe_times_tester, empty_df, concat
 from helper.helper import date_range, measure_time
-from ohlcv import read_multi_timeframe_ohlcv, cache_times
+from Model.Data.ohlcv import read_multi_timeframe_ohlcv, cache_times
 
 
 def RMA(values: pd.DataFrame, length):

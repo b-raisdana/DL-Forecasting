@@ -13,7 +13,7 @@ from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
 from helper.data_preparation import read_file, cast_and_validate, trim_to_date_range, \
     expand_date_range, after_under_process_date, empty_df, nearest_match, concat, index_names
 from helper.helper import measure_time, date_range
-from ohlcv import read_base_timeframe_ohlcv
+from Model.Data.ohlcv import read_base_timeframe_ohlcv
 
 
 def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValley], top_type: TopTYPE,

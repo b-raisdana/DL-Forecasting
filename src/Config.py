@@ -26,7 +26,7 @@ class CandleSize(Enum):
     Spinning: MinMax = MinMax(min=0.0, max=0.80)
     Standard: MinMax = MinMax(min=0.80, max=1.20)
     Long: MinMax = MinMax(min=1.2, max=2.5)
-    Spike: MinMax = MinMax(min=2.5, max=np.Inf)
+    Spike: MinMax = MinMax(min=2.5, max=np.inf)
 
 
 class TREND(Enum):
