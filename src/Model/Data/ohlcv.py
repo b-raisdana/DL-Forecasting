@@ -6,7 +6,6 @@ import pytz
 from pandera import typing as pt
 
 from Config import config
-# from MetaTrader import MT
 from PanderaDFM.OHLCV import MultiTimeframeOHLCV, OHLCV
 from Model.Data.fetch_ohlcv import fetch_ohlcv_by_range
 from helper.data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \

@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta  # noqa
 import pytz
-import talib as tal
 from pandera import typing as pt
 
 from Config import config
@@ -42,7 +41,7 @@ def RMA(values: pd.DataFrame, length):
 
 
 @measure_time
-def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = 'pandas_ta', apply_rma: bool = True) -> pd.DataFrame:
+def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = 'pandas_ta') -> pd.DataFrame:
     if len(timeframe_ohlcv) <= config.atr_timeperiod:
         timeframe_ohlcv['atr'] = pd.NA
     else:
@@ -53,9 +52,6 @@ def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = 'pandas_ta', ap
                                                             # close='close',
                                                             # mamode='ema',
                                                             )
-        elif mode == 'ta_lib':
-            timeframe_ohlcv['atr'] = tal.atr(high=timeframe_ohlcv['high'].values, low=timeframe_ohlcv['low'].values,
-                                             close=timeframe_ohlcv['close'].values, timeperiod=config.atr_timeperiod)
         else:
             raise Exception(f"Unsupported mode:{mode}")
     return timeframe_ohlcv

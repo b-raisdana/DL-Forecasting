@@ -6,7 +6,7 @@ from pandera import typing as pt
 
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
 from Config import config
-from MetaTrader import MT
+# from MetaTrader import MT
 from PanderaDFM.BullBearSide import BullBearSide
 from PanderaDFM.BullBearSidePivot import BullBearSidePivot
 from PanderaDFM.Pivot import MultiTimeframePivotDFM
@@ -159,7 +159,7 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None,
     multi_timeframe_pivots.to_csv(
         os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'),
         compression='zip')
-    MT.extract_to_data_path(os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'))
+    # MT.extract_to_data_path(os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'))
 
     """
         in all boundaries with movement >= 1 atr:

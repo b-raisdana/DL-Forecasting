@@ -1,4 +1,3 @@
-# import talib as ta
 import os
 from typing import Literal
 
@@ -7,7 +6,7 @@ import pandera.typing as pt
 
 from Config import config, TopTYPE
 from FigurePlotter.plotter import INFINITY_TIME_DELTA
-from MetaTrader import MT
+# from MetaTrader import MT
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
 from helper.data_preparation import read_file, cast_and_validate, trim_to_date_range, \
@@ -607,7 +606,7 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = No
         _peaks_n_valleys[['open', 'high', 'low', 'close', 'volume', 'peak_or_valley', 'strength', 'permanent_strength']]
     _peaks_n_valleys.to_csv(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'),
                             compression='zip')
-    MT.extract_to_data_path(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'))
+    # MT.extract_to_data_path(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'))
 
 
 # @measure_time

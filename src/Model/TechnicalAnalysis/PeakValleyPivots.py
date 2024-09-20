@@ -4,7 +4,7 @@ import pandas as pd
 from pandera import typing as pt
 
 from Config import config
-from MetaTrader import MT
+# from MetaTrader import MT
 from PanderaDFM.Pivot import MultiTimeframePivotDFM
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from PivotsHelper import pivots_level_n_margins, level_ttl
