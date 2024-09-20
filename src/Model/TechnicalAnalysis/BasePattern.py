@@ -8,7 +8,7 @@ from pandera import typing as pt, Timestamp
 from Config import config, CandleSize
 from PanderaDFM.BasePattern import BasePattern, MultiTimeframeBasePattern
 from PanderaDFM.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
-from atr import read_multi_timeframe_ohlcva
+from Model.Data.atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, \
     anti_pattern_timeframe, \
     anti_trigger_timeframe, to_timeframe, trim_to_date_range

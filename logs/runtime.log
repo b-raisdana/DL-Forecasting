@@ -1,51 +1,793 @@
-DEBUG@09-19.22:12:36:...Starting
-DEBUG@09-19.22:12:36:generate_multi_timeframe_ohlcv(24-02-07.00-00T24-09-19.22-12) started
-DEBUG@09-19.22:12:49:generate_base_timeframe_ohlcv(24-08-26.00-00T24-09-01.23-59, base_timeframe:None) started
-INFO@09-19.22:12:55:fetch_ohlcv@2024-08-31 03:30:00#1000>1000
-INFO@09-19.22:12:56:fetch_ohlcv@2024-08-31 20:10:00#440>440
-INFO@09-19.22:13:01:fetch_ohlcv@2024-09-01 03:30:00#1000>1000
-INFO@09-19.22:13:01:fetch_ohlcv@2024-09-01 20:10:00#440>440
-INFO@09-19.22:13:02:generate_base_timeframe_ohlcv(24-08-26.00-00T24-09-01.23-59, base_timeframe:None) executed in [91m13.242 seconds
-DEBUG@09-19.22:13:04:generate_base_timeframe_ohlcv(24-09-02.00-00T24-09-08.23-59, base_timeframe:None) started
-INFO@09-19.22:13:09:fetch_ohlcv@2024-09-02 03:30:00#1000>1000
-INFO@09-19.22:13:09:fetch_ohlcv@2024-09-02 20:10:00#440>440
-INFO@09-19.22:13:14:fetch_ohlcv@2024-09-03 03:30:00#1000>1000
-INFO@09-19.22:13:15:fetch_ohlcv@2024-09-03 20:10:00#440>440
-INFO@09-19.22:13:23:fetch_ohlcv@2024-09-04 03:30:00#1000>1000
-INFO@09-19.22:13:24:fetch_ohlcv@2024-09-04 20:10:00#440>440
-INFO@09-19.22:13:29:fetch_ohlcv@2024-09-05 03:30:00#1000>1000
-INFO@09-19.22:13:30:fetch_ohlcv@2024-09-05 20:10:00#440>440
-INFO@09-19.22:13:35:fetch_ohlcv@2024-09-06 03:30:00#1000>1000
-INFO@09-19.22:13:36:fetch_ohlcv@2024-09-06 20:10:00#440>440
-INFO@09-19.22:13:41:fetch_ohlcv@2024-09-07 03:30:00#1000>1000
-INFO@09-19.22:13:41:fetch_ohlcv@2024-09-07 20:10:00#440>440
-INFO@09-19.22:13:47:fetch_ohlcv@2024-09-08 03:30:00#1000>1000
-INFO@09-19.22:13:48:fetch_ohlcv@2024-09-08 20:10:00#440>440
-INFO@09-19.22:13:48:generate_base_timeframe_ohlcv(24-09-02.00-00T24-09-08.23-59, base_timeframe:None) executed in [91m44.154 seconds
-DEBUG@09-19.22:13:49:generate_base_timeframe_ohlcv(24-09-09.00-00T24-09-15.23-59, base_timeframe:None) started
-INFO@09-19.22:13:54:fetch_ohlcv@2024-09-09 03:30:00#1000>1000
-INFO@09-19.22:13:55:fetch_ohlcv@2024-09-09 20:10:00#440>440
-INFO@09-19.22:14:00:fetch_ohlcv@2024-09-10 03:30:00#1000>1000
-INFO@09-19.22:14:00:fetch_ohlcv@2024-09-10 20:10:00#440>440
-INFO@09-19.22:14:06:fetch_ohlcv@2024-09-11 03:30:00#1000>1000
-INFO@09-19.22:14:06:fetch_ohlcv@2024-09-11 20:10:00#440>440
-INFO@09-19.22:14:11:fetch_ohlcv@2024-09-12 03:30:00#1000>1000
-INFO@09-19.22:14:11:fetch_ohlcv@2024-09-12 20:10:00#440>440
-INFO@09-19.22:14:16:fetch_ohlcv@2024-09-13 03:30:00#1000>1000
-INFO@09-19.22:14:16:fetch_ohlcv@2024-09-13 20:10:00#440>440
-INFO@09-19.22:14:22:fetch_ohlcv@2024-09-14 03:30:00#1000>1000
-INFO@09-19.22:14:23:fetch_ohlcv@2024-09-14 20:10:00#440>440
-INFO@09-19.22:14:30:fetch_ohlcv@2024-09-15 03:30:00#1000>1000
-INFO@09-19.22:14:31:fetch_ohlcv@2024-09-15 20:10:00#440>440
-INFO@09-19.22:14:31:generate_base_timeframe_ohlcv(24-09-09.00-00T24-09-15.23-59, base_timeframe:None) executed in [91m41.729 seconds
-DEBUG@09-19.22:14:32:generate_base_timeframe_ohlcv(24-09-16.00-00T24-09-22.23-59, base_timeframe:None) started
-INFO@09-19.22:14:37:fetch_ohlcv@2024-09-16 03:30:00#1000>1000
-INFO@09-19.22:14:38:fetch_ohlcv@2024-09-16 20:10:00#440>440
-INFO@09-19.22:14:42:fetch_ohlcv@2024-09-17 03:30:00#1000>1000
-INFO@09-19.22:14:43:fetch_ohlcv@2024-09-17 20:10:00#440>440
-INFO@09-19.22:14:49:fetch_ohlcv@2024-09-18 03:30:00#1000>1000
-INFO@09-19.22:14:49:fetch_ohlcv@2024-09-18 20:10:00#440>440
-INFO@09-19.22:14:54:fetch_ohlcv@2024-09-19 03:30:00#1000>1000
-INFO@09-19.22:14:54:fetch_ohlcv@2024-09-19 20:10:00#440>125
-INFO@09-19.22:14:55:Error in generate_base_timeframe_ohlcv(24-09-16.00-00T24-09-22.23-59, base_timeframe:None): Some times in 24-09-19.00-00T24-09-19.23-59@1min are missing in the DataFrame's index:2024-09-19 20:48:00+00:00, 2024-09-19 19:31:00+00:00, 2024-09-19 19:12:00+00:00, 2024-09-19 21:56:00+00:00, 2024-09-19 20:20:00+00:00, 2024-09-19 22:11:00+00:00, 2024-09-19 21:52:00+00:00, 2024-09-19 19:42:00+00:00, 2024-09-19 20:16:00+00:00, 2024-09-19 19:57:00+00:00, 2024-09-19 20:01:00+00:00, 2024-09-19 20:35:00+00:00, 2024-09-19 21:48:00+00:00, 2024-09-19 21:33:00+00:00, 2024-09-19 22:07:00+00:00, 2024-09-19 19:26:00+00:00, 2024-09-19 19:07:00+00:00, 2024-09-19 18:48:00+00:00, 2024-09-19 19:56:00+00:00, 2024-09-19 21:47:00+00:00, 2024-09-19 21:28:00+00:00, 2024-09-19 19:18:00+00:00, 2024-09-19 22:02:00+00:00, 2024-09-19 19:33:00+00:00, 2024-09-19 19:52:00+00:00, 2024-09-19 19:37:00+00:00, 2024-09-19 20:11:00+00:00, 2024-09-19 21:24:00+00:00, 2024-09-19 21:09:00+00:00, 2024-09-19 21:43:00+00:00, 2024-09-19 21:23:00+00:00, 2024-09-19 21:04:00+00:00, 2024-09-19 19:47:00+00:00, 2024-09-19 21:38:00+00:00, 2024-09-19 19:09:00+00:00, 2024-09-19 19:28:00+00:00, 2024-09-19 19:43:00+00:00, 2024-09-19 20:02:00+00:00, 2024-09-19 21:00:00+00:00, 2024-09-19 20:45:00+00:00, 2024-09-19 21:19:00+00:00, 2024-09-19 19:24:00+00:00, 2024-09-19 22:08:00+00:00, 2024-09-19 19:23:00+00:00, 2024-09-19 21:14:00+00:00, 2024-09-19 18:45:00+00:00, 2024-09-19 19:04:00+00:00, 2024-09-19 19:19:00+00:00, 2024-09-19 22:12:00+00:00, 2024-09-19 19:38:00+00:00, 2024-09-19 20:51:00+00:00, 2024-09-19 20:36:00+00:00, 2024-09-19 21:10:00+00:00, 2024-09-19 20:55:00+00:00, 2024-09-19 21:29:00+00:00, 2024-09-19 19:00:00+00:00, 2024-09-19 21:59:00+00:00, 2024-09-19 21:40:00+00:00, 2024-09-19 21:21:00+00:00, 2024-09-19 18:59:00+00:00, 2024-09-19 20:50:00+00:00, 2024-09-19 20:31:00+00:00, 2024-09-19 19:14:00+00:00, 2024-09-19 18:55:00+00:00, 2024-09-19 22:03:00+00:00, 2024-09-19 20:27:00+00:00, 2024-09-19 20:12:00+00:00, 2024-09-19 20:46:00+00:00, 2024-09-19 21:05:00+00:00, 2024-09-19 21:35:00+00:00, 2024-09-19 21:16:00+00:00, 2024-09-19 20:57:00+00:00, 2024-09-19 19:08:00+00:00, 2024-09-19 20:26:00+00:00, 2024-09-19 20:07:00+00:00, 2024-09-19 18:50:00+00:00, 2024-09-19 21:39:00+00:00, 2024-09-19 21:58:00+00:00, 2024-09-19 19:05:00+00:00, 2024-09-19 20:03:00+00:00, 2024-09-19 19:48:00+00:00, 2024-09-19 20:22:00+00:00, 2024-09-19 20:41:00+00:00, 2024-09-19 18:46:00+00:00, 2024-09-19 21:54:00+00:00, 2024-09-19 21:11:00+00:00, 2024-09-19 22:09:00+00:00, 2024-09-19 21:53:00+00:00, 2024-09-19 21:34:00+00:00, 2024-09-19 21:15:00+00:00, 2024-09-19 19:58:00+00:00, 2024-09-19 21:49:00+00:00, 2024-09-19 19:39:00+00:00, 2024-09-19 20:13:00+00:00, 2024-09-19 19:54:00+00:00, 2024-09-19 20:32:00+00:00, 2024-09-19 20:17:00+00:00, 2024-09-19 21:30:00+00:00, 2024-09-19 22:04:00+00:00, 2024-09-19 21:02:00+00:00, 2024-09-19 20:43:00+00:00, 2024-09-19 22:00:00+00:00, 2024-09-19 20:24:00+00:00, 2024-09-19 19:53:00+00:00, 2024-09-19 21:44:00+00:00, 2024-09-19 21:25:00+00:00, 2024-09-19 19:15:00+00:00, 2024-09-19 19:49:00+00:00, 2024-09-19 19:30:00+00:00, 2024-09-19 19:34:00+00:00, 2024-09-19 20:08:00+00:00, 2024-09-19 21:06:00+00:00, 2024-09-19 21:55:00+00:00, 2024-09-19 20:38:00+00:00, 2024-09-19 20:19:00+00:00, 2024-09-19 21:36:00+00:00, 2024-09-19 21:51:00+00:00, 2024-09-19 19:02:00+00:00, 2024-09-19 22:10:00+00:00, 2024-09-19 20:00:00+00:00, 2024-09-19 19:29:00+00:00, 2024-09-19 21:20:00+00:00, 2024-09-19 21:01:00+00:00, 2024-09-19 18:51:00+00:00, 2024-09-19 19:25:00+00:00, 2024-09-19 19:06:00+00:00, 2024-09-19 19:10:00+00:00, 2024-09-19 19:44:00+00:00, 2024-09-19 20:42:00+00:00, 2024-09-19 21:50:00+00:00, 2024-09-19 21:31:00+00:00, 2024-09-19 20:14:00+00:00, 2024-09-19 19:55:00+00:00, 2024-09-19 21:12:00+00:00, 2024-09-19 20:29:00+00:00, 2024-09-19 21:27:00+00:00, 2024-09-19 21:46:00+00:00, 2024-09-19 19:51:00+00:00, 2024-09-19 22:05:00+00:00, 2024-09-19 20:10:00+00:00, 2024-09-19 20:56:00+00:00, 2024-09-19 20:37:00+00:00, 2024-09-19 19:20:00+00:00, 2024-09-19 19:01:00+00:00, 2024-09-19 20:18:00+00:00, 2024-09-19 19:35:00+00:00, 2024-09-19 19:16:00+00:00, 2024-09-19 20:33:00+00:00, 2024-09-19 20:52:00+00:00, 2024-09-19 18:57:00+00:00, 2024-09-19 21:26:00+00:00, 2024-09-19 21:07:00+00:00, 2024-09-19 19:50:00+00:00, 2024-09-19 21:41:00+00:00, 2024-09-19 21:22:00+00:00, 2024-09-19 20:05:00+00:00, 2024-09-19 21:03:00+00:00, 2024-09-19 21:37:00+00:00, 2024-09-19 21:18:00+00:00, 2024-09-19 19:27:00+00:00, 2024-09-19 19:46:00+00:00, 2024-09-19 18:56:00+00:00, 2024-09-19 20:47:00+00:00, 2024-09-19 21:45:00+00:00, 2024-09-19 19:11:00+00:00, 2024-09-19 18:52:00+00:00, 2024-09-19 20:09:00+00:00, 2024-09-19 18:49:00+00:00, 2024-09-19 21:57:00+00:00, 2024-09-19 20:28:00+00:00, 2024-09-19 21:17:00+00:00, 2024-09-19 20:58:00+00:00, 2024-09-19 19:41:00+00:00, 2024-09-19 20:39:00+00:00, 2024-09-19 21:13:00+00:00, 2024-09-19 20:54:00+00:00, 2024-09-19 21:32:00+00:00, 2024-09-19 19:03:00+00:00, 2024-09-19 19:22:00+00:00, 2024-09-19 20:23:00+00:00, 2024-09-19 20:04:00+00:00, 2024-09-19 18:47:00+00:00, 2024-09-19 19:45:00+00:00, 2024-09-19 20:53:00+00:00, 2024-09-19 20:34:00+00:00, 2024-09-19 19:17:00+00:00, 2024-09-19 20:15:00+00:00, 2024-09-19 20:49:00+00:00, 2024-09-19 20:30:00+00:00, 2024-09-19 21:08:00+00:00, 2024-09-19 18:54:00+00:00, 2024-09-19 19:13:00+00:00, 2024-09-19 18:58:00+00:00, 2024-09-19 22:06:00+00:00, 2024-09-19 19:32:00+00:00, 2024-09-19 19:59:00+00:00, 2024-09-19 19:40:00+00:00, 2024-09-19 19:21:00+00:00, 2024-09-19 20:21:00+00:00, 2024-09-19 19:36:00+00:00, 2024-09-19 18:53:00+00:00, 2024-09-19 22:01:00+00:00, 2024-09-19 20:25:00+00:00, 2024-09-19 20:06:00+00:00, 2024-09-19 20:59:00+00:00, 2024-09-19 20:40:00+00:00, 2024-09-19 20:44:00+00:00, 2024-09-19 21:42:00+00:00
-INFO@09-19.22:14:55:Error in generate_multi_timeframe_ohlcv(24-02-07.00-00T24-09-19.22-12): Some times in 24-09-19.00-00T24-09-19.23-59@1min are missing in the DataFrame's index:2024-09-19 20:48:00+00:00, 2024-09-19 19:31:00+00:00, 2024-09-19 19:12:00+00:00, 2024-09-19 21:56:00+00:00, 2024-09-19 20:20:00+00:00, 2024-09-19 22:11:00+00:00, 2024-09-19 21:52:00+00:00, 2024-09-19 19:42:00+00:00, 2024-09-19 20:16:00+00:00, 2024-09-19 19:57:00+00:00, 2024-09-19 20:01:00+00:00, 2024-09-19 20:35:00+00:00, 2024-09-19 21:48:00+00:00, 2024-09-19 21:33:00+00:00, 2024-09-19 22:07:00+00:00, 2024-09-19 19:26:00+00:00, 2024-09-19 19:07:00+00:00, 2024-09-19 18:48:00+00:00, 2024-09-19 19:56:00+00:00, 2024-09-19 21:47:00+00:00, 2024-09-19 21:28:00+00:00, 2024-09-19 19:18:00+00:00, 2024-09-19 22:02:00+00:00, 2024-09-19 19:33:00+00:00, 2024-09-19 19:52:00+00:00, 2024-09-19 19:37:00+00:00, 2024-09-19 20:11:00+00:00, 2024-09-19 21:24:00+00:00, 2024-09-19 21:09:00+00:00, 2024-09-19 21:43:00+00:00, 2024-09-19 21:23:00+00:00, 2024-09-19 21:04:00+00:00, 2024-09-19 19:47:00+00:00, 2024-09-19 21:38:00+00:00, 2024-09-19 19:09:00+00:00, 2024-09-19 19:28:00+00:00, 2024-09-19 19:43:00+00:00, 2024-09-19 20:02:00+00:00, 2024-09-19 21:00:00+00:00, 2024-09-19 20:45:00+00:00, 2024-09-19 21:19:00+00:00, 2024-09-19 19:24:00+00:00, 2024-09-19 22:08:00+00:00, 2024-09-19 19:23:00+00:00, 2024-09-19 21:14:00+00:00, 2024-09-19 18:45:00+00:00, 2024-09-19 19:04:00+00:00, 2024-09-19 19:19:00+00:00, 2024-09-19 22:12:00+00:00, 2024-09-19 19:38:00+00:00, 2024-09-19 20:51:00+00:00, 2024-09-19 20:36:00+00:00, 2024-09-19 21:10:00+00:00, 2024-09-19 20:55:00+00:00, 2024-09-19 21:29:00+00:00, 2024-09-19 19:00:00+00:00, 2024-09-19 21:59:00+00:00, 2024-09-19 21:40:00+00:00, 2024-09-19 21:21:00+00:00, 2024-09-19 18:59:00+00:00, 2024-09-19 20:50:00+00:00, 2024-09-19 20:31:00+00:00, 2024-09-19 19:14:00+00:00, 2024-09-19 18:55:00+00:00, 2024-09-19 22:03:00+00:00, 2024-09-19 20:27:00+00:00, 2024-09-19 20:12:00+00:00, 2024-09-19 20:46:00+00:00, 2024-09-19 21:05:00+00:00, 2024-09-19 21:35:00+00:00, 2024-09-19 21:16:00+00:00, 2024-09-19 20:57:00+00:00, 2024-09-19 19:08:00+00:00, 2024-09-19 20:26:00+00:00, 2024-09-19 20:07:00+00:00, 2024-09-19 18:50:00+00:00, 2024-09-19 21:39:00+00:00, 2024-09-19 21:58:00+00:00, 2024-09-19 19:05:00+00:00, 2024-09-19 20:03:00+00:00, 2024-09-19 19:48:00+00:00, 2024-09-19 20:22:00+00:00, 2024-09-19 20:41:00+00:00, 2024-09-19 18:46:00+00:00, 2024-09-19 21:54:00+00:00, 2024-09-19 21:11:00+00:00, 2024-09-19 22:09:00+00:00, 2024-09-19 21:53:00+00:00, 2024-09-19 21:34:00+00:00, 2024-09-19 21:15:00+00:00, 2024-09-19 19:58:00+00:00, 2024-09-19 21:49:00+00:00, 2024-09-19 19:39:00+00:00, 2024-09-19 20:13:00+00:00, 2024-09-19 19:54:00+00:00, 2024-09-19 20:32:00+00:00, 2024-09-19 20:17:00+00:00, 2024-09-19 21:30:00+00:00, 2024-09-19 22:04:00+00:00, 2024-09-19 21:02:00+00:00, 2024-09-19 20:43:00+00:00, 2024-09-19 22:00:00+00:00, 2024-09-19 20:24:00+00:00, 2024-09-19 19:53:00+00:00, 2024-09-19 21:44:00+00:00, 2024-09-19 21:25:00+00:00, 2024-09-19 19:15:00+00:00, 2024-09-19 19:49:00+00:00, 2024-09-19 19:30:00+00:00, 2024-09-19 19:34:00+00:00, 2024-09-19 20:08:00+00:00, 2024-09-19 21:06:00+00:00, 2024-09-19 21:55:00+00:00, 2024-09-19 20:38:00+00:00, 2024-09-19 20:19:00+00:00, 2024-09-19 21:36:00+00:00, 2024-09-19 21:51:00+00:00, 2024-09-19 19:02:00+00:00, 2024-09-19 22:10:00+00:00, 2024-09-19 20:00:00+00:00, 2024-09-19 19:29:00+00:00, 2024-09-19 21:20:00+00:00, 2024-09-19 21:01:00+00:00, 2024-09-19 18:51:00+00:00, 2024-09-19 19:25:00+00:00, 2024-09-19 19:06:00+00:00, 2024-09-19 19:10:00+00:00, 2024-09-19 19:44:00+00:00, 2024-09-19 20:42:00+00:00, 2024-09-19 21:50:00+00:00, 2024-09-19 21:31:00+00:00, 2024-09-19 20:14:00+00:00, 2024-09-19 19:55:00+00:00, 2024-09-19 21:12:00+00:00, 2024-09-19 20:29:00+00:00, 2024-09-19 21:27:00+00:00, 2024-09-19 21:46:00+00:00, 2024-09-19 19:51:00+00:00, 2024-09-19 22:05:00+00:00, 2024-09-19 20:10:00+00:00, 2024-09-19 20:56:00+00:00, 2024-09-19 20:37:00+00:00, 2024-09-19 19:20:00+00:00, 2024-09-19 19:01:00+00:00, 2024-09-19 20:18:00+00:00, 2024-09-19 19:35:00+00:00, 2024-09-19 19:16:00+00:00, 2024-09-19 20:33:00+00:00, 2024-09-19 20:52:00+00:00, 2024-09-19 18:57:00+00:00, 2024-09-19 21:26:00+00:00, 2024-09-19 21:07:00+00:00, 2024-09-19 19:50:00+00:00, 2024-09-19 21:41:00+00:00, 2024-09-19 21:22:00+00:00, 2024-09-19 20:05:00+00:00, 2024-09-19 21:03:00+00:00, 2024-09-19 21:37:00+00:00, 2024-09-19 21:18:00+00:00, 2024-09-19 19:27:00+00:00, 2024-09-19 19:46:00+00:00, 2024-09-19 18:56:00+00:00, 2024-09-19 20:47:00+00:00, 2024-09-19 21:45:00+00:00, 2024-09-19 19:11:00+00:00, 2024-09-19 18:52:00+00:00, 2024-09-19 20:09:00+00:00, 2024-09-19 18:49:00+00:00, 2024-09-19 21:57:00+00:00, 2024-09-19 20:28:00+00:00, 2024-09-19 21:17:00+00:00, 2024-09-19 20:58:00+00:00, 2024-09-19 19:41:00+00:00, 2024-09-19 20:39:00+00:00, 2024-09-19 21:13:00+00:00, 2024-09-19 20:54:00+00:00, 2024-09-19 21:32:00+00:00, 2024-09-19 19:03:00+00:00, 2024-09-19 19:22:00+00:00, 2024-09-19 20:23:00+00:00, 2024-09-19 20:04:00+00:00, 2024-09-19 18:47:00+00:00, 2024-09-19 19:45:00+00:00, 2024-09-19 20:53:00+00:00, 2024-09-19 20:34:00+00:00, 2024-09-19 19:17:00+00:00, 2024-09-19 20:15:00+00:00, 2024-09-19 20:49:00+00:00, 2024-09-19 20:30:00+00:00, 2024-09-19 21:08:00+00:00, 2024-09-19 18:54:00+00:00, 2024-09-19 19:13:00+00:00, 2024-09-19 18:58:00+00:00, 2024-09-19 22:06:00+00:00, 2024-09-19 19:32:00+00:00, 2024-09-19 19:59:00+00:00, 2024-09-19 19:40:00+00:00, 2024-09-19 19:21:00+00:00, 2024-09-19 20:21:00+00:00, 2024-09-19 19:36:00+00:00, 2024-09-19 18:53:00+00:00, 2024-09-19 22:01:00+00:00, 2024-09-19 20:25:00+00:00, 2024-09-19 20:06:00+00:00, 2024-09-19 20:59:00+00:00, 2024-09-19 20:40:00+00:00, 2024-09-19 20:44:00+00:00, 2024-09-19 21:42:00+00:00
+DEBUG@09-20.18:12:05:...Starting
+DEBUG@09-20.18:12:19:core_generate_multi_timeframe_ohlcva(24-02-07.00-00T24-02-07.23-59) started
+DEBUG@09-20.18:12:20:generate_multi_timeframe_ohlcv(24-02-06.23-44T24-02-07.23-59) started
+DEBUG@09-20.18:12:20:generate_base_timeframe_ohlcv(24-02-06.00-00T24-02-06.23-59, base_timeframe:None) started
+DEBUG@09-20.18:12:20:fetch_ohlcv(BTC/USDT, timeframe:1min, start:2024-02-06 00:00:00+00:00, number_of_ticks:1440, params:{'timeframe': '1min'}) started
+INFO@09-20.18:12:25:fetch_ohlcv@2024-02-06 03:30:00#1000>1000
+INFO@09-20.18:12:26:fetch_ohlcv@2024-02-06 20:10:00#440>440
+INFO@09-20.18:12:26:fetch_ohlcv(BTC/USDT, timeframe:1min, start:2024-02-06 00:00:00+00:00, number_of_ticks:1440, params:{'timeframe': '1min'}) executed in [91m6.028 seconds
+INFO@09-20.18:12:26:generate_base_timeframe_ohlcv(24-02-06.00-00T24-02-06.23-59, base_timeframe:None) executed in [91m6.310 seconds
+INFO@09-20.18:12:27:generate_multi_timeframe_ohlcv(24-02-06.23-44T24-02-07.23-59) executed in [91m7.200 seconds
+DEBUG@09-20.18:12:27:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:12:27:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.031 seconds
+DEBUG@09-20.18:12:27:generate_multi_timeframe_ohlcv(24-02-06.22-40T24-02-07.23-59) started
+INFO@09-20.18:12:28:generate_multi_timeframe_ohlcv(24-02-06.22-40T24-02-07.23-59) executed in [93m0.578 seconds
+DEBUG@09-20.18:12:28:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:12:28:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:12:28:generate_multi_timeframe_ohlcv(24-02-06.20-00T24-02-07.23-59) started
+INFO@09-20.18:12:29:generate_multi_timeframe_ohlcv(24-02-06.20-00T24-02-07.23-59) executed in [93m0.531 seconds
+DEBUG@09-20.18:12:29:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:12:29:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:12:29:generate_multi_timeframe_ohlcv(24-02-06.08-00T24-02-07.23-59) started
+INFO@09-20.18:12:29:generate_multi_timeframe_ohlcv(24-02-06.08-00T24-02-07.23-59) executed in [93m0.562 seconds
+DEBUG@09-20.18:12:29:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:12:29:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:12:29:generate_multi_timeframe_ohlcv(24-02-04.08-00T24-02-07.23-59) started
+DEBUG@09-20.18:12:29:generate_base_timeframe_ohlcv(24-02-04.00-00T24-02-04.23-59, base_timeframe:None) started
+DEBUG@09-20.18:12:29:fetch_ohlcv(BTC/USDT, timeframe:1min, start:2024-02-04 00:00:00+00:00, number_of_ticks:1440, params:{'timeframe': '1min'}) started
+INFO@09-20.18:12:35:fetch_ohlcv@2024-02-04 03:30:00#1000>1000
+INFO@09-20.18:12:35:fetch_ohlcv@2024-02-04 20:10:00#440>440
+INFO@09-20.18:12:35:fetch_ohlcv(BTC/USDT, timeframe:1min, start:2024-02-04 00:00:00+00:00, number_of_ticks:1440, params:{'timeframe': '1min'}) executed in [91m6.000 seconds
+INFO@09-20.18:12:36:generate_base_timeframe_ohlcv(24-02-04.00-00T24-02-04.23-59, base_timeframe:None) executed in [91m6.187 seconds
+DEBUG@09-20.18:12:36:generate_base_timeframe_ohlcv(24-02-05.00-00T24-02-11.23-59, base_timeframe:None) started
+DEBUG@09-20.18:12:36:fetch_ohlcv(BTC/USDT, timeframe:1min, start:2024-02-05 00:00:00+00:00, number_of_ticks:1440, params:{'timeframe': '1min'}) started
+INFO@09-20.18:12:44:fetch_ohlcv@2024-02-05 03:30:00#1000>1000
+INFO@09-20.18:12:44:fetch_ohlcv@2024-02-05 20:10:00#440>440
+INFO@09-20.18:12:44:fetch_ohlcv(BTC/USDT, timeframe:1min, start:2024-02-05 00:00:00+00:00, number_of_ticks:1440, params:{'timeframe': '1min'}) executed in [91m8.028 seconds
+INFO@09-20.18:12:45:generate_base_timeframe_ohlcv(24-02-05.00-00T24-02-11.23-59, base_timeframe:None) executed in [91m9.262 seconds
+INFO@09-20.18:12:47:generate_multi_timeframe_ohlcv(24-02-04.08-00T24-02-07.23-59) executed in [91m17.463 seconds
+DEBUG@09-20.18:12:47:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:12:47:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:12:47:generate_multi_timeframe_ohlcv(24-01-22.00-00T24-02-07.23-59) started
+INFO@09-20.18:12:52:generate_multi_timeframe_ohlcv(24-01-22.00-00T24-02-07.23-59) executed in [91m4.998 seconds
+DEBUG@09-20.18:12:53:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:12:53:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:12:53:generate_multi_timeframe_ohlcv(23-10-18.00-00T24-02-07.23-59) started
+INFO@09-20.18:13:37:generate_multi_timeframe_ohlcv(23-10-18.00-00T24-02-07.23-59) executed in [91m44.137 seconds
+DEBUG@09-20.18:13:42:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:13:42:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+INFO@09-20.18:13:42:core_generate_multi_timeframe_ohlcva(24-02-07.00-00T24-02-07.23-59) executed in [91m82.387 seconds
+DEBUG@09-20.18:13:49:core_generate_multi_timeframe_ohlcva(24-02-08.00-00T24-02-08.23-59) started
+DEBUG@09-20.18:13:49:generate_multi_timeframe_ohlcv(24-02-07.23-44T24-02-08.23-59) started
+INFO@09-20.18:13:49:generate_multi_timeframe_ohlcv(24-02-07.23-44T24-02-08.23-59) executed in [93m0.548 seconds
+DEBUG@09-20.18:13:49:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:13:49:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:13:49:generate_multi_timeframe_ohlcv(24-02-07.22-40T24-02-08.23-59) started
+INFO@09-20.18:13:50:generate_multi_timeframe_ohlcv(24-02-07.22-40T24-02-08.23-59) executed in [93m0.516 seconds
+DEBUG@09-20.18:13:50:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:13:50:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:13:50:generate_multi_timeframe_ohlcv(24-02-07.20-00T24-02-08.23-59) started
+INFO@09-20.18:13:51:generate_multi_timeframe_ohlcv(24-02-07.20-00T24-02-08.23-59) executed in [93m0.625 seconds
+DEBUG@09-20.18:13:51:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:13:51:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.018 seconds
+DEBUG@09-20.18:13:51:generate_multi_timeframe_ohlcv(24-02-07.08-00T24-02-08.23-59) started
+INFO@09-20.18:13:51:generate_multi_timeframe_ohlcv(24-02-07.08-00T24-02-08.23-59) executed in [93m0.604 seconds
+DEBUG@09-20.18:13:52:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:13:52:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:13:52:generate_multi_timeframe_ohlcv(24-02-05.08-00T24-02-08.23-59) started
+INFO@09-20.18:13:53:generate_multi_timeframe_ohlcv(24-02-05.08-00T24-02-08.23-59) executed in [91m1.094 seconds
+DEBUG@09-20.18:13:53:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:13:53:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:13:53:generate_multi_timeframe_ohlcv(24-01-23.00-00T24-02-08.23-59) started
+INFO@09-20.18:13:58:generate_multi_timeframe_ohlcv(24-01-23.00-00T24-02-08.23-59) executed in [91m4.768 seconds
+DEBUG@09-20.18:13:59:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:13:59:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:13:59:generate_multi_timeframe_ohlcv(23-10-19.00-00T24-02-08.23-59) started
+INFO@09-20.18:14:48:generate_multi_timeframe_ohlcv(23-10-19.00-00T24-02-08.23-59) executed in [91m48.968 seconds
+DEBUG@09-20.18:14:52:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:14:52:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+INFO@09-20.18:14:52:core_generate_multi_timeframe_ohlcva(24-02-08.00-00T24-02-08.23-59) executed in [91m63.731 seconds
+DEBUG@09-20.18:14:59:core_generate_multi_timeframe_ohlcva(24-02-09.00-00T24-02-09.23-59) started
+DEBUG@09-20.18:14:59:generate_multi_timeframe_ohlcv(24-02-08.23-44T24-02-09.23-59) started
+INFO@09-20.18:15:00:generate_multi_timeframe_ohlcv(24-02-08.23-44T24-02-09.23-59) executed in [93m0.964 seconds
+DEBUG@09-20.18:15:00:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:15:00:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.007 seconds
+DEBUG@09-20.18:15:00:generate_multi_timeframe_ohlcv(24-02-08.22-40T24-02-09.23-59) started
+INFO@09-20.18:15:00:generate_multi_timeframe_ohlcv(24-02-08.22-40T24-02-09.23-59) executed in [93m0.453 seconds
+DEBUG@09-20.18:15:01:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:15:01:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:15:01:generate_multi_timeframe_ohlcv(24-02-08.20-00T24-02-09.23-59) started
+INFO@09-20.18:15:01:generate_multi_timeframe_ohlcv(24-02-08.20-00T24-02-09.23-59) executed in [93m0.422 seconds
+DEBUG@09-20.18:15:01:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:15:01:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:15:01:generate_multi_timeframe_ohlcv(24-02-08.08-00T24-02-09.23-59) started
+INFO@09-20.18:15:02:generate_multi_timeframe_ohlcv(24-02-08.08-00T24-02-09.23-59) executed in [93m0.469 seconds
+DEBUG@09-20.18:15:02:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:15:02:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:15:02:generate_multi_timeframe_ohlcv(24-02-06.08-00T24-02-09.23-59) started
+INFO@09-20.18:15:03:generate_multi_timeframe_ohlcv(24-02-06.08-00T24-02-09.23-59) executed in [93m0.891 seconds
+DEBUG@09-20.18:15:03:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:15:03:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:15:03:generate_multi_timeframe_ohlcv(24-01-24.00-00T24-02-09.23-59) started
+INFO@09-20.18:15:07:generate_multi_timeframe_ohlcv(24-01-24.00-00T24-02-09.23-59) executed in [91m3.969 seconds
+DEBUG@09-20.18:15:08:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:15:08:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:15:08:generate_multi_timeframe_ohlcv(23-10-20.00-00T24-02-09.23-59) started
+INFO@09-20.18:15:46:generate_multi_timeframe_ohlcv(23-10-20.00-00T24-02-09.23-59) executed in [91m38.553 seconds
+DEBUG@09-20.18:15:51:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:15:51:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+INFO@09-20.18:15:51:core_generate_multi_timeframe_ohlcva(24-02-09.00-00T24-02-09.23-59) executed in [91m51.952 seconds
+DEBUG@09-20.18:15:51:core_generate_multi_timeframe_ohlcva(24-02-10.00-00T24-02-10.23-59) started
+DEBUG@09-20.18:15:51:generate_multi_timeframe_ohlcv(24-02-09.23-44T24-02-10.23-59) started
+INFO@09-20.18:15:51:generate_multi_timeframe_ohlcv(24-02-09.23-44T24-02-10.23-59) executed in [93m0.437 seconds
+DEBUG@09-20.18:15:51:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:15:51:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:15:51:generate_multi_timeframe_ohlcv(24-02-09.22-40T24-02-10.23-59) started
+INFO@09-20.18:15:52:generate_multi_timeframe_ohlcv(24-02-09.22-40T24-02-10.23-59) executed in [93m0.562 seconds
+DEBUG@09-20.18:15:52:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:15:52:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:15:52:generate_multi_timeframe_ohlcv(24-02-09.20-00T24-02-10.23-59) started
+INFO@09-20.18:15:53:generate_multi_timeframe_ohlcv(24-02-09.20-00T24-02-10.23-59) executed in [93m0.578 seconds
+DEBUG@09-20.18:15:53:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:15:53:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:15:53:generate_multi_timeframe_ohlcv(24-02-09.08-00T24-02-10.23-59) started
+INFO@09-20.18:15:54:generate_multi_timeframe_ohlcv(24-02-09.08-00T24-02-10.23-59) executed in [93m0.578 seconds
+DEBUG@09-20.18:15:54:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:15:54:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:15:54:generate_multi_timeframe_ohlcv(24-02-07.08-00T24-02-10.23-59) started
+INFO@09-20.18:15:55:generate_multi_timeframe_ohlcv(24-02-07.08-00T24-02-10.23-59) executed in [91m1.031 seconds
+DEBUG@09-20.18:15:55:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:15:55:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:15:55:generate_multi_timeframe_ohlcv(24-01-25.00-00T24-02-10.23-59) started
+INFO@09-20.18:15:59:generate_multi_timeframe_ohlcv(24-01-25.00-00T24-02-10.23-59) executed in [91m3.919 seconds
+DEBUG@09-20.18:16:00:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:16:00:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:16:00:generate_multi_timeframe_ohlcv(23-10-21.00-00T24-02-10.23-59) started
+INFO@09-20.18:16:48:generate_multi_timeframe_ohlcv(23-10-21.00-00T24-02-10.23-59) executed in [91m48.326 seconds
+DEBUG@09-20.18:16:53:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:16:53:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+INFO@09-20.18:16:53:core_generate_multi_timeframe_ohlcva(24-02-10.00-00T24-02-10.23-59) executed in [91m61.794 seconds
+DEBUG@09-20.18:16:53:core_generate_multi_timeframe_ohlcva(24-02-11.00-00T24-02-11.23-59) started
+DEBUG@09-20.18:16:53:generate_multi_timeframe_ohlcv(24-02-10.23-44T24-02-11.23-59) started
+INFO@09-20.18:16:53:generate_multi_timeframe_ohlcv(24-02-10.23-44T24-02-11.23-59) executed in [93m0.375 seconds
+DEBUG@09-20.18:16:53:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:16:53:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:16:53:generate_multi_timeframe_ohlcv(24-02-10.22-40T24-02-11.23-59) started
+INFO@09-20.18:16:54:generate_multi_timeframe_ohlcv(24-02-10.22-40T24-02-11.23-59) executed in [93m0.437 seconds
+DEBUG@09-20.18:16:54:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:16:54:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:16:54:generate_multi_timeframe_ohlcv(24-02-10.20-00T24-02-11.23-59) started
+INFO@09-20.18:16:54:generate_multi_timeframe_ohlcv(24-02-10.20-00T24-02-11.23-59) executed in [93m0.484 seconds
+DEBUG@09-20.18:16:54:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:16:54:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:16:55:generate_multi_timeframe_ohlcv(24-02-10.08-00T24-02-11.23-59) started
+INFO@09-20.18:16:55:generate_multi_timeframe_ohlcv(24-02-10.08-00T24-02-11.23-59) executed in [93m0.516 seconds
+DEBUG@09-20.18:16:55:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:16:55:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:16:55:generate_multi_timeframe_ohlcv(24-02-08.08-00T24-02-11.23-59) started
+INFO@09-20.18:16:56:generate_multi_timeframe_ohlcv(24-02-08.08-00T24-02-11.23-59) executed in [91m1.088 seconds
+DEBUG@09-20.18:16:56:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:16:56:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:16:57:generate_multi_timeframe_ohlcv(24-01-26.00-00T24-02-11.23-59) started
+INFO@09-20.18:17:00:generate_multi_timeframe_ohlcv(24-01-26.00-00T24-02-11.23-59) executed in [91m3.944 seconds
+DEBUG@09-20.18:17:01:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:17:01:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:17:01:generate_multi_timeframe_ohlcv(23-10-22.00-00T24-02-11.23-59) started
+INFO@09-20.18:17:53:generate_multi_timeframe_ohlcv(23-10-22.00-00T24-02-11.23-59) executed in [91m51.791 seconds
+DEBUG@09-20.18:18:01:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:18:01:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.017 seconds
+INFO@09-20.18:18:01:core_generate_multi_timeframe_ohlcva(24-02-11.00-00T24-02-11.23-59) executed in [91m68.544 seconds
+DEBUG@09-20.18:18:02:core_generate_multi_timeframe_ohlcva(24-02-12.00-00T24-02-12.23-59) started
+DEBUG@09-20.18:18:02:generate_multi_timeframe_ohlcv(24-02-11.23-44T24-02-12.23-59) started
+INFO@09-20.18:18:04:generate_multi_timeframe_ohlcv(24-02-11.23-44T24-02-12.23-59) executed in [91m2.087 seconds
+DEBUG@09-20.18:18:05:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:18:05:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.050 seconds
+DEBUG@09-20.18:18:05:generate_multi_timeframe_ohlcv(24-02-11.22-40T24-02-12.23-59) started
+INFO@09-20.18:18:07:generate_multi_timeframe_ohlcv(24-02-11.22-40T24-02-12.23-59) executed in [91m1.858 seconds
+DEBUG@09-20.18:18:07:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:18:07:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.022 seconds
+DEBUG@09-20.18:18:07:generate_multi_timeframe_ohlcv(24-02-11.20-00T24-02-12.23-59) started
+INFO@09-20.18:18:08:generate_multi_timeframe_ohlcv(24-02-11.20-00T24-02-12.23-59) executed in [91m1.056 seconds
+DEBUG@09-20.18:18:09:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:18:09:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.012 seconds
+DEBUG@09-20.18:18:09:generate_multi_timeframe_ohlcv(24-02-11.08-00T24-02-12.23-59) started
+INFO@09-20.18:18:10:generate_multi_timeframe_ohlcv(24-02-11.08-00T24-02-12.23-59) executed in [91m1.076 seconds
+DEBUG@09-20.18:18:10:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:18:10:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.036 seconds
+DEBUG@09-20.18:18:10:generate_multi_timeframe_ohlcv(24-02-09.08-00T24-02-12.23-59) started
+INFO@09-20.18:18:13:generate_multi_timeframe_ohlcv(24-02-09.08-00T24-02-12.23-59) executed in [91m2.784 seconds
+DEBUG@09-20.18:18:14:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:18:14:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.010 seconds
+DEBUG@09-20.18:18:14:generate_multi_timeframe_ohlcv(24-01-27.00-00T24-02-12.23-59) started
+INFO@09-20.18:18:26:generate_multi_timeframe_ohlcv(24-01-27.00-00T24-02-12.23-59) executed in [91m12.755 seconds
+DEBUG@09-20.18:18:27:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:18:27:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.008 seconds
+DEBUG@09-20.18:18:27:generate_multi_timeframe_ohlcv(23-10-23.00-00T24-02-12.23-59) started
+INFO@09-20.18:19:21:generate_multi_timeframe_ohlcv(23-10-23.00-00T24-02-12.23-59) executed in [91m53.275 seconds
+DEBUG@09-20.18:19:25:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:19:25:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+INFO@09-20.18:19:25:core_generate_multi_timeframe_ohlcva(24-02-12.00-00T24-02-12.23-59) executed in [91m83.440 seconds
+DEBUG@09-20.18:19:25:core_generate_multi_timeframe_ohlcva(24-02-13.00-00T24-02-13.23-59) started
+DEBUG@09-20.18:19:25:generate_multi_timeframe_ohlcv(24-02-12.23-44T24-02-13.23-59) started
+INFO@09-20.18:19:26:generate_multi_timeframe_ohlcv(24-02-12.23-44T24-02-13.23-59) executed in [93m0.414 seconds
+DEBUG@09-20.18:19:26:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:19:26:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:19:26:generate_multi_timeframe_ohlcv(24-02-12.22-40T24-02-13.23-59) started
+INFO@09-20.18:19:26:generate_multi_timeframe_ohlcv(24-02-12.22-40T24-02-13.23-59) executed in [93m0.407 seconds
+DEBUG@09-20.18:19:26:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:19:26:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:19:26:generate_multi_timeframe_ohlcv(24-02-12.20-00T24-02-13.23-59) started
+INFO@09-20.18:19:27:generate_multi_timeframe_ohlcv(24-02-12.20-00T24-02-13.23-59) executed in [93m0.432 seconds
+DEBUG@09-20.18:19:27:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:19:27:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:19:27:generate_multi_timeframe_ohlcv(24-02-12.08-00T24-02-13.23-59) started
+INFO@09-20.18:19:28:generate_multi_timeframe_ohlcv(24-02-12.08-00T24-02-13.23-59) executed in [93m0.517 seconds
+DEBUG@09-20.18:19:28:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:19:28:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:19:28:generate_multi_timeframe_ohlcv(24-02-10.08-00T24-02-13.23-59) started
+INFO@09-20.18:19:29:generate_multi_timeframe_ohlcv(24-02-10.08-00T24-02-13.23-59) executed in [93m0.918 seconds
+DEBUG@09-20.18:19:29:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:19:29:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:19:29:generate_multi_timeframe_ohlcv(24-01-28.00-00T24-02-13.23-59) started
+INFO@09-20.18:19:33:generate_multi_timeframe_ohlcv(24-01-28.00-00T24-02-13.23-59) executed in [91m3.734 seconds
+DEBUG@09-20.18:19:33:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:19:33:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:19:33:generate_multi_timeframe_ohlcv(23-10-24.00-00T24-02-13.23-59) started
+INFO@09-20.18:20:13:generate_multi_timeframe_ohlcv(23-10-24.00-00T24-02-13.23-59) executed in [91m39.944 seconds
+DEBUG@09-20.18:20:18:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:20:18:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+INFO@09-20.18:20:18:core_generate_multi_timeframe_ohlcva(24-02-13.00-00T24-02-13.23-59) executed in [91m52.803 seconds
+DEBUG@09-20.18:20:18:core_generate_multi_timeframe_ohlcva(24-02-14.00-00T24-02-14.23-59) started
+DEBUG@09-20.18:20:18:generate_multi_timeframe_ohlcv(24-02-13.23-44T24-02-14.23-59) started
+INFO@09-20.18:20:19:generate_multi_timeframe_ohlcv(24-02-13.23-44T24-02-14.23-59) executed in [93m0.392 seconds
+DEBUG@09-20.18:20:19:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:20:19:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.008 seconds
+DEBUG@09-20.18:20:19:generate_multi_timeframe_ohlcv(24-02-13.22-40T24-02-14.23-59) started
+INFO@09-20.18:20:19:generate_multi_timeframe_ohlcv(24-02-13.22-40T24-02-14.23-59) executed in [93m0.402 seconds
+DEBUG@09-20.18:20:19:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:20:19:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.007 seconds
+DEBUG@09-20.18:20:19:generate_multi_timeframe_ohlcv(24-02-13.20-00T24-02-14.23-59) started
+INFO@09-20.18:20:20:generate_multi_timeframe_ohlcv(24-02-13.20-00T24-02-14.23-59) executed in [93m0.486 seconds
+DEBUG@09-20.18:20:20:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:20:20:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:20:20:generate_multi_timeframe_ohlcv(24-02-13.08-00T24-02-14.23-59) started
+INFO@09-20.18:20:20:generate_multi_timeframe_ohlcv(24-02-13.08-00T24-02-14.23-59) executed in [93m0.501 seconds
+DEBUG@09-20.18:20:21:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:20:21:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:20:21:generate_multi_timeframe_ohlcv(24-02-11.08-00T24-02-14.23-59) started
+INFO@09-20.18:20:22:generate_multi_timeframe_ohlcv(24-02-11.08-00T24-02-14.23-59) executed in [93m0.918 seconds
+DEBUG@09-20.18:20:22:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:20:22:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:20:22:generate_multi_timeframe_ohlcv(24-01-29.00-00T24-02-14.23-59) started
+INFO@09-20.18:20:25:generate_multi_timeframe_ohlcv(24-01-29.00-00T24-02-14.23-59) executed in [91m3.722 seconds
+DEBUG@09-20.18:20:26:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:20:26:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:20:26:generate_multi_timeframe_ohlcv(23-10-25.00-00T24-02-14.23-59) started
+INFO@09-20.18:21:05:generate_multi_timeframe_ohlcv(23-10-25.00-00T24-02-14.23-59) executed in [91m38.801 seconds
+DEBUG@09-20.18:21:09:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:21:09:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+INFO@09-20.18:21:09:core_generate_multi_timeframe_ohlcva(24-02-14.00-00T24-02-14.23-59) executed in [91m51.193 seconds
+DEBUG@09-20.18:21:10:core_generate_multi_timeframe_ohlcva(24-02-15.00-00T24-02-15.23-59) started
+DEBUG@09-20.18:21:10:generate_multi_timeframe_ohlcv(24-02-14.23-44T24-02-15.23-59) started
+INFO@09-20.18:21:10:generate_multi_timeframe_ohlcv(24-02-14.23-44T24-02-15.23-59) executed in [93m0.401 seconds
+DEBUG@09-20.18:21:10:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:21:10:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:21:10:generate_multi_timeframe_ohlcv(24-02-14.22-40T24-02-15.23-59) started
+INFO@09-20.18:21:11:generate_multi_timeframe_ohlcv(24-02-14.22-40T24-02-15.23-59) executed in [93m0.432 seconds
+DEBUG@09-20.18:21:11:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:21:11:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:21:11:generate_multi_timeframe_ohlcv(24-02-14.20-00T24-02-15.23-59) started
+INFO@09-20.18:21:11:generate_multi_timeframe_ohlcv(24-02-14.20-00T24-02-15.23-59) executed in [93m0.464 seconds
+DEBUG@09-20.18:21:11:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:21:11:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:21:11:generate_multi_timeframe_ohlcv(24-02-14.08-00T24-02-15.23-59) started
+INFO@09-20.18:21:12:generate_multi_timeframe_ohlcv(24-02-14.08-00T24-02-15.23-59) executed in [93m0.501 seconds
+DEBUG@09-20.18:21:12:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:21:12:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:21:12:generate_multi_timeframe_ohlcv(24-02-12.08-00T24-02-15.23-59) started
+INFO@09-20.18:21:13:generate_multi_timeframe_ohlcv(24-02-12.08-00T24-02-15.23-59) executed in [91m1.025 seconds
+DEBUG@09-20.18:21:13:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:21:13:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:21:13:generate_multi_timeframe_ohlcv(24-01-30.00-00T24-02-15.23-59) started
+INFO@09-20.18:21:17:generate_multi_timeframe_ohlcv(24-01-30.00-00T24-02-15.23-59) executed in [91m4.141 seconds
+DEBUG@09-20.18:21:19:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:21:19:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.010 seconds
+DEBUG@09-20.18:21:19:generate_multi_timeframe_ohlcv(23-10-26.00-00T24-02-15.23-59) started
+INFO@09-20.18:22:00:generate_multi_timeframe_ohlcv(23-10-26.00-00T24-02-15.23-59) executed in [91m41.024 seconds
+DEBUG@09-20.18:22:05:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:22:05:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+INFO@09-20.18:22:05:core_generate_multi_timeframe_ohlcva(24-02-15.00-00T24-02-15.23-59) executed in [91m55.412 seconds
+DEBUG@09-20.18:22:05:core_generate_multi_timeframe_ohlcva(24-02-16.00-00T24-02-16.23-59) started
+DEBUG@09-20.18:22:05:generate_multi_timeframe_ohlcv(24-02-15.23-44T24-02-16.23-59) started
+INFO@09-20.18:22:06:generate_multi_timeframe_ohlcv(24-02-15.23-44T24-02-16.23-59) executed in [93m0.379 seconds
+DEBUG@09-20.18:22:06:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:22:06:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:22:06:generate_multi_timeframe_ohlcv(24-02-15.22-40T24-02-16.23-59) started
+INFO@09-20.18:22:06:generate_multi_timeframe_ohlcv(24-02-15.22-40T24-02-16.23-59) executed in [93m0.454 seconds
+DEBUG@09-20.18:22:06:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:22:06:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:22:06:generate_multi_timeframe_ohlcv(24-02-15.20-00T24-02-16.23-59) started
+INFO@09-20.18:22:07:generate_multi_timeframe_ohlcv(24-02-15.20-00T24-02-16.23-59) executed in [93m0.469 seconds
+DEBUG@09-20.18:22:07:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:22:07:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:22:07:generate_multi_timeframe_ohlcv(24-02-15.08-00T24-02-16.23-59) started
+INFO@09-20.18:22:07:generate_multi_timeframe_ohlcv(24-02-15.08-00T24-02-16.23-59) executed in [93m0.433 seconds
+DEBUG@09-20.18:22:07:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:22:07:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:22:07:generate_multi_timeframe_ohlcv(24-02-13.08-00T24-02-16.23-59) started
+INFO@09-20.18:22:08:generate_multi_timeframe_ohlcv(24-02-13.08-00T24-02-16.23-59) executed in [91m1.040 seconds
+DEBUG@09-20.18:22:09:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:22:09:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:22:09:generate_multi_timeframe_ohlcv(24-01-31.00-00T24-02-16.23-59) started
+INFO@09-20.18:22:13:generate_multi_timeframe_ohlcv(24-01-31.00-00T24-02-16.23-59) executed in [91m3.864 seconds
+DEBUG@09-20.18:22:13:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:22:13:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:22:13:generate_multi_timeframe_ohlcv(23-10-27.00-00T24-02-16.23-59) started
+INFO@09-20.18:23:02:generate_multi_timeframe_ohlcv(23-10-27.00-00T24-02-16.23-59) executed in [91m49.070 seconds
+DEBUG@09-20.18:23:10:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:23:10:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+INFO@09-20.18:23:10:core_generate_multi_timeframe_ohlcva(24-02-16.00-00T24-02-16.23-59) executed in [91m64.651 seconds
+DEBUG@09-20.18:23:10:core_generate_multi_timeframe_ohlcva(24-02-17.00-00T24-02-17.23-59) started
+DEBUG@09-20.18:23:10:generate_multi_timeframe_ohlcv(24-02-16.23-44T24-02-17.23-59) started
+INFO@09-20.18:23:10:generate_multi_timeframe_ohlcv(24-02-16.23-44T24-02-17.23-59) executed in [93m0.401 seconds
+DEBUG@09-20.18:23:10:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:23:10:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:23:10:generate_multi_timeframe_ohlcv(24-02-16.22-40T24-02-17.23-59) started
+INFO@09-20.18:23:11:generate_multi_timeframe_ohlcv(24-02-16.22-40T24-02-17.23-59) executed in [93m0.517 seconds
+DEBUG@09-20.18:23:11:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:23:11:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:23:11:generate_multi_timeframe_ohlcv(24-02-16.20-00T24-02-17.23-59) started
+INFO@09-20.18:23:12:generate_multi_timeframe_ohlcv(24-02-16.20-00T24-02-17.23-59) executed in [93m0.448 seconds
+DEBUG@09-20.18:23:12:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:23:12:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:23:12:generate_multi_timeframe_ohlcv(24-02-16.08-00T24-02-17.23-59) started
+INFO@09-20.18:23:12:generate_multi_timeframe_ohlcv(24-02-16.08-00T24-02-17.23-59) executed in [93m0.423 seconds
+DEBUG@09-20.18:23:12:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:23:12:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:23:12:generate_multi_timeframe_ohlcv(24-02-14.08-00T24-02-17.23-59) started
+INFO@09-20.18:23:13:generate_multi_timeframe_ohlcv(24-02-14.08-00T24-02-17.23-59) executed in [93m0.971 seconds
+DEBUG@09-20.18:23:13:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:23:13:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:23:13:generate_multi_timeframe_ohlcv(24-02-01.00-00T24-02-17.23-59) started
+INFO@09-20.18:23:19:generate_multi_timeframe_ohlcv(24-02-01.00-00T24-02-17.23-59) executed in [91m5.582 seconds
+DEBUG@09-20.18:23:20:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:23:20:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:23:20:generate_multi_timeframe_ohlcv(23-10-28.00-00T24-02-17.23-59) started
+INFO@09-20.18:24:05:generate_multi_timeframe_ohlcv(23-10-28.00-00T24-02-17.23-59) executed in [91m45.394 seconds
+DEBUG@09-20.18:24:10:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:24:10:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.008 seconds
+INFO@09-20.18:24:11:core_generate_multi_timeframe_ohlcva(24-02-17.00-00T24-02-17.23-59) executed in [91m60.701 seconds
+DEBUG@09-20.18:24:11:core_generate_multi_timeframe_ohlcva(24-02-18.00-00T24-02-18.23-59) started
+DEBUG@09-20.18:24:11:generate_multi_timeframe_ohlcv(24-02-17.23-44T24-02-18.23-59) started
+INFO@09-20.18:24:11:generate_multi_timeframe_ohlcv(24-02-17.23-44T24-02-18.23-59) executed in [93m0.385 seconds
+DEBUG@09-20.18:24:11:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:24:11:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:24:11:generate_multi_timeframe_ohlcv(24-02-17.22-40T24-02-18.23-59) started
+INFO@09-20.18:24:12:generate_multi_timeframe_ohlcv(24-02-17.22-40T24-02-18.23-59) executed in [93m0.486 seconds
+DEBUG@09-20.18:24:12:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:24:12:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:24:12:generate_multi_timeframe_ohlcv(24-02-17.20-00T24-02-18.23-59) started
+INFO@09-20.18:24:12:generate_multi_timeframe_ohlcv(24-02-17.20-00T24-02-18.23-59) executed in [93m0.454 seconds
+DEBUG@09-20.18:24:12:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:24:12:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:24:12:generate_multi_timeframe_ohlcv(24-02-17.08-00T24-02-18.23-59) started
+INFO@09-20.18:24:13:generate_multi_timeframe_ohlcv(24-02-17.08-00T24-02-18.23-59) executed in [93m0.486 seconds
+DEBUG@09-20.18:24:13:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:24:13:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:24:13:generate_multi_timeframe_ohlcv(24-02-15.08-00T24-02-18.23-59) started
+INFO@09-20.18:24:14:generate_multi_timeframe_ohlcv(24-02-15.08-00T24-02-18.23-59) executed in [93m0.902 seconds
+DEBUG@09-20.18:24:14:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:24:14:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:24:14:generate_multi_timeframe_ohlcv(24-02-02.00-00T24-02-18.23-59) started
+INFO@09-20.18:24:20:generate_multi_timeframe_ohlcv(24-02-02.00-00T24-02-18.23-59) executed in [91m5.703 seconds
+DEBUG@09-20.18:24:21:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:24:21:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:24:21:generate_multi_timeframe_ohlcv(23-10-29.00-00T24-02-18.23-59) started
+INFO@09-20.18:25:15:generate_multi_timeframe_ohlcv(23-10-29.00-00T24-02-18.23-59) executed in [91m54.086 seconds
+DEBUG@09-20.18:25:20:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:25:20:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+INFO@09-20.18:25:20:core_generate_multi_timeframe_ohlcva(24-02-18.00-00T24-02-18.23-59) executed in [91m69.376 seconds
+DEBUG@09-20.18:25:20:core_generate_multi_timeframe_ohlcva(24-02-19.00-00T24-02-19.23-59) started
+DEBUG@09-20.18:25:20:generate_multi_timeframe_ohlcv(24-02-18.23-44T24-02-19.23-59) started
+INFO@09-20.18:25:21:generate_multi_timeframe_ohlcv(24-02-18.23-44T24-02-19.23-59) executed in [93m0.401 seconds
+DEBUG@09-20.18:25:21:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:25:21:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:25:21:generate_multi_timeframe_ohlcv(24-02-18.22-40T24-02-19.23-59) started
+INFO@09-20.18:25:21:generate_multi_timeframe_ohlcv(24-02-18.22-40T24-02-19.23-59) executed in [93m0.417 seconds
+DEBUG@09-20.18:25:21:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:25:21:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:25:21:generate_multi_timeframe_ohlcv(24-02-18.20-00T24-02-19.23-59) started
+INFO@09-20.18:25:22:generate_multi_timeframe_ohlcv(24-02-18.20-00T24-02-19.23-59) executed in [93m0.439 seconds
+DEBUG@09-20.18:25:22:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:25:22:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:25:22:generate_multi_timeframe_ohlcv(24-02-18.08-00T24-02-19.23-59) started
+INFO@09-20.18:25:22:generate_multi_timeframe_ohlcv(24-02-18.08-00T24-02-19.23-59) executed in [93m0.517 seconds
+DEBUG@09-20.18:25:22:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:25:22:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:25:23:generate_multi_timeframe_ohlcv(24-02-16.08-00T24-02-19.23-59) started
+INFO@09-20.18:25:23:generate_multi_timeframe_ohlcv(24-02-16.08-00T24-02-19.23-59) executed in [93m0.887 seconds
+DEBUG@09-20.18:25:24:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:25:24:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:25:24:generate_multi_timeframe_ohlcv(24-02-03.00-00T24-02-19.23-59) started
+INFO@09-20.18:25:27:generate_multi_timeframe_ohlcv(24-02-03.00-00T24-02-19.23-59) executed in [91m3.782 seconds
+DEBUG@09-20.18:25:28:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:25:28:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.007 seconds
+DEBUG@09-20.18:25:28:generate_multi_timeframe_ohlcv(23-10-30.00-00T24-02-19.23-59) started
+INFO@09-20.18:26:22:generate_multi_timeframe_ohlcv(23-10-30.00-00T24-02-19.23-59) executed in [91m53.630 seconds
+DEBUG@09-20.18:26:26:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:26:26:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+INFO@09-20.18:26:26:core_generate_multi_timeframe_ohlcva(24-02-19.00-00T24-02-19.23-59) executed in [91m66.201 seconds
+DEBUG@09-20.18:26:26:core_generate_multi_timeframe_ohlcva(24-02-20.00-00T24-02-20.23-59) started
+DEBUG@09-20.18:26:27:generate_multi_timeframe_ohlcv(24-02-19.23-44T24-02-20.23-59) started
+INFO@09-20.18:26:27:generate_multi_timeframe_ohlcv(24-02-19.23-44T24-02-20.23-59) executed in [93m0.463 seconds
+DEBUG@09-20.18:26:27:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:26:27:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:26:27:generate_multi_timeframe_ohlcv(24-02-19.22-40T24-02-20.23-59) started
+INFO@09-20.18:26:28:generate_multi_timeframe_ohlcv(24-02-19.22-40T24-02-20.23-59) executed in [93m0.485 seconds
+DEBUG@09-20.18:26:28:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:26:28:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:26:28:generate_multi_timeframe_ohlcv(24-02-19.20-00T24-02-20.23-59) started
+INFO@09-20.18:26:28:generate_multi_timeframe_ohlcv(24-02-19.20-00T24-02-20.23-59) executed in [93m0.500 seconds
+DEBUG@09-20.18:26:29:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:26:29:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.018 seconds
+DEBUG@09-20.18:26:29:generate_multi_timeframe_ohlcv(24-02-19.08-00T24-02-20.23-59) started
+INFO@09-20.18:26:29:generate_multi_timeframe_ohlcv(24-02-19.08-00T24-02-20.23-59) executed in [93m0.775 seconds
+DEBUG@09-20.18:26:30:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:26:30:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.010 seconds
+DEBUG@09-20.18:26:30:generate_multi_timeframe_ohlcv(24-02-17.08-00T24-02-20.23-59) started
+INFO@09-20.18:26:31:generate_multi_timeframe_ohlcv(24-02-17.08-00T24-02-20.23-59) executed in [91m1.721 seconds
+DEBUG@09-20.18:26:31:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:26:31:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:26:31:generate_multi_timeframe_ohlcv(24-02-04.00-00T24-02-20.23-59) started
+INFO@09-20.18:26:38:generate_multi_timeframe_ohlcv(24-02-04.00-00T24-02-20.23-59) executed in [91m6.352 seconds
+DEBUG@09-20.18:26:39:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:26:39:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.010 seconds
+DEBUG@09-20.18:26:40:generate_multi_timeframe_ohlcv(23-10-31.00-00T24-02-20.23-59) started
+INFO@09-20.18:27:41:generate_multi_timeframe_ohlcv(23-10-31.00-00T24-02-20.23-59) executed in [91m61.819 seconds
+DEBUG@09-20.18:27:46:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:27:46:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+INFO@09-20.18:27:47:core_generate_multi_timeframe_ohlcva(24-02-20.00-00T24-02-20.23-59) executed in [91m80.129 seconds
+DEBUG@09-20.18:27:47:core_generate_multi_timeframe_ohlcva(24-02-21.00-00T24-02-21.23-59) started
+DEBUG@09-20.18:27:47:generate_multi_timeframe_ohlcv(24-02-20.23-44T24-02-21.23-59) started
+INFO@09-20.18:27:47:generate_multi_timeframe_ohlcv(24-02-20.23-44T24-02-21.23-59) executed in [93m0.392 seconds
+DEBUG@09-20.18:27:47:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:27:47:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.002 seconds
+DEBUG@09-20.18:27:47:generate_multi_timeframe_ohlcv(24-02-20.22-40T24-02-21.23-59) started
+INFO@09-20.18:27:48:generate_multi_timeframe_ohlcv(24-02-20.22-40T24-02-21.23-59) executed in [93m0.548 seconds
+DEBUG@09-20.18:27:48:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:27:48:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:27:48:generate_multi_timeframe_ohlcv(24-02-20.20-00T24-02-21.23-59) started
+INFO@09-20.18:27:49:generate_multi_timeframe_ohlcv(24-02-20.20-00T24-02-21.23-59) executed in [93m0.570 seconds
+DEBUG@09-20.18:27:49:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:27:49:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:27:49:generate_multi_timeframe_ohlcv(24-02-20.08-00T24-02-21.23-59) started
+INFO@09-20.18:27:50:generate_multi_timeframe_ohlcv(24-02-20.08-00T24-02-21.23-59) executed in [93m0.798 seconds
+DEBUG@09-20.18:27:50:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:27:50:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:27:50:generate_multi_timeframe_ohlcv(24-02-18.08-00T24-02-21.23-59) started
+INFO@09-20.18:27:51:generate_multi_timeframe_ohlcv(24-02-18.08-00T24-02-21.23-59) executed in [93m0.902 seconds
+DEBUG@09-20.18:27:51:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:27:51:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:27:51:generate_multi_timeframe_ohlcv(24-02-05.00-00T24-02-21.23-59) started
+INFO@09-20.18:27:55:generate_multi_timeframe_ohlcv(24-02-05.00-00T24-02-21.23-59) executed in [91m3.863 seconds
+DEBUG@09-20.18:27:55:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:27:55:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:27:55:generate_multi_timeframe_ohlcv(23-11-01.00-00T24-02-21.23-59) started
+INFO@09-20.18:28:48:generate_multi_timeframe_ohlcv(23-11-01.00-00T24-02-21.23-59) executed in [91m52.814 seconds
+DEBUG@09-20.18:28:55:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:28:55:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.007 seconds
+INFO@09-20.18:28:55:core_generate_multi_timeframe_ohlcva(24-02-21.00-00T24-02-21.23-59) executed in [91m68.394 seconds
+DEBUG@09-20.18:28:55:core_generate_multi_timeframe_ohlcva(24-02-22.00-00T24-02-22.23-59) started
+DEBUG@09-20.18:28:56:generate_multi_timeframe_ohlcv(24-02-21.23-44T24-02-22.23-59) started
+INFO@09-20.18:28:56:generate_multi_timeframe_ohlcv(24-02-21.23-44T24-02-22.23-59) executed in [93m0.501 seconds
+DEBUG@09-20.18:28:56:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:28:56:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:28:56:generate_multi_timeframe_ohlcv(24-02-21.22-40T24-02-22.23-59) started
+INFO@09-20.18:28:57:generate_multi_timeframe_ohlcv(24-02-21.22-40T24-02-22.23-59) executed in [93m0.912 seconds
+DEBUG@09-20.18:28:57:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:28:57:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.010 seconds
+DEBUG@09-20.18:28:57:generate_multi_timeframe_ohlcv(24-02-21.20-00T24-02-22.23-59) started
+INFO@09-20.18:28:58:generate_multi_timeframe_ohlcv(24-02-21.20-00T24-02-22.23-59) executed in [93m0.862 seconds
+DEBUG@09-20.18:28:59:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:28:59:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.025 seconds
+DEBUG@09-20.18:28:59:generate_multi_timeframe_ohlcv(24-02-21.08-00T24-02-22.23-59) started
+INFO@09-20.18:29:00:generate_multi_timeframe_ohlcv(24-02-21.08-00T24-02-22.23-59) executed in [93m0.636 seconds
+DEBUG@09-20.18:29:00:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:29:00:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:29:00:generate_multi_timeframe_ohlcv(24-02-19.08-00T24-02-22.23-59) started
+INFO@09-20.18:29:01:generate_multi_timeframe_ohlcv(24-02-19.08-00T24-02-22.23-59) executed in [93m0.994 seconds
+DEBUG@09-20.18:29:01:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:29:01:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:29:01:generate_multi_timeframe_ohlcv(24-02-06.00-00T24-02-22.23-59) started
+INFO@09-20.18:29:05:generate_multi_timeframe_ohlcv(24-02-06.00-00T24-02-22.23-59) executed in [91m3.948 seconds
+DEBUG@09-20.18:29:06:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:29:06:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.006 seconds
+DEBUG@09-20.18:29:06:generate_multi_timeframe_ohlcv(23-11-02.00-00T24-02-22.23-59) started
+INFO@09-20.18:29:56:generate_multi_timeframe_ohlcv(23-11-02.00-00T24-02-22.23-59) executed in [91m50.546 seconds
+DEBUG@09-20.18:30:04:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:30:04:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+INFO@09-20.18:30:04:core_generate_multi_timeframe_ohlcva(24-02-22.00-00T24-02-22.23-59) executed in [91m68.482 seconds
+DEBUG@09-20.18:30:04:core_generate_multi_timeframe_ohlcva(24-02-23.00-00T24-02-23.23-59) started
+DEBUG@09-20.18:30:04:generate_multi_timeframe_ohlcv(24-02-22.23-44T24-02-23.23-59) started
+INFO@09-20.18:30:05:generate_multi_timeframe_ohlcv(24-02-22.23-44T24-02-23.23-59) executed in [93m0.464 seconds
+DEBUG@09-20.18:30:05:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:30:05:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.002 seconds
+DEBUG@09-20.18:30:05:generate_multi_timeframe_ohlcv(24-02-22.22-40T24-02-23.23-59) started
+INFO@09-20.18:30:05:generate_multi_timeframe_ohlcv(24-02-22.22-40T24-02-23.23-59) executed in [93m0.435 seconds
+DEBUG@09-20.18:30:05:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:30:05:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:30:05:generate_multi_timeframe_ohlcv(24-02-22.20-00T24-02-23.23-59) started
+INFO@09-20.18:30:06:generate_multi_timeframe_ohlcv(24-02-22.20-00T24-02-23.23-59) executed in [93m0.454 seconds
+DEBUG@09-20.18:30:06:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:30:06:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:30:06:generate_multi_timeframe_ohlcv(24-02-22.08-00T24-02-23.23-59) started
+INFO@09-20.18:30:06:generate_multi_timeframe_ohlcv(24-02-22.08-00T24-02-23.23-59) executed in [93m0.470 seconds
+DEBUG@09-20.18:30:06:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:30:06:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:30:06:generate_multi_timeframe_ohlcv(24-02-20.08-00T24-02-23.23-59) started
+INFO@09-20.18:30:07:generate_multi_timeframe_ohlcv(24-02-20.08-00T24-02-23.23-59) executed in [93m0.902 seconds
+DEBUG@09-20.18:30:08:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:30:08:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:30:08:generate_multi_timeframe_ohlcv(24-02-07.00-00T24-02-23.23-59) started
+INFO@09-20.18:30:12:generate_multi_timeframe_ohlcv(24-02-07.00-00T24-02-23.23-59) executed in [91m3.897 seconds
+DEBUG@09-20.18:30:12:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:30:12:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:30:12:generate_multi_timeframe_ohlcv(23-11-03.00-00T24-02-23.23-59) started
+INFO@09-20.18:30:55:generate_multi_timeframe_ohlcv(23-11-03.00-00T24-02-23.23-59) executed in [91m42.917 seconds
+DEBUG@09-20.18:31:00:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:31:00:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+INFO@09-20.18:31:00:core_generate_multi_timeframe_ohlcva(24-02-23.00-00T24-02-23.23-59) executed in [91m55.845 seconds
+DEBUG@09-20.18:31:00:core_generate_multi_timeframe_ohlcva(24-02-24.00-00T24-02-24.23-59) started
+DEBUG@09-20.18:31:00:generate_multi_timeframe_ohlcv(24-02-23.23-44T24-02-24.23-59) started
+INFO@09-20.18:31:01:generate_multi_timeframe_ohlcv(24-02-23.23-44T24-02-24.23-59) executed in [93m0.421 seconds
+DEBUG@09-20.18:31:01:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:31:01:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:31:01:generate_multi_timeframe_ohlcv(24-02-23.22-40T24-02-24.23-59) started
+INFO@09-20.18:31:01:generate_multi_timeframe_ohlcv(24-02-23.22-40T24-02-24.23-59) executed in [93m0.432 seconds
+DEBUG@09-20.18:31:01:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:31:01:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:31:01:generate_multi_timeframe_ohlcv(24-02-23.20-00T24-02-24.23-59) started
+INFO@09-20.18:31:02:generate_multi_timeframe_ohlcv(24-02-23.20-00T24-02-24.23-59) executed in [93m0.463 seconds
+DEBUG@09-20.18:31:02:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:31:02:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:31:02:generate_multi_timeframe_ohlcv(24-02-23.08-00T24-02-24.23-59) started
+INFO@09-20.18:31:03:generate_multi_timeframe_ohlcv(24-02-23.08-00T24-02-24.23-59) executed in [93m0.764 seconds
+DEBUG@09-20.18:31:03:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:31:03:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.010 seconds
+DEBUG@09-20.18:31:03:generate_multi_timeframe_ohlcv(24-02-21.08-00T24-02-24.23-59) started
+INFO@09-20.18:31:05:generate_multi_timeframe_ohlcv(24-02-21.08-00T24-02-24.23-59) executed in [91m1.565 seconds
+DEBUG@09-20.18:31:05:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:31:05:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:31:05:generate_multi_timeframe_ohlcv(24-02-08.00-00T24-02-24.23-59) started
+INFO@09-20.18:31:09:generate_multi_timeframe_ohlcv(24-02-08.00-00T24-02-24.23-59) executed in [91m4.169 seconds
+DEBUG@09-20.18:31:10:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:31:10:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:31:10:generate_multi_timeframe_ohlcv(23-11-04.00-00T24-02-24.23-59) started
+INFO@09-20.18:31:53:generate_multi_timeframe_ohlcv(23-11-04.00-00T24-02-24.23-59) executed in [91m43.590 seconds
+DEBUG@09-20.18:31:58:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:31:58:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.014 seconds
+INFO@09-20.18:31:58:core_generate_multi_timeframe_ohlcva(24-02-24.00-00T24-02-24.23-59) executed in [91m58.258 seconds
+DEBUG@09-20.18:31:58:core_generate_multi_timeframe_ohlcva(24-02-25.00-00T24-02-25.23-59) started
+DEBUG@09-20.18:31:58:generate_multi_timeframe_ohlcv(24-02-24.23-44T24-02-25.23-59) started
+INFO@09-20.18:31:59:generate_multi_timeframe_ohlcv(24-02-24.23-44T24-02-25.23-59) executed in [93m0.401 seconds
+DEBUG@09-20.18:31:59:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:31:59:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:31:59:generate_multi_timeframe_ohlcv(24-02-24.22-40T24-02-25.23-59) started
+INFO@09-20.18:32:00:generate_multi_timeframe_ohlcv(24-02-24.22-40T24-02-25.23-59) executed in [93m0.533 seconds
+DEBUG@09-20.18:32:00:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:32:00:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:32:00:generate_multi_timeframe_ohlcv(24-02-24.20-00T24-02-25.23-59) started
+INFO@09-20.18:32:00:generate_multi_timeframe_ohlcv(24-02-24.20-00T24-02-25.23-59) executed in [93m0.553 seconds
+DEBUG@09-20.18:32:00:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:32:00:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:32:00:generate_multi_timeframe_ohlcv(24-02-24.08-00T24-02-25.23-59) started
+INFO@09-20.18:32:01:generate_multi_timeframe_ohlcv(24-02-24.08-00T24-02-25.23-59) executed in [93m0.494 seconds
+DEBUG@09-20.18:32:01:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:32:01:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.008 seconds
+DEBUG@09-20.18:32:01:generate_multi_timeframe_ohlcv(24-02-22.08-00T24-02-25.23-59) started
+INFO@09-20.18:32:03:generate_multi_timeframe_ohlcv(24-02-22.08-00T24-02-25.23-59) executed in [91m1.568 seconds
+DEBUG@09-20.18:32:04:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:32:04:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.010 seconds
+DEBUG@09-20.18:32:04:generate_multi_timeframe_ohlcv(24-02-09.00-00T24-02-25.23-59) started
+INFO@09-20.18:32:11:generate_multi_timeframe_ohlcv(24-02-09.00-00T24-02-25.23-59) executed in [91m7.341 seconds
+DEBUG@09-20.18:32:12:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:32:12:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:32:12:generate_multi_timeframe_ohlcv(23-11-05.00-00T24-02-25.23-59) started
+INFO@09-20.18:32:50:generate_multi_timeframe_ohlcv(23-11-05.00-00T24-02-25.23-59) executed in [91m38.353 seconds
+DEBUG@09-20.18:32:56:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:32:56:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+INFO@09-20.18:32:56:core_generate_multi_timeframe_ohlcva(24-02-25.00-00T24-02-25.23-59) executed in [91m57.462 seconds
+DEBUG@09-20.18:32:56:core_generate_multi_timeframe_ohlcva(24-02-26.00-00T24-02-26.23-59) started
+DEBUG@09-20.18:32:56:generate_multi_timeframe_ohlcv(24-02-25.23-44T24-02-26.23-59) started
+INFO@09-20.18:32:56:generate_multi_timeframe_ohlcv(24-02-25.23-44T24-02-26.23-59) executed in [93m0.400 seconds
+DEBUG@09-20.18:32:57:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:32:57:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:32:57:generate_multi_timeframe_ohlcv(24-02-25.22-40T24-02-26.23-59) started
+INFO@09-20.18:32:57:generate_multi_timeframe_ohlcv(24-02-25.22-40T24-02-26.23-59) executed in [93m0.470 seconds
+DEBUG@09-20.18:32:57:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:32:57:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:32:57:generate_multi_timeframe_ohlcv(24-02-25.20-00T24-02-26.23-59) started
+INFO@09-20.18:32:58:generate_multi_timeframe_ohlcv(24-02-25.20-00T24-02-26.23-59) executed in [93m0.485 seconds
+DEBUG@09-20.18:32:58:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:32:58:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:32:58:generate_multi_timeframe_ohlcv(24-02-25.08-00T24-02-26.23-59) started
+INFO@09-20.18:32:59:generate_multi_timeframe_ohlcv(24-02-25.08-00T24-02-26.23-59) executed in [93m0.623 seconds
+DEBUG@09-20.18:32:59:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:32:59:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:32:59:generate_multi_timeframe_ohlcv(24-02-23.08-00T24-02-26.23-59) started
+INFO@09-20.18:33:00:generate_multi_timeframe_ohlcv(24-02-23.08-00T24-02-26.23-59) executed in [93m0.953 seconds
+DEBUG@09-20.18:33:00:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:33:00:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:33:00:generate_multi_timeframe_ohlcv(24-02-10.00-00T24-02-26.23-59) started
+INFO@09-20.18:33:04:generate_multi_timeframe_ohlcv(24-02-10.00-00T24-02-26.23-59) executed in [91m4.643 seconds
+DEBUG@09-20.18:33:05:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:33:05:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:33:05:generate_multi_timeframe_ohlcv(23-11-06.00-00T24-02-26.23-59) started
+INFO@09-20.18:33:48:generate_multi_timeframe_ohlcv(23-11-06.00-00T24-02-26.23-59) executed in [91m42.218 seconds
+DEBUG@09-20.18:33:53:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:33:53:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+INFO@09-20.18:33:53:core_generate_multi_timeframe_ohlcva(24-02-26.00-00T24-02-26.23-59) executed in [91m57.114 seconds
+DEBUG@09-20.18:33:53:core_generate_multi_timeframe_ohlcva(24-02-27.00-00T24-02-27.23-59) started
+DEBUG@09-20.18:33:53:generate_multi_timeframe_ohlcv(24-02-26.23-44T24-02-27.23-59) started
+INFO@09-20.18:33:54:generate_multi_timeframe_ohlcv(24-02-26.23-44T24-02-27.23-59) executed in [93m0.416 seconds
+DEBUG@09-20.18:33:54:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:33:54:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:33:54:generate_multi_timeframe_ohlcv(24-02-26.22-40T24-02-27.23-59) started
+INFO@09-20.18:33:54:generate_multi_timeframe_ohlcv(24-02-26.22-40T24-02-27.23-59) executed in [93m0.539 seconds
+DEBUG@09-20.18:33:55:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:33:55:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:33:55:generate_multi_timeframe_ohlcv(24-02-26.20-00T24-02-27.23-59) started
+INFO@09-20.18:33:55:generate_multi_timeframe_ohlcv(24-02-26.20-00T24-02-27.23-59) executed in [93m0.470 seconds
+DEBUG@09-20.18:33:55:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:33:55:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:33:55:generate_multi_timeframe_ohlcv(24-02-26.08-00T24-02-27.23-59) started
+INFO@09-20.18:33:56:generate_multi_timeframe_ohlcv(24-02-26.08-00T24-02-27.23-59) executed in [93m0.813 seconds
+DEBUG@09-20.18:33:57:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:33:57:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.010 seconds
+DEBUG@09-20.18:33:57:generate_multi_timeframe_ohlcv(24-02-24.08-00T24-02-27.23-59) started
+INFO@09-20.18:33:58:generate_multi_timeframe_ohlcv(24-02-24.08-00T24-02-27.23-59) executed in [93m0.922 seconds
+DEBUG@09-20.18:33:58:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:33:58:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:33:58:generate_multi_timeframe_ohlcv(24-02-11.00-00T24-02-27.23-59) started
+INFO@09-20.18:34:02:generate_multi_timeframe_ohlcv(24-02-11.00-00T24-02-27.23-59) executed in [91m4.206 seconds
+DEBUG@09-20.18:34:03:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:34:03:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:34:03:generate_multi_timeframe_ohlcv(23-11-07.00-00T24-02-27.23-59) started
+INFO@09-20.18:34:47:generate_multi_timeframe_ohlcv(23-11-07.00-00T24-02-27.23-59) executed in [91m44.561 seconds
+DEBUG@09-20.18:34:52:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:34:52:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+INFO@09-20.18:34:53:core_generate_multi_timeframe_ohlcva(24-02-27.00-00T24-02-27.23-59) executed in [91m59.323 seconds
+DEBUG@09-20.18:34:53:core_generate_multi_timeframe_ohlcva(24-02-28.00-00T24-02-28.23-59) started
+DEBUG@09-20.18:34:53:generate_multi_timeframe_ohlcv(24-02-27.23-44T24-02-28.23-59) started
+INFO@09-20.18:34:53:generate_multi_timeframe_ohlcv(24-02-27.23-44T24-02-28.23-59) executed in [93m0.445 seconds
+DEBUG@09-20.18:34:53:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:34:53:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.005 seconds
+DEBUG@09-20.18:34:53:generate_multi_timeframe_ohlcv(24-02-27.22-40T24-02-28.23-59) started
+INFO@09-20.18:34:54:generate_multi_timeframe_ohlcv(24-02-27.22-40T24-02-28.23-59) executed in [93m0.500 seconds
+DEBUG@09-20.18:34:54:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:34:54:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.017 seconds
+DEBUG@09-20.18:34:54:generate_multi_timeframe_ohlcv(24-02-27.20-00T24-02-28.23-59) started
+INFO@09-20.18:34:55:generate_multi_timeframe_ohlcv(24-02-27.20-00T24-02-28.23-59) executed in [93m0.569 seconds
+DEBUG@09-20.18:34:55:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:34:55:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:34:55:generate_multi_timeframe_ohlcv(24-02-27.08-00T24-02-28.23-59) started
+INFO@09-20.18:34:55:generate_multi_timeframe_ohlcv(24-02-27.08-00T24-02-28.23-59) executed in [93m0.547 seconds
+DEBUG@09-20.18:34:55:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:34:55:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.017 seconds
+DEBUG@09-20.18:34:55:generate_multi_timeframe_ohlcv(24-02-25.08-00T24-02-28.23-59) started
+INFO@09-20.18:34:57:generate_multi_timeframe_ohlcv(24-02-25.08-00T24-02-28.23-59) executed in [91m2.060 seconds
+DEBUG@09-20.18:34:58:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:34:58:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.013 seconds
+DEBUG@09-20.18:34:58:generate_multi_timeframe_ohlcv(24-02-12.00-00T24-02-28.23-59) started
+INFO@09-20.18:35:03:generate_multi_timeframe_ohlcv(24-02-12.00-00T24-02-28.23-59) executed in [91m4.536 seconds
+DEBUG@09-20.18:35:04:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:35:04:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:35:04:generate_multi_timeframe_ohlcv(23-11-08.00-00T24-02-28.23-59) started
+INFO@09-20.18:35:46:generate_multi_timeframe_ohlcv(23-11-08.00-00T24-02-28.23-59) executed in [91m41.947 seconds
+DEBUG@09-20.18:35:50:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:35:50:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+INFO@09-20.18:35:51:core_generate_multi_timeframe_ohlcva(24-02-28.00-00T24-02-28.23-59) executed in [91m57.834 seconds
+DEBUG@09-20.18:35:51:core_generate_multi_timeframe_ohlcva(24-02-29.00-00T24-02-29.23-59) started
+DEBUG@09-20.18:35:51:generate_multi_timeframe_ohlcv(24-02-28.23-44T24-02-29.23-59) started
+INFO@09-20.18:35:51:generate_multi_timeframe_ohlcv(24-02-28.23-44T24-02-29.23-59) executed in [93m0.378 seconds
+DEBUG@09-20.18:35:51:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:35:51:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:35:51:generate_multi_timeframe_ohlcv(24-02-28.22-40T24-02-29.23-59) started
+INFO@09-20.18:35:52:generate_multi_timeframe_ohlcv(24-02-28.22-40T24-02-29.23-59) executed in [93m0.438 seconds
+DEBUG@09-20.18:35:52:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:35:52:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:35:52:generate_multi_timeframe_ohlcv(24-02-28.20-00T24-02-29.23-59) started
+INFO@09-20.18:35:52:generate_multi_timeframe_ohlcv(24-02-28.20-00T24-02-29.23-59) executed in [93m0.501 seconds
+DEBUG@09-20.18:35:52:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:35:52:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.007 seconds
+DEBUG@09-20.18:35:52:generate_multi_timeframe_ohlcv(24-02-28.08-00T24-02-29.23-59) started
+INFO@09-20.18:35:53:generate_multi_timeframe_ohlcv(24-02-28.08-00T24-02-29.23-59) executed in [93m0.516 seconds
+DEBUG@09-20.18:35:53:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:35:53:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:35:53:generate_multi_timeframe_ohlcv(24-02-26.08-00T24-02-29.23-59) started
+INFO@09-20.18:35:55:generate_multi_timeframe_ohlcv(24-02-26.08-00T24-02-29.23-59) executed in [91m1.447 seconds
+DEBUG@09-20.18:35:55:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:35:55:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:35:55:generate_multi_timeframe_ohlcv(24-02-13.00-00T24-02-29.23-59) started
+INFO@09-20.18:36:01:generate_multi_timeframe_ohlcv(24-02-13.00-00T24-02-29.23-59) executed in [91m5.749 seconds
+DEBUG@09-20.18:36:02:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:36:02:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:36:02:generate_multi_timeframe_ohlcv(23-11-09.00-00T24-02-29.23-59) started
+INFO@09-20.18:36:57:generate_multi_timeframe_ohlcv(23-11-09.00-00T24-02-29.23-59) executed in [91m54.418 seconds
+DEBUG@09-20.18:37:01:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:37:01:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+INFO@09-20.18:37:01:core_generate_multi_timeframe_ohlcva(24-02-29.00-00T24-02-29.23-59) executed in [91m70.368 seconds
+DEBUG@09-20.18:37:01:core_generate_multi_timeframe_ohlcva(24-03-01.00-00T24-03-01.23-59) started
+DEBUG@09-20.18:37:01:generate_multi_timeframe_ohlcv(24-02-29.23-44T24-03-01.23-59) started
+INFO@09-20.18:37:02:generate_multi_timeframe_ohlcv(24-02-29.23-44T24-03-01.23-59) executed in [93m0.394 seconds
+DEBUG@09-20.18:37:02:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:37:02:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:37:02:generate_multi_timeframe_ohlcv(24-02-29.22-40T24-03-01.23-59) started
+INFO@09-20.18:37:02:generate_multi_timeframe_ohlcv(24-02-29.22-40T24-03-01.23-59) executed in [93m0.470 seconds
+DEBUG@09-20.18:37:02:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:37:02:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:37:02:generate_multi_timeframe_ohlcv(24-02-29.20-00T24-03-01.23-59) started
+INFO@09-20.18:37:03:generate_multi_timeframe_ohlcv(24-02-29.20-00T24-03-01.23-59) executed in [93m0.454 seconds
+DEBUG@09-20.18:37:03:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:37:03:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:37:03:generate_multi_timeframe_ohlcv(24-02-29.08-00T24-03-01.23-59) started
+INFO@09-20.18:37:03:generate_multi_timeframe_ohlcv(24-02-29.08-00T24-03-01.23-59) executed in [93m0.486 seconds
+DEBUG@09-20.18:37:04:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:37:04:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:37:04:generate_multi_timeframe_ohlcv(24-02-27.08-00T24-03-01.23-59) started
+INFO@09-20.18:37:04:generate_multi_timeframe_ohlcv(24-02-27.08-00T24-03-01.23-59) executed in [93m0.918 seconds
+DEBUG@09-20.18:37:05:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:37:05:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:37:05:generate_multi_timeframe_ohlcv(24-02-14.00-00T24-03-01.23-59) started
+INFO@09-20.18:37:09:generate_multi_timeframe_ohlcv(24-02-14.00-00T24-03-01.23-59) executed in [91m4.037 seconds
+DEBUG@09-20.18:37:09:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:37:09:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:37:09:generate_multi_timeframe_ohlcv(23-11-10.00-00T24-03-01.23-59) started
+INFO@09-20.18:37:58:generate_multi_timeframe_ohlcv(23-11-10.00-00T24-03-01.23-59) executed in [91m48.230 seconds
+DEBUG@09-20.18:38:03:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:38:03:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.030 seconds
+INFO@09-20.18:38:03:core_generate_multi_timeframe_ohlcva(24-03-01.00-00T24-03-01.23-59) executed in [91m61.829 seconds
+DEBUG@09-20.18:38:04:core_generate_multi_timeframe_ohlcva(24-03-02.00-00T24-03-02.23-59) started
+DEBUG@09-20.18:38:04:generate_multi_timeframe_ohlcv(24-03-01.23-44T24-03-02.23-59) started
+INFO@09-20.18:38:06:generate_multi_timeframe_ohlcv(24-03-01.23-44T24-03-02.23-59) executed in [91m1.750 seconds
+DEBUG@09-20.18:38:06:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:38:06:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:38:06:generate_multi_timeframe_ohlcv(24-03-01.22-40T24-03-02.23-59) started
+INFO@09-20.18:38:07:generate_multi_timeframe_ohlcv(24-03-01.22-40T24-03-02.23-59) executed in [93m0.876 seconds
+DEBUG@09-20.18:38:07:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:38:07:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.010 seconds
+DEBUG@09-20.18:38:07:generate_multi_timeframe_ohlcv(24-03-01.20-00T24-03-02.23-59) started
+INFO@09-20.18:38:08:generate_multi_timeframe_ohlcv(24-03-01.20-00T24-03-02.23-59) executed in [93m0.947 seconds
+DEBUG@09-20.18:38:08:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:38:09:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.010 seconds
+DEBUG@09-20.18:38:09:generate_multi_timeframe_ohlcv(24-03-01.08-00T24-03-02.23-59) started
+INFO@09-20.18:38:09:generate_multi_timeframe_ohlcv(24-03-01.08-00T24-03-02.23-59) executed in [93m0.705 seconds
+DEBUG@09-20.18:38:09:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:38:09:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.008 seconds
+DEBUG@09-20.18:38:09:generate_multi_timeframe_ohlcv(24-02-28.08-00T24-03-02.23-59) started
+INFO@09-20.18:38:10:generate_multi_timeframe_ohlcv(24-02-28.08-00T24-03-02.23-59) executed in [93m0.935 seconds
+DEBUG@09-20.18:38:11:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:38:11:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:38:11:generate_multi_timeframe_ohlcv(24-02-15.00-00T24-03-02.23-59) started
+INFO@09-20.18:38:15:generate_multi_timeframe_ohlcv(24-02-15.00-00T24-03-02.23-59) executed in [91m3.980 seconds
+DEBUG@09-20.18:38:15:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:38:15:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:38:15:generate_multi_timeframe_ohlcv(23-11-11.00-00T24-03-02.23-59) started
+INFO@09-20.18:39:38:generate_multi_timeframe_ohlcv(23-11-11.00-00T24-03-02.23-59) executed in [91m82.939 seconds
+DEBUG@09-20.18:39:48:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:39:48:insert_atr(16*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.010 seconds
+INFO@09-20.18:39:48:core_generate_multi_timeframe_ohlcva(24-03-02.00-00T24-03-02.23-59) executed in [91m104.596 seconds
+DEBUG@09-20.18:39:48:core_generate_multi_timeframe_ohlcva(24-03-03.00-00T24-03-03.23-59) started
+DEBUG@09-20.18:39:48:generate_multi_timeframe_ohlcv(24-03-02.23-44T24-03-03.23-59) started
+INFO@09-20.18:39:49:generate_multi_timeframe_ohlcv(24-03-02.23-44T24-03-03.23-59) executed in [93m0.513 seconds
+DEBUG@09-20.18:39:49:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:39:49:insert_atr(1456*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:39:49:generate_multi_timeframe_ohlcv(24-03-02.22-40T24-03-03.23-59) started
+INFO@09-20.18:39:50:generate_multi_timeframe_ohlcv(24-03-02.22-40T24-03-03.23-59) executed in [93m0.684 seconds
+DEBUG@09-20.18:39:50:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:39:50:insert_atr(304*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.008 seconds
+DEBUG@09-20.18:39:50:generate_multi_timeframe_ohlcv(24-03-02.20-00T24-03-03.23-59) started
+INFO@09-20.18:39:51:generate_multi_timeframe_ohlcv(24-03-02.20-00T24-03-03.23-59) executed in [93m0.573 seconds
+DEBUG@09-20.18:39:51:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:39:51:insert_atr(112*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:39:51:generate_multi_timeframe_ohlcv(24-03-02.08-00T24-03-03.23-59) started
+INFO@09-20.18:39:51:generate_multi_timeframe_ohlcv(24-03-02.08-00T24-03-03.23-59) executed in [93m0.575 seconds
+DEBUG@09-20.18:39:51:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:39:51:insert_atr(40*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [92m0.016 seconds
+DEBUG@09-20.18:39:52:generate_multi_timeframe_ohlcv(24-02-29.08-00T24-03-03.23-59) started
+INFO@09-20.18:39:53:generate_multi_timeframe_ohlcv(24-02-29.08-00T24-03-03.23-59) executed in [91m1.067 seconds
+DEBUG@09-20.18:39:53:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started
+INFO@09-20.18:39:53:insert_atr(22*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) executed in [94m0.000 seconds
+DEBUG@09-20.18:39:53:generate_multi_timeframe_ohlcv(24-02-16.00-00T24-03-03.23-59) started
+INFO@09-20.18:39:59:generate_multi_timeframe_ohlcv(24-02-16.00-00T24-03-03.23-59) executed in [91m5.706 seconds
+DEBUG@09-20.18:40:00:insert_atr(17*Index(['open', 'close', 'high', 'low', 'volume'], dtype='object')) started

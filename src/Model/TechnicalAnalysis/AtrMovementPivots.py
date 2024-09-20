@@ -13,7 +13,7 @@ from PanderaDFM.OHLCVA import OHLCVA
 from PanderaDFM.PeakValley import MultiTimeframePeakValley, PeakValley
 from PeakValley import read_multi_timeframe_peaks_n_valleys, peaks_only, valleys_only, insert_crossing2, \
     major_timeframe
-from atr import read_multi_timeframe_ohlcva
+from Model.Data.atr import read_multi_timeframe_ohlcva
 from Model.TechnicalAnalysis.ftc import insert_multi_timeframe_pivots_real_start
 from helper.data_preparation import to_timeframe, single_timeframe, pattern_timeframe, trigger_timeframe
 from helper.helper import measure_time, date_range, date_range_to_string

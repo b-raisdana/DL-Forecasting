@@ -8,7 +8,7 @@ from FigurePlotter.OHLVC_plotter import plot_ohlcva
 from FigurePlotter.plotter import plot_multiple_figures, file_id, timeframe_color, save_figure, update_figure_layout
 from PanderaDFM.PeakValley import MultiTimeframePeakValley
 from Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
-from Model.TechnicalAnalysis.atr import read_multi_timeframe_ohlcva
+from Model.Data.atr import read_multi_timeframe_ohlcva
 from helper.helper import measure_time
 
 

@@ -307,7 +307,8 @@ def read_by_date(data_frame_type, date_range_str, file_path, n_rows, skip_rows):
     return df
 
 
-def single_timeframe(multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type], timeframe, keep_timeframe: bool = False)\
+def single_timeframe(multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type], timeframe, keep_timeframe: bool = False,
+                     sort:bool = True, index_only: bool = False)\
         -> pd.DataFrame:
     if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(
@@ -315,13 +316,19 @@ def single_timeframe(multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type], ti
     if timeframe not in config.timeframes:
         raise Exception(
             f'timeframe:{timeframe} is not in supported timeframes:{config.timeframes}')
-    single_timeframe_data: pd.DataFrame = multi_timeframe_data.loc[
-        multi_timeframe_data.index.get_level_values('timeframe') == timeframe]
+    if multi_timeframe_data.index.names.index('timeframe') != 0:
+        raise AssertionError("multi_timeframe_data.index.names.index('timeframe') != 0")
+    if index_only:
+        return multi_timeframe_data.loc[pd.IndexSlice[timeframe, :]].index
+    single_timeframe_data: pd.DataFrame = multi_timeframe_data.loc[pd.IndexSlice[timeframe, :]]
     if keep_timeframe:
-        return validate_no_timeframe(single_timeframe_data.reset_index(level='timeframe'))
+        out = validate_no_timeframe(single_timeframe_data.reset_index(level='timeframe'))
     else:
-        return validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
-
+        out = validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
+    if sort:
+        return out.sort_index(level='date')
+    else:
+        return out
 
 def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str, ignore_cached_times: bool = False,
                  do_not_warn: bool = False) \

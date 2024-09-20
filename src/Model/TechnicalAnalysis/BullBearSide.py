@@ -13,7 +13,7 @@ from PanderaDFM.OHLCVA import OHLCVA
 from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
 from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_timeframe, \
     insert_previous_n_next_top
-from atr import read_multi_timeframe_ohlcva
+from Model.Data.atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import read_file, single_timeframe, to_timeframe, cast_and_validate, empty_df, concat, \
     date_range_of_data
 from helper.helper import log, measure_time, LogSeverity

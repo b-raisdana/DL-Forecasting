@@ -12,6 +12,8 @@ import pandas as pd
 import pandera
 import pytz
 
+from Config import Config, config
+
 
 class LogSeverity(Enum):
     INFO = "INFO"
@@ -35,7 +37,7 @@ class bcolors(Enum):
     UNDERLINE = '\033[4m'
 
 
-path_of_logs = 'logs'
+path_of_logs = config.path_of_logs  # 'logs'
 
 __severity_color_map = {
     LogSeverity.INFO: bcolors.OKGREEN,
@@ -45,6 +47,7 @@ __severity_color_map = {
 }
 
 log_file_handler = open(os.path.join(path_of_logs, 'runtime.log'), 'w')
+
 
 def log_d(message: str, stack_trace: bool = False):
     log(message, LogSeverity.DEBUG, stack_trace)
