@@ -1,3 +1,5 @@
+import sys
+import traceback
 from datetime import datetime
 from enum import Enum
 from typing import List
@@ -5,10 +7,11 @@ from typing import List
 import ccxt
 import pandas as pd
 import pytz
+from ccxt import RequestTimeout
 
 from Config import config
 from helper.data_preparation import map_symbol
-from helper.helper import log, date_range, measure_time
+from helper.helper import log, date_range, measure_time, log_d
 
 _ccxt_symbol_map = {
     'BTCUSDT': 'BTC/USDT',
@@ -76,8 +79,14 @@ def fetch_ohlcv(symbol, timeframe: str = None, start: datetime = None, number_of
         if start < datetime.utcnow().replace(tzinfo=pytz.utc):
             start_timestamp = int(start.timestamp() + batch_start * width_of_timeframe) * 1000
             this_query_size = min(number_of_ticks - batch_start, max_query_size)
-            response = exchange.fetch_ohlcv(symbol, timeframe=ccxt_timeframe, since=start_timestamp,
-                                            limit=min(number_of_ticks - batch_start, this_query_size), params=params)
+            for i in range(10):
+                try:
+                    response = exchange.fetch_ohlcv(symbol, timeframe=ccxt_timeframe, since=start_timestamp,
+                                                limit=min(number_of_ticks - batch_start, this_query_size), params=params)
+                    break
+                except RequestTimeout as e:
+                    log_d("ccxt.RequestTimeout:"+str(e))
+                    pass
             log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}',
                 stack_trace=False)
             output_list = output_list + response

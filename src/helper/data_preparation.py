@@ -751,6 +751,8 @@ def expand_date_range(date_range_str: str, time_delta: timedelta, mode: Literal[
     if limit_to_processing_period:
         _, processing_period_end = date_range(config.processing_date_range)
         end = min(end, processing_period_end)
+    if end < start:
+        raise RuntimeError("end < start")
     return date_range_to_string(start=start, end=end)
 
 

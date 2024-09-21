@@ -44,7 +44,7 @@ class Config:
     root_path = os.path.dirname(os.path.dirname(__file__))
     # self.processing_date_range = '17-12-24.00-00T17-12-31.23-59'
     processing_date_range = '17-12-01.00-00T17-12-31.23-59'
-    limit_to_under_process_period = True
+    limit_to_under_process_period = False
     under_process_symbol = 'BTCUSDT'
     files_to_load = [
         '17-01-01.0-01TO17-12-31.23-59.1min',
