@@ -126,7 +126,7 @@ class ExtendedDf:
 
         Parameters:
             date_range_str (str): The date range string used to construct the filename.
-            data_frame_type (str): The type of DataFrame to read, e.g., 'ohlcva', 'multi_timeframe_ohlcva', etc.
+            data_frame_type (str): The type of DataFrame to read, e.g., 'ohlcva', 'multi_timeframe_ohlcvaa', etc.
             generator (Callable): The function that generates the DataFrame if needed.
             skip_rows (Optional[int]): The number of rows to skip while reading the file.
             n_rows (Optional[int]): The maximum number of rows to read from the file.

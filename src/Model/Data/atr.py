@@ -47,11 +47,19 @@ def insert_mt_volume_rma(mt_v:pt.DataFrame[MultiTimeframe]):
     return mt_v
 
 def insert_volume_rma(timeframe_v: pt.DataFrame[OHLCV]):
+    '''
+    timeframe_v['volume_rma'] = timeframe_v['volume'] / ta.rma(timeframe_v['volume'])
+    Args:
+        timeframe_v:
+
+    Returns:
+
+    '''
     if len(timeframe_v) <= config.atr_timeperiod:
         timeframe_v['volume_rma'] = pd.NA
         return timeframe_v
     timeframe_v['volume_rma'] = timeframe_v['volume'] / ta.rma(timeframe_v['volume'], length=config.atr_timeperiod)
-    return timeframe_v
+    return timeframe_v['volume_rma']
 
 # @measure_time
 def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = 'pandas_ta') -> pd.DataFrame:
@@ -93,7 +101,7 @@ def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str =
     df = trim_to_date_range(date_range_str, df)
     # assert not df.index.duplicated().any()
     multi_timeframe_times_tester(df, date_range_str)
-    df.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcvaa.{date_range_str}.zip'),
+    df.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcva.{date_range_str}.zip'),
               compression='zip')
 
 
@@ -133,7 +141,7 @@ def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: 
     multi_timeframe_ohlcva = trim_to_date_range(date_range_str, multi_timeframe_ohlcva)
     assert multi_timeframe_times_tester(multi_timeframe_ohlcva, date_range_str)
     # plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva)
-    multi_timeframe_ohlcva.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcvaa.{date_range_str}.zip'),
+    multi_timeframe_ohlcva.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcva.{date_range_str}.zip'),
                                   compression='zip')
 
 
