@@ -93,15 +93,15 @@ def measure_time(func):
         function_parameters = get_function_parameters(args, kwargs)
         log_d(f"{func.__name__}({function_parameters}) started", stack_trace=False)
 
-        try:
-            result = func(*args, **kwargs)
-        except OSError as e:
-            log_e(f"Current directory is {os.path.abspath(os.path.curdir)}", stack_trace=False)
-            log_e(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
-            raise e
-        except Exception as e:
-            log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
-            raise
+        # try:
+        result = func(*args, **kwargs)
+        # except OSError as e:
+        #     log_e(f"Current directory is {os.path.abspath(os.path.curdir)}", stack_trace=False)
+        #     log_e(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
+        #     raise e
+        # except Exception as e:
+        #     log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
+        #     raise
 
         end_time = time.time()
         execution_time = end_time - start_time

@@ -98,10 +98,10 @@ def cache_times(result):
     for timeframe in config.timeframes:
         # if f'valid_times_{timeframe}' not in config.GLOBAL_CACHE.keys():
         config.GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
-            single_timeframe(result, timeframe).index.get_level_values('date').tolist()
+            single_timeframe(result, timeframe).index#.get_level_values('date').tolist()
 
 
-@measure_time
+# @measure_time
 def generate_multi_timeframe_ohlcv(date_range_str: str = None, file_path: str = None) -> None:
     if date_range_str == '23-09-13.00-00T23-12-27.23-59':
         pass

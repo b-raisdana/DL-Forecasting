@@ -107,10 +107,10 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
     if zero_size_allowed is None:
         zero_size_allowed = after_under_process_date(date_range_str)
     if df is None or not cast_and_validate(df, caster_model, return_bool=True, zero_size_allowed=zero_size_allowed):
-        try:
-            generator(date_range_str, **generator_params)
-        except Exception as e:
-            raise e
+        # try:
+        generator(date_range_str, **generator_params)
+        # except Exception as e:
+        #     raise e
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
         df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
     else:
@@ -320,15 +320,28 @@ def single_timeframe(multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type], ti
         raise AssertionError("multi_timeframe_data.index.names.index('timeframe') != 0")
     if index_only:
         return multi_timeframe_data.loc[pd.IndexSlice[timeframe, :]].index
-    single_timeframe_data: pd.DataFrame = multi_timeframe_data.loc[pd.IndexSlice[timeframe, :]]
+    try:
+        single_timeframe_data: pd.DataFrame = multi_timeframe_data.loc[pd.IndexSlice[timeframe, :]]
+    except KeyError:
+        return pd.DataFrame()
+    # if 'timeframe' in single_timeframe_data.index.names:
+    #     if keep_timeframe:
+    #         out = (single_timeframe_data.reset_index(level='timeframe'))
+    #     else:
+    #         out = (single_timeframe_data.droplevel('timeframe', axis='index'))
+    # else:
     if keep_timeframe:
-        out = validate_no_timeframe(single_timeframe_data.reset_index(level='timeframe'))
-    else:
-        out = validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
+        single_timeframe_data['timeframe']=timeframe
+    if 'timeframe' in [single_timeframe_data.index.name] + single_timeframe_data.index.names:
+        raise AssertionError(
+            "'timeframe' == single_timeframe_data.index.name or 'timeframe' in single_timeframe_data.index.names")
+    # else:
+    #     out = validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
+    validate_no_timeframe(single_timeframe_data)
     if sort:
-        return out.sort_index(level='date')
+        return single_timeframe_data.sort_index(level='date')
     else:
-        return out
+        return single_timeframe_data
 
 def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str, ignore_cached_times: bool = False,
                  do_not_warn: bool = False) \
