@@ -108,7 +108,7 @@ def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str =
 def read_multi_timeframe_ohlcva(date_range_str: str = None) -> pt.DataFrame[MultiTimeframeOHLCVA]:
     if date_range_str is None:
         date_range_str = config.processing_date_range
-    result = read_file(date_range_str, 'multi_timeframe_ohlcvaa', generate_multi_timeframe_ohlcva,
+    result = read_file(date_range_str, 'multi_timeframe_ohlcva', generate_multi_timeframe_ohlcva,
                        MultiTimeframeOHLCVA)
     cache_times(result)
     return result
@@ -147,7 +147,7 @@ def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: 
 
 def core_read_multi_timeframe_ohlcva(date_range_str: str = None) \
         -> pt.DataFrame[MultiTimeframeOHLCVA]:
-    result = read_file(date_range_str, 'multi_timeframe_ohlcvaa', core_generate_multi_timeframe_ohlcva,
+    result = read_file(date_range_str, 'multi_timeframe_ohlcva', core_generate_multi_timeframe_ohlcva,
                        MultiTimeframeOHLCVA)
     cache_times(result)
     return result

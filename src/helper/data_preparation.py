@@ -67,7 +67,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
 
     Parameters:
         date_range_str (str): The date range string used to construct the filename.
-        data_frame_type (str): The type of DataFrame to read, e.g., 'ohlcva', 'multi_timeframe_ohlcvaa', etc.
+        data_frame_type (str): The type of DataFrame to read, e.g., 'ohlcva', 'multi_timeframe_ohlcva', etc.
         generator (Callable): The function that generates the DataFrame if needed.
         skip_rows (Optional[int]): The number of rows to skip while reading the file.
         n_rows (Optional[int]): The maximum number of rows to read from the file.
@@ -252,7 +252,7 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
     The 'date' index is assumed to be UTC.
 
     Parameters:
-        data_frame_type (str): The type of data frame being read, such as 'ohlcv', 'ohlcva', or 'multi_timeframe_ohlcvaa'.
+        data_frame_type (str): The type of data frame being read, such as 'ohlcv', 'ohlcva', or 'multi_timeframe_ohlcva'.
         date_range_str (str): The date range string used to generate the file name.
         file_path (str): The path to the directory containing the data file.
         n_rows (int): The maximum number of rows to read from the CSV file.
