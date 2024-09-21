@@ -11,7 +11,7 @@ from ccxt import RequestTimeout
 
 from Config import config
 from helper.data_preparation import map_symbol
-from helper.helper import log, date_range, measure_time, log_d
+from helper.helper import log, date_range, measure_time, log_d, log_e
 
 _ccxt_symbol_map = {
     'BTCUSDT': 'BTC/USDT',
@@ -79,13 +79,13 @@ def fetch_ohlcv(symbol, timeframe: str = None, start: datetime = None, number_of
         if start < datetime.utcnow().replace(tzinfo=pytz.utc):
             start_timestamp = int(start.timestamp() + batch_start * width_of_timeframe) * 1000
             this_query_size = min(number_of_ticks - batch_start, max_query_size)
-            for i in range(10):
+            for i in range(20):
                 try:
                     response = exchange.fetch_ohlcv(symbol, timeframe=ccxt_timeframe, since=start_timestamp,
                                                 limit=min(number_of_ticks - batch_start, this_query_size), params=params)
                     break
                 except RequestTimeout as e:
-                    log_d("ccxt.RequestTimeout:"+str(e))
+                    log_e("ccxt.RequestTimeout:"+str(e))
                     pass
             log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}',
                 stack_trace=False)
