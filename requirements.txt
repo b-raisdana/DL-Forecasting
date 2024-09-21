@@ -4,6 +4,9 @@ pandas
 plotly
 pydantic
 numpy<2
+matplotlib
+scipy
+scikit-learn
 # psutil
 pytz
 pandas_ta
