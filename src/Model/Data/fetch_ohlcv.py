@@ -7,7 +7,7 @@ from typing import List
 import ccxt
 import pandas as pd
 import pytz
-from ccxt import RequestTimeout
+from ccxt import RequestTimeout, NetworkError
 
 from Config import config
 from helper.data_preparation import map_symbol
@@ -86,6 +86,9 @@ def fetch_ohlcv(symbol, timeframe: str = None, start: datetime = None, number_of
                     break
                 except RequestTimeout as e:
                     log_e("ccxt.RequestTimeout:"+str(e))
+                    pass
+                except NetworkError as e:
+                    log_e("ccxt.NetworkError:"+str(e))
                     pass
             log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}',
                 stack_trace=False)
