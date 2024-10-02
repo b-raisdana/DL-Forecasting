@@ -14,6 +14,7 @@ from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
 from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_timeframe, \
     insert_previous_n_next_top
 from data_processing.atr import read_multi_timeframe_ohlcva
+from data_processing.fragmented_data import data_path
 from helper.data_preparation import read_file, single_timeframe, to_timeframe, cast_and_validate, empty_df, concat, \
     date_range_of_data
 from helper.helper import log, measure_time, LogSeverity
@@ -593,7 +594,7 @@ def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str = None, f
     if date_range_str is None:
         date_range_str = config.processing_date_range
     if file_path is None:
-        file_path = config.path_of_data
+        file_path = data_path()
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
 
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
@@ -610,7 +611,9 @@ def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str = None, f
 
 @measure_time
 def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortlist: List['str'] = None,
-                                          file_path: str = config.path_of_data):
+                                          file_path: str = None):
+    if file_path is None:
+        file_path = data_path()
     multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(date_range_str)
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str).sort_index(level='date')
     multi_timeframe_candle_trend = empty_df(MultiTimeframeCandleTrend)

@@ -9,6 +9,7 @@ from FigurePlotter.plotter import INFINITY_TIME_DELTA
 # from MetaTrader import MT
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
+from data_processing.fragmented_data import data_path
 from helper.data_preparation import read_file, cast_and_validate, trim_to_date_range, \
     expand_date_range, after_under_process_date, empty_df, nearest_match, concat, index_names
 from helper.helper import measure_time, date_range
@@ -589,7 +590,7 @@ def multi_timeframe_peaks_n_valleys(expanded_date_range: str) -> pt.DataFrame[Mu
 # @measure_time
 def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = None):
     if file_path is None:
-        file_path = config.path_of_data
+        file_path = data_path()
     biggest_timeframe = config.timeframes[-1]
     expanded_date_range = expand_date_range(date_range_str,
                                             time_delta=4 * pd.to_timedelta(biggest_timeframe),

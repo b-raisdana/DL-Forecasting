@@ -1,6 +1,9 @@
+import os.path
+
 import pandas as pd
 
 from Config import config, TREND
+from data_processing.fragmented_data import data_path
 from helper.data_preparation import single_timeframe
 from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures
 from Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
@@ -11,7 +14,7 @@ from helper.helper import measure_time
 @measure_time
 def plot_single_timeframe_candle_trend(ohlcv: pd.DataFrame, single_timeframe_candle_trend: pd.DataFrame,
                                        single_timeframe_peaks_n_valleys: pd.DataFrame, show=True, save=True,
-                                       path_of_plot=config.path_of_plots, name='Single Timeframe Candle Trend'):
+                                       name='Single Timeframe Candle Trend'):
     """
     Plot candlesticks with highlighted trends (Bullish, Bearish, Side).
 
@@ -59,7 +62,10 @@ def plot_single_timeframe_candle_trend(ohlcv: pd.DataFrame, single_timeframe_can
 
 @measure_time
 def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys, ohlcv, show=True,
-                                      save=True, path_of_plot=config.path_of_plots):
+                                      save=True, path_of_plot=None):
+    if path_of_plot is None:
+        path_of_plot = os.path.join(data_path(), config.path_of_plots)
+
     figures = []
     _multi_timeframe_peaks = peaks_only(multi_timeframe_peaks_n_valleys)
     _multi_timeframe_valleys = valleys_only(multi_timeframe_peaks_n_valleys)

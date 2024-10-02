@@ -15,6 +15,7 @@ from PeakValley import read_multi_timeframe_peaks_n_valleys, peaks_only, valleys
     major_timeframe
 from data_processing.atr import read_multi_timeframe_ohlcva
 from Model.TechnicalAnalysis.ftc import insert_multi_timeframe_pivots_real_start
+from data_processing.fragmented_data import data_path
 from helper.data_preparation import to_timeframe, single_timeframe, pattern_timeframe, trigger_timeframe
 from helper.helper import measure_time, date_range, date_range_to_string
 
@@ -64,8 +65,10 @@ def find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, m
     return pivots
 
 
-def generate_multi_timeframe_atr_movement_pivots(date_range_str: str = None, file_path: str = config.path_of_data,
+def generate_multi_timeframe_atr_movement_pivots(date_range_str: str = None, file_path: str = None,
                                                  timeframe_shortlist: List['str'] = None):
+    if file_path is None:
+        file_path = data_path()
     if date_range_str is None:
         date_range_str = config.processing_date_range
     if timeframe_shortlist is None:

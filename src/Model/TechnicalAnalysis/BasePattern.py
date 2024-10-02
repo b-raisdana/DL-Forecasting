@@ -284,8 +284,10 @@ def multi_timeframe_base_patterns(expanded_multi_timeframe_ohlcva: pt.DataFrame[
     return _multi_timeframe_base_patterns
 
 
-def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path: str = config.path_of_data,
+def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path: str = None,
                                            timeframe_shortlist: List['str'] = None):
+    if file_path is None:
+        file_path = data_path()
     if date_range_str is None:
         date_range_str = config.processing_date_range
     if timeframe_shortlist is None:

@@ -113,7 +113,7 @@ class ExtendedDf:
 
     @classmethod
     def read_file(cls, date_range_str: str, data_frame_type: str, generator: Callable,
-                  skip_rows=None, n_rows=None, file_path: str = config.path_of_data,
+                  skip_rows=None, n_rows=None, file_path: str = None,
                   zero_size_allowed: Union[None, bool] = None) -> pt.DataFrame['BasePanderaDFM']:
         """
         Read data from a file and return a DataFrame. If the file does not exist or the DataFrame does not
@@ -155,6 +155,8 @@ class ExtendedDf:
             :param data_frame_type:
             :param generator:
         """
+        if file_path is None:
+            file_path = data_path()
         if date_range_str is None:
             date_range_str = config.processing_date_range
         df = None

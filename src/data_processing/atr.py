@@ -120,7 +120,7 @@ def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: 
     if date_range_str is None:
         date_range_str = config.processing_date_range
     if file_path is None:
-        file_path = config.path_of_data
+        file_path = data_path()
     multi_timeframe_ohlcva = empty_df(MultiTimeframeOHLCVA)
     for _, timeframe in enumerate(config.timeframes):
         if timeframe == '4h':

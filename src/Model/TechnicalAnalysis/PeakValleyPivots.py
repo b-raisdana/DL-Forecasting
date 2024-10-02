@@ -9,6 +9,7 @@ from PanderaDFM.Pivot import MultiTimeframePivotDFM
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from PivotsHelper import pivots_level_n_margins, level_ttl
 from data_processing.atr import read_multi_timeframe_ohlcva
+from data_processing.fragmented_data import data_path
 from helper.data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
     read_file, after_under_process_date, empty_df, concat
 from helper.helper import measure_time
@@ -77,7 +78,7 @@ def generate_multi_timeframe_major_times_top_pivots(date_range_str: str = None, 
     if date_range_str is None:
         date_range_str = config.processing_date_range
     if file_path is None:
-        file_path = config.path_of_data
+        file_path = data_path()
     _tops_pivots = major_times_tops_pivots(date_range_str)
     _tops_pivots = _tops_pivots.sort_index(level='date')
     _tops_pivots.to_csv(

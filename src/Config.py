@@ -86,7 +86,7 @@ class Config:
     INFINITY_TIME_DELTA = timedelta(days=10 * 365)
 
     path_of_data = os.path.join(root_path, 'data')
-    path_of_plots = os.path.join(path_of_data, 'plots')
+    path_of_plots = 'plots'
     path_of_logs = os.path.join(root_path, 'logs')
     path_of_test_plots = os.path.join('test_plots')
 

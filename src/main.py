@@ -8,7 +8,7 @@ if __name__ == "__main__":
     # config.processing_date_range = date_range_to_string(days=5, end=datetime(year=2023, month=11, day=18))
     config.processing_date_range = date_range_to_string(days=15) #, end=datetime(year=2023, month=3, day=8))
     #
-    #     file_path: str = config.path_of_data
+    #     file_path: str = data_path()
     #     today_morning = today_morning()
     #     for month in range(0, 2):
     #         date_range_str = date_range_to_string(days=30, end=today_morning - timedelta(days=30 * month))
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # # generate_multi_timeframe_base_patterns()
     # base_patterns = read_multi_timeframe_base_patterns()
     # # # orders_df = pd.read_csv(
-    # # #     os.path.join(config.path_of_data,
+    # # #     os.path.join(data_path(),
     # # #                  f'BasePatternStrategy.orders.0Rzb5KJmWrXfRsnjTE1t9g.24-01-11.00-00T24-01-12.23-59.csv'))
     # # plot_multi_timeframe_base_pattern(base_patterns, ohlcva)  # , orders_df=orders_df)
     # multi_timeframe_ftc(

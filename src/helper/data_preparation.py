@@ -15,6 +15,7 @@ from pandera import typing as pt, DataType
 
 from Config import config
 from PanderaDFM.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
+from data_processing.fragmented_data import data_path
 from helper.helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity, log_d, log_w
 
 
@@ -54,7 +55,7 @@ def no_generator(*args, **kwargs):
 
 
 def read_file(date_range_str: str, data_frame_type: str, generator: Callable, caster_model: Type[Pandera_DFM_Type]
-              , skip_rows=None, n_rows=None, file_path: str = config.path_of_data,
+              , skip_rows=None, n_rows=None, file_path: str = None,
               zero_size_allowed: Union[None, bool] = None, generator_params: dict = {}) -> pd.DataFrame:
     """
     Read data from a file and return a DataFrame. If the file does not exist or the DataFrame does not
@@ -97,6 +98,8 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
         :param generator:
         :param caster_model:
     """
+    if file_path is None:
+        file_path = data_path()
     if date_range_str is None:
         date_range_str = config.processing_date_range
     df = None

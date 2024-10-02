@@ -4,12 +4,13 @@ import re
 import zipfile
 
 from Config import config  # Make sure to import your config module
+from data_processing.fragmented_data import data_path
 from helper.helper import log_d
 
 
 def convert_hour_timeframes_case():
     """
-    We have to check all files in file_path = config.path_of_data directory names ad multi_timeframe_*.zip.
+    We have to check all files in file_path = data_path directory names ad multi_timeframe_*.zip.
     These zip files include a .csv file.
     Replace all the whole word matches for timeframes listed in confi.timeframes (which include h like 1h or 4h)
     but in cap[ital case with lowercase h. as an example covert 1H to 1h and convert 4H to 4h.
@@ -49,8 +50,7 @@ def convert_hour_timeframes_case():
                 zip_file_path = os.path.join(directory_path, filename)
                 process_zip_file(zip_file_path, timeframe_with_h)
 
-    # Replace 'config.path_of_data' with the actual path to your data directory
-    file_path = config.path_of_data
+    file_path = data_path()
     process_all_zip_files(file_path)
 
 

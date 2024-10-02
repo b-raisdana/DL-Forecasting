@@ -13,6 +13,7 @@ from PanderaDFM.SignalDf import SignalDFM, SignalDf
 from Strategy.BaseTickStructure import BaseTickStructure
 from Strategy.order_helper import order_name, add_order_info, order_is_open, \
     order_is_closed, dict_of_order
+from data_processing.fragmented_data import data_path
 from helper.data_preparation import concat, dict_of_list
 from helper.helper import log_d, measure_time, log_w
 
@@ -229,13 +230,13 @@ class ExtendedStrategy(bt.Strategy):
         self.next_log(force=True)
         log_d("Stopping!")
         if self.vault_df is not None:
-            self.vault_df.to_csv(os.path.join(config.path_of_data,
+            self.vault_df.to_csv(os.path.join(data_path(),
                                               f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv"))
         if self.orders_df is not None:
-            self.orders_df.to_csv(os.path.join(config.path_of_data,
+            self.orders_df.to_csv(os.path.join(data_path(),
                                                f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv"))
         if self.signal_df is not None:
-            self.signal_df.to_csv(os.path.join(config.path_of_data,
+            self.signal_df.to_csv(os.path.join(data_path(),
                                                f"{self.__class__.__name__}.signals.{config.id}.{self.date_range_str}.csv"))
         if self.original_orders is not None and len(self.original_orders) > 0:
             df = pd.DataFrame()
@@ -245,7 +246,7 @@ class ExtendedStrategy(bt.Strategy):
             df.index.name = 'ref_id'
             if not df.empty:
                 df.to_csv(
-                    os.path.join(config.path_of_data,
+                    os.path.join(data_path(),
                                  f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv"))
         if self.sl_orders is not None and len(self.sl_orders) > 0:
             for index in self.sl_orders.keys():
@@ -254,7 +255,7 @@ class ExtendedStrategy(bt.Strategy):
             df.index.name = 'ref_id'
             if not df.empty:
                 df.to_csv(
-                    os.path.join(config.path_of_data,
+                    os.path.join(data_path(),
                                  f"{self.__class__.__name__}.stop_orders.{config.id}.{self.date_range_str}.csv"))
         if self.tp_orders is not None and len(self.tp_orders) > 0:
             for index in self.tp_orders.keys():
@@ -263,7 +264,7 @@ class ExtendedStrategy(bt.Strategy):
             df.index.name = 'ref_id'
             if not df.empty:
                 df.to_csv(
-                    os.path.join(config.path_of_data,
+                    os.path.join(data_path(),
                                  f"{self.__class__.__name__}.profit_orders.{config.id}.{self.date_range_str}.csv"))
 
     def log_order(self, order: bt.Order, index=None):

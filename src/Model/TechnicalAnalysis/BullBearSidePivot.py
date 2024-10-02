@@ -13,6 +13,7 @@ from PanderaDFM.Pivot import MultiTimeframePivotDFM
 from PeakValley import read_multi_timeframe_peaks_n_valleys, major_timeframe
 from PivotsHelper import pivots_level_n_margins, level_ttl
 from data_processing.atr import read_multi_timeframe_ohlcva
+from data_processing.fragmented_data import data_path
 from helper.data_preparation import single_timeframe, trigger_timeframe, read_file, \
     cast_and_validate, anti_pattern_timeframe, after_under_process_date, empty_df, concat
 from helper.helper import measure_time
@@ -131,7 +132,7 @@ def read_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None) \
 
 @measure_time
 def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None,
-                                                   file_path: str = config.path_of_data,
+                                                   file_path: str = None,
                                                    timeframe_shortlist: List['str'] = None):
     """
     highest high of every Bullish and lowest low of every Bearish trend. for Trends
@@ -151,6 +152,8 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None,
                 time and high of highest high in Bullish and time and low of lowest low in Bearish,
     :return:
     """
+    if file_path is None:
+        file_path = data_path()
     if date_range_str is None:
         date_range_str = config.processing_date_range
     multi_timeframe_pivots = multi_timeframe_bull_bear_side_pivots(date_range_str, timeframe_shortlist)
