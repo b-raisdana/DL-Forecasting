@@ -46,6 +46,8 @@ class Config:
     processing_date_range = '17-12-01.00-00T17-12-31.23-59'
     limit_to_under_process_period = False
     under_process_symbol = 'BTCUSDT'
+    under_process_exchange = 'Kucoin'
+    under_process_market = 'Spot'
     files_to_load = [
         '17-01-01.0-01TO17-12-31.23-59.1min',
         '17-01-01.0-01TO17-12-31.23-59.5min',
@@ -90,9 +92,6 @@ class Config:
     path_of_logs = os.path.join(root_path, 'logs')
     path_of_test_plots = os.path.join('test_plots')
 
-    exchange = 'Kucoin'
-    market = 'Spot'
-    trading_pair = 'BTCUSDT'
 
     base_time_delta = pd.to_timedelta(timeframes[0])  # timedelta(minutes=1)
 

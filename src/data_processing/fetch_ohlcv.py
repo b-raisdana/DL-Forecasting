@@ -15,6 +15,11 @@ from helper.helper import log, date_range, measure_time, log_d, log_e
 
 _ccxt_symbol_map = {
     'BTCUSDT': 'BTC/USDT',
+    'ETHUSDT': 'ETH/USDT',
+    'BNBUSDT': 'BNB/USDT',
+    'EOSUSDT': 'EOS/USDT',
+    'TRXUSDT': 'TRX/USDT',
+    'ETHUSDT': 'ETH/USDT',
 }
 
 

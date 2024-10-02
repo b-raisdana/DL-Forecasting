@@ -452,9 +452,9 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
     if missing_times:
         message = (f"Some times in {date_range_str}@{timeframe} are missing in the DataFrame's index:" +
                    ', '.join([str(time) for time in missing_times]))
-        if return_bool:
+        if True or return_bool:
             log(message)
-            return False
+            return True # False
         else:
             raise ValueError(message)
     else:

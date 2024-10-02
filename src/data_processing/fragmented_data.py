@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 
-from Config import config
+from Config import config, Config
 
 
 def load_ohlcv_list():
@@ -10,13 +10,13 @@ def load_ohlcv_list():
         ohlcv_list = pd.read_csv(os.path.join(data_path(), 'ohlcva_summary.zip'), compression='zip')
 
 
-def data_path(file_path:str = None, exchange:str = None, market:str = None, trading_pair:str = None, )->str:
-    if file_path is None:
-        file_path = data_path()
+def data_path(path_of_data:str = None, exchange:str = None, market:str = None, trading_pair:str = None, )->str:
+    if path_of_data is None:
+        path_of_data = Config.path_of_data
     if exchange is None:
-        exchange = config.exchange
+        exchange = config.under_process_exchange
     if market is None:
-        market = config.market
+        market = config.under_process_market
     if trading_pair is None:
-        trading_pair = config.trading_pair
-    return os.path.join(file_path, exchange, market, trading_pair)
+        trading_pair = config.under_process_symbol
+    return os.path.join(path_of_data, exchange, market, trading_pair)
