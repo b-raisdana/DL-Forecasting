@@ -19,7 +19,8 @@ _ccxt_symbol_map = {
     'BNBUSDT': 'BNB/USDT',
     'EOSUSDT': 'EOS/USDT',
     'TRXUSDT': 'TRX/USDT',
-    'ETHUSDT': 'ETH/USDT',
+    'TONUSDT': 'TON/USDT',
+    'SOLUSDT': 'SOL/USDT',
 }
 
 
