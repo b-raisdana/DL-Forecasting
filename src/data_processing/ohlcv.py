@@ -7,7 +7,7 @@ from pandera import typing as pt
 
 from Config import config
 from PanderaDFM.OHLCV import MultiTimeframeOHLCV, OHLCV
-from Model.Data.fetch_ohlcv import fetch_ohlcv_by_range
+from data_processing.fetch_ohlcv import fetch_ohlcv_by_range
 from helper.data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
     after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df, concat
 from helper.helper import measure_time, date_range, date_range_to_string

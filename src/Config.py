@@ -90,6 +90,10 @@ class Config:
     path_of_logs = os.path.join(root_path, 'logs')
     path_of_test_plots = os.path.join('test_plots')
 
+    exchange = 'Kucoin'
+    market = 'Spot'
+    trading_pair = 'BTCUSDT'
+
     base_time_delta = pd.to_timedelta(timeframes[0])  # timedelta(minutes=1)
 
     momentum_trand_strength_factor = 0.70  # CandleSize.Standard.value[0]

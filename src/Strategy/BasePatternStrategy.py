@@ -12,9 +12,9 @@ from Model.Order import OrderSide, BracketOrderType
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern, BasePattern
 from PanderaDFM.SignalDf import SignalDf
 from Strategy.ExtendedStrategy import ExtendedStrategy
-from Model.Data.atr import read_multi_timeframe_ohlcva
+from data_processing.atr import read_multi_timeframe_ohlcva
 from helper.helper import log_d, measure_time
-from Model.Data.ohlcv import read_base_timeframe_ohlcv
+from data_processing.ohlcv import read_base_timeframe_ohlcv
 
 
 class BasePatternStrategy(ExtendedStrategy):

@@ -8,7 +8,7 @@ from Config import config
 from PanderaDFM.Pivot import MultiTimeframePivotDFM
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from PivotsHelper import pivots_level_n_margins, level_ttl
-from Model.Data.atr import read_multi_timeframe_ohlcva
+from data_processing.atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
     read_file, after_under_process_date, empty_df, concat
 from helper.helper import measure_time

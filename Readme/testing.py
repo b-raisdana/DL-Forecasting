@@ -1,6 +1,6 @@
 import pandas as pd
 
-from Model.Data.atr import read_multi_timeframe_ohlcva, insert_mt_volume_rma
+from data_processing.atr import read_multi_timeframe_ohlcva, insert_mt_volume_rma
 from helper.helper import date_range_to_string
 
 mt_ohlcva = read_multi_timeframe_ohlcva(

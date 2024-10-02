@@ -11,10 +11,11 @@ from Config import config
 from PanderaDFM.MultiTimeframe import MultiTimeframe
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
+from data_processing.fragmented_data import data_path
 from helper.data_preparation import read_file, trim_to_date_range, single_timeframe, expand_date_range, \
     multi_timeframe_times_tester, empty_df, concat
-from helper.helper import date_range, measure_time
-from Model.Data.ohlcv import read_multi_timeframe_ohlcv, cache_times
+from helper.helper import date_range
+from data_processing.ohlcv import read_multi_timeframe_ohlcv, cache_times
 
 
 def RMA(values: pd.DataFrame, length):
@@ -83,7 +84,7 @@ def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str =
     if date_range_str is None:
         date_range_str = config.processing_date_range
     if file_path is None:
-        file_path = config.path_of_data
+        file_path = data_path()
     start, end = date_range(date_range_str)
 
     # Split the date range into individual days

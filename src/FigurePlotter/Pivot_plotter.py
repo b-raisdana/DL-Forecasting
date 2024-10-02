@@ -11,7 +11,7 @@ from FigurePlotter.plotter import show_and_save_plot, update_figure_layout
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
 from PanderaDFM.Pivot2 import Pivot2DFM, MultiTimeframePivot2DFM
-from Model.Data.atr import read_multi_timeframe_ohlcva
+from data_processing.atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import single_timeframe
 
 

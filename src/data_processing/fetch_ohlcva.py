@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 
 from Config import config
-from Model.Data.atr import read_multi_timeframe_ohlcva
+from data_processing.atr import read_multi_timeframe_ohlcva
 from helper.helper import date_range_to_string
 
 if __name__ == "__main__":
