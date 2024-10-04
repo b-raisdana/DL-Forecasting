@@ -11,6 +11,7 @@ scikit-learn
 pytz
 pandas_ta
 tensorflow
+prophet
 # typing-extensions
 # matplotlib
 # conda install -c conda-forge ta-lib
