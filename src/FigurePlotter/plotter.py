@@ -1,6 +1,7 @@
 import colorsys
 import os
 import webbrowser
+from datetime import datetime
 from typing import List
 
 import pandas as pd
@@ -98,9 +99,12 @@ def file_id(data: pd.DataFrame, name: str = '') -> str:
         return f'{name}.{date_range_of_data(data)}'
 
 
-def show_and_save_plot(fig: plgo.Figure, save: bool, show: bool, name_without_prefix: str, path_of_plot: str = None):
+def show_and_save_plot(fig: plgo.Figure, save: bool = True, show: bool = True, name_without_prefix: str = None,
+                       path_of_plot: str = None):
     if path_of_plot is None:
         path_of_plot = os.path.join(data_path(), config.path_of_plots)
+    if name_without_prefix is None:
+        name_without_prefix = f'{int(datetime.now().timestamp())}'
     file_path = os.path.join(path_of_plot, f'{name_without_prefix}.html')
     with open(file_path, "w", encoding="utf-8") as file:
         file.write(fig.to_html())

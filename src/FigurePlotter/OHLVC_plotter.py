@@ -10,7 +10,22 @@ from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
 from helper.data_preparation import single_timeframe
 from helper.helper import log, measure_time
-
+price_columns = {
+    'open': 'gray',
+    'high': 'green',
+    'low': 'red',
+    'close': 'blue',
+}
+def trace_chart(i_fig, df, name_prefix, fig_row, fig_col):
+    for col in price_columns.keys():
+        x = df.index.get_level_values('date')
+        i_fig.add_trace(
+            go.Scatter(x=x, y=df[col], mode='lines', name=f'{name_prefix} {col}', line=dict(color=price_columns[col])),
+            row=fig_row, col=fig_col)
+    i_fig.add_trace(
+        go.Scatter(x=x, y=df['volume'], mode='lines', name=f'{name_prefix} volume', line=dict(color='orange')),
+        row=fig_row, col=fig_col)
+    return i_fig
 
 @measure_time
 def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bool = True, save: bool = True) -> None:
