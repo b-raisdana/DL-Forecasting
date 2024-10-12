@@ -3,10 +3,10 @@ from typing import Annotated
 import pandas as pd
 from pandera import typing as pt
 
-from PanderaDFM.OHLCV import MultiTimeframeOHLCV
+from helper.importer import pa
 
 
-class RollingMeanStdOHLCV():
+class RollingMeanStdOHLCV(pa.DataFrameModel):
     timeframe: pt.Index[str]
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
 

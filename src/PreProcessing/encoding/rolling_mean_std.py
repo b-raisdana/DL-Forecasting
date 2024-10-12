@@ -64,3 +64,4 @@ def read_multi_timeframe_rolling_mean_std_ohlcv(date_range_str: str = None) -> p
 config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
                                                     end=pd.to_datetime('09-01-24'))
 df = read_multi_timeframe_rolling_mean_std_ohlcv()
+print(df.describe())
