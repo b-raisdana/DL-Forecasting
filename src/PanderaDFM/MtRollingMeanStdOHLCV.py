@@ -10,11 +10,11 @@ from helper.importer import pa
 class RollingMeanStdOHLCV(pa.DataFrameModel):
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
 
-    t_open: pt.Series[float]
-    t_close: pt.Series[float]
-    t_high: pt.Series[float]
-    t_low: pt.Series[float]
-    t_volume: pt.Series[float]
+    n_open: pt.Series[float]
+    n_close: pt.Series[float]
+    n_high: pt.Series[float]
+    n_low: pt.Series[float]
+    n_volume: pt.Series[float]
 
     mean_open: pt.Series[float]
     mean_close: pt.Series[float]

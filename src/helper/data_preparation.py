@@ -115,9 +115,17 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
         # except Exception as e:
         #     raise e
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
-        df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
+        # df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
+        if zero_size_allowed:
+            if len(df)==0:
+                raise Exception('Zero size data!')
+        df = caster_model.validate(df)
     else:
-        df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
+        # df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
+        if zero_size_allowed:
+            if len(df)==0:
+                raise Exception('Zero size data!')
+        df = caster_model.validate(df)
     if datarange_is_not_cachable(date_range_str):
         os.remove(os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip'))
     return df
