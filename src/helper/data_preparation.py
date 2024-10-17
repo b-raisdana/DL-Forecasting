@@ -56,7 +56,7 @@ def no_generator(*args, **kwargs):
 
 def read_file(date_range_str: str, data_frame_type: str, generator: Callable, caster_model: Type[Pandera_DFM_Type]
               , skip_rows=None, n_rows=None, file_path: str = None,
-              zero_size_allowed: Union[None, bool] = None, generator_params: dict = {}) -> pd.DataFrame:
+              zero_size_allowed: Union[None, bool] = None, generator_params: dict = {}):
     """
     Read data from a file and return a DataFrame. If the file does not exist or the DataFrame does not
     match the expected columns, the generator function is used to create the DataFrame.
