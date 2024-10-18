@@ -22,11 +22,14 @@ timeframe_normalization_length = {
     '1W': 4,
 }
 
-def reverse_rolling_mean_std(rolling_mean_std):
-    reconstructed_ohlcv = pd.DataFrame(index=rolling_mean_std.index)
+def reverse_rolling_mean_std(rolling_mean_std: pt.DataFrame[MtRollingMeanStdOHLCV]):
+    # reconstructed_ohlcv = pd.DataFrame(index=rolling_mean_std.index)
+    t_rolling_mean_std = rolling_mean_std.copy()
     for col in columns_list:
-        reconstructed_ohlcv.loc[:, col] = \
-            rolling_mean_std[f'mean_{col}'] + rolling_mean_std[f'std_{col}'] * rolling_mean_std[f'n_{col}']
+        t_rolling_mean_std.drop(col, axis='columns', inplace=True)
+        t_rolling_mean_std.loc[:, col] = \
+            t_rolling_mean_std[f'mean_{col}'] + t_rolling_mean_std[f'std_{col}'] * t_rolling_mean_std[f'n_{col}']
+    return t_rolling_mean_std
 
 def reverse_mt_rolling_mean_std(mt_rolling_mean_std):
     reconstructed_mt_ohlcv = pd.DataFrame(index=mt_rolling_mean_std.index)

@@ -35,10 +35,10 @@ def plot_mt_train_n_test(X, y, n, base_ohlcv):
                                    close=reconstructed_trigger['close'],
                                    name='Trigger')
     pattern_trace = go.Candlestick(x=reconstructed_pattern.index.get_level_values(level='date'),
-                                   open=reconstructed_double['open'],
-                                   high=reconstructed_double['high'],
-                                   low=reconstructed_double['low'],
-                                   close=reconstructed_double['close'],
+                                   open=reconstructed_pattern['open'],
+                                   high=reconstructed_pattern['high'],
+                                   low=reconstructed_pattern['low'],
+                                   close=reconstructed_pattern['close'],
                                    name='Pattern')
     structure_trace = go.Candlestick(x=reconstructed_structure.index.get_level_values(level='date'),
                                      open=reconstructed_structure['open'],
@@ -67,7 +67,7 @@ def plot_mt_train_n_test(X, y, n, base_ohlcv):
         y[n].index.get_level_values(level='date').max()
     )
     ohlcv_slice = base_ohlcv[min_date:max_date]
-    ohlcv_trace = go.Candlestick(ohlcv_slice.index.get_level_values(level='date'),
+    ohlcv_trace = go.Candlestick(x=ohlcv_slice.index.get_level_values(level='date'),
                                  open=ohlcv_slice['open'],
                                  high=ohlcv_slice['high'],
                                  low=ohlcv_slice['low'],
@@ -77,7 +77,7 @@ def plot_mt_train_n_test(X, y, n, base_ohlcv):
     layout = go.Layout(
         title='X Items and Double Slice Over Date Range',
         xaxis=dict(title='Date', range=[min_date, max_date]),
-        yaxis=dict(title='Values'),
+        yaxis=dict(title='Values', fixedrange=False, ),
         showlegend=True
     )
 
@@ -93,8 +93,16 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], model_in
                     batch_size: int, forecast_horizon: int = 20, ):
     """
     Returns:
-        X (np.array): Input features.
-        y (np.array): Output targets (high and low).
+        (X, y)
+            - X (dict): A dictionary with keys ('double', 'trigger', 'pattern', 'structure') and corresponding
+              values as lists of Pandas DataFrames. Each DataFrame represents a slice of the multi-timeframe
+              input features.
+                - 'double': Input feature data for the double timeframe.
+                - 'trigger': Input feature data for the trigger timeframe.
+                - 'pattern': Input feature data for the pattern timeframe.
+                - 'structure': Input feature data for the structure timeframe.
+            - y (list): A list of Pandas DataFrames representing the forecast targets. Each DataFrame contains
+              the predicted values for the future time steps (horizon) from the trigger timeframe.
     """
     pattern_tf = pattern_timeframe(structure_tf)
     trigger_tf = trigger_timeframe(structure_tf)
@@ -112,44 +120,44 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], model_in
             + model_input_lengths['double'] * pd.to_timedelta(double_tf)
     )
 
-    input_start = mt_any.index.get_level_values(
+    train_end_safe_start = mt_any.index.get_level_values(
         level='date').min() + length_of_training * 2  # * 2 for simple safeside.
-    input_end = mt_any.index.get_level_values(level='date').max() - forecast_horizon * pd.to_timedelta(
-        trigger_tf)
-    duration_seconds = (input_end - input_start) / timedelta(seconds=1)
-
+    train_end_safe_end = \
+        mt_any.index.get_level_values(level='date').max() - forecast_horizon * pd.to_timedelta(trigger_tf)
+    duration_seconds = (train_end_safe_end - train_end_safe_start) / timedelta(seconds=1)
+    if duration_seconds <=0 :
+        raise RuntimeError(f"Extend date boundary +{duration_seconds+1}s to make possible range of end dates positive!")
     X, y = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
 
     for relative_double_end in np.random.randint(0, duration_seconds, size=batch_size):
-        double_end = input_end - relative_double_end * timedelta(seconds=1)
+        double_end = train_end_safe_end - relative_double_end * timedelta(seconds=1)
         trigger_end = double_end - model_input_lengths['double'] * pd.to_timedelta(double_tf)
-        pattern_end = trigger_end - model_input_lengths['trigger'] * pd.to_timedelta(double_tf)
-        structure_end = pattern_end - model_input_lengths['pattern'] * pd.to_timedelta(double_tf)
+        pattern_end = trigger_end - model_input_lengths['trigger'] * pd.to_timedelta(trigger_tf)
+        structure_end = pattern_end - model_input_lengths['pattern'] * pd.to_timedelta(pattern_tf)
 
         double_slice = double_df.loc[pd.IndexSlice[: double_end], :].iloc[-model_input_lengths['double']:]
         trigger_slice = trigger_df.loc[pd.IndexSlice[: trigger_end], :].iloc[-model_input_lengths['trigger']:]
         pattern_slice = pattern_df.loc[pd.IndexSlice[: pattern_end], :].iloc[-model_input_lengths['pattern']:]
         structure_slice = structure_df.loc[pd.IndexSlice[: structure_end], :].iloc[-model_input_lengths['structure']:]
 
-        X['double'].append(double_slice)
-        X['trigger'].append(trigger_slice)
-        X['pattern'].append(pattern_slice)
-        X['structure'].append(structure_slice)
+        X['double'].append((double_slice))
+        X['trigger'].append((trigger_slice))
+        X['pattern'].append((pattern_slice))
+        X['structure'].append((structure_slice))
 
-        future_slice = trigger_df.loc[pd.IndexSlice[pattern_end:], :].iloc[:-model_input_lengths['pattern']]
-        y.append(future_slice)
-    return np.array(X), np.array(y)
+        future_slice = trigger_df.loc[pd.IndexSlice[double_end:], :].iloc[:forecast_horizon]
+        y.append((future_slice))
+    return X, y
 
 
-# n_mt_ohlcv = pd.read_csv(
-#     os.path.join(r"C:\Code\dl-forcasting\data\Kucoin\Spot\BTCUSDT",
-#                  f"n_mt_ohlcv.{config.processing_date_range}.csv.zip"), parse_dates=['date'], compression='zip')
-# n_mt_ohlcv.set_index(['timeframe', 'date'], inplace=True, drop=True)
-# n_mt_ohlcv.dtypes, n_mt_ohlcv.index.dtypes
-config.processing_date_range = "24-03-01.00-00T24-09-01.00-00"
+# config.processing_date_range = "24-03-01.00-00T24-09-01.00-00"
+config.processing_date_range = "24-03-01.00-00T24-06-01.00-00"
 t = date_range(config.processing_date_range)
 n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
 mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
 base_ohlcv = single_timeframe(mt_ohlcv, '15min')
 X, y = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_input_lengths, batch_size=10)
+
+plot_mt_train_n_test(X, y, 2, base_ohlcv)
+nop = 1
 
