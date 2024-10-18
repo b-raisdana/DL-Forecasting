@@ -1,7 +1,8 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 
 from Config import config
 from FigurePlotter.plotter import show_and_save_plot
@@ -13,7 +14,6 @@ from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
 from helper.helper import date_range
 from helper.importer import pt
-import plotly.graph_objects as go
 
 
 def plot_mt_train_n_test(X, y, n, base_ohlcv):
@@ -121,16 +121,17 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], model_in
     )
 
     train_end_safe_start = mt_any.index.get_level_values(
-        level='date').min() + length_of_training * 2  # * 2 for simple safeside.
+        level='date').min() + length_of_training * 2  # * 2 for simple safe side.
     train_end_safe_end = \
         mt_any.index.get_level_values(level='date').max() - forecast_horizon * pd.to_timedelta(trigger_tf)
     duration_seconds = (train_end_safe_end - train_end_safe_start) / timedelta(seconds=1)
     if duration_seconds <=0 :
         raise RuntimeError(f"Extend date boundary +{duration_seconds+1}s to make possible range of end dates positive!")
+    X_df, y_df = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
     X, y = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
 
     for relative_double_end in np.random.randint(0, duration_seconds, size=batch_size):
-        double_end = train_end_safe_end - relative_double_end * timedelta(seconds=1)
+        double_end: datetime = train_end_safe_end - relative_double_end * timedelta(seconds=1)
         trigger_end = double_end - model_input_lengths['double'] * pd.to_timedelta(double_tf)
         pattern_end = trigger_end - model_input_lengths['trigger'] * pd.to_timedelta(trigger_tf)
         structure_end = pattern_end - model_input_lengths['pattern'] * pd.to_timedelta(pattern_tf)
@@ -140,24 +141,29 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], model_in
         pattern_slice = pattern_df.loc[pd.IndexSlice[: pattern_end], :].iloc[-model_input_lengths['pattern']:]
         structure_slice = structure_df.loc[pd.IndexSlice[: structure_end], :].iloc[-model_input_lengths['structure']:]
 
-        X['double'].append((double_slice))
-        X['trigger'].append((trigger_slice))
-        X['pattern'].append((pattern_slice))
-        X['structure'].append((structure_slice))
+        X_df['double'].append((double_slice))
+        X_df['trigger'].append((trigger_slice))
+        X_df['pattern'].append((pattern_slice))
+        X_df['structure'].append((structure_slice))
+        X['double'].append(np.array(double_slice))
+        X['trigger'].append(np.array(trigger_slice))
+        X['pattern'].append(np.array(pattern_slice))
+        X['structure'].append(np.array(structure_slice))
 
         future_slice = trigger_df.loc[pd.IndexSlice[double_end:], :].iloc[:forecast_horizon]
-        y.append((future_slice))
-    return X, y
+        y_df.append((future_slice))
+        y.append(np.array(future_slice))
+        # concated_X_df = pd.concat([double_slice, trigger_slice, pattern_slice, structure_slice])
+        # concated_X_df.to_csv(os.path.join(data_path(),
+        #                                   f'mt_X.{double_end.strftime("%y-%m-%d.%H-%M")}.csv.zip'), compression='zip' )
+        # concated_X_df.to_parquet(os.path.join(data_path(),
+        #                                   f'mt_X.{double_end.strftime("%y-%m-%d.%H-%M")}.parquet'))
+        # future_slice.to_csv(os.path.join(data_path(),
+        #                                   f'mt_y.{double_end.strftime("%y-%m-%d.%H-%M")}.csv.zip'), compression='zip' )
+        # future_slice.to_parquet(os.path.join(data_path(),
+        #                                   f'mt_y.{double_end.strftime("%y-%m-%d.%H-%M")}.parquet'))
+    return X, y, X_df, y_df
 
 
-# config.processing_date_range = "24-03-01.00-00T24-09-01.00-00"
-config.processing_date_range = "24-03-01.00-00T24-06-01.00-00"
-t = date_range(config.processing_date_range)
-n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
-mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
-base_ohlcv = single_timeframe(mt_ohlcv, '15min')
-X, y = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_input_lengths, batch_size=10)
 
-plot_mt_train_n_test(X, y, 2, base_ohlcv)
-nop = 1
 
