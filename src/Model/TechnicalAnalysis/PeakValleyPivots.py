@@ -84,5 +84,5 @@ def generate_multi_timeframe_major_times_top_pivots(date_range_str: str = None, 
     _tops_pivots.to_csv(
         os.path.join(file_path, f'multi_timeframe_top_pivots.{date_range_str}.zip'),
         compression='zip')
-    MT.extract_to_data_path(
-        os.path.join(file_path, f'multi_timeframe_major_times_top_pivots.{date_range_str}.zip'))
+    # MT.extract_to_data_path(
+    #     os.path.join(file_path, f'multi_timeframe_major_times_top_pivots.{date_range_str}.zip'))

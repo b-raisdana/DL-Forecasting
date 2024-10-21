@@ -5,8 +5,9 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.python.keras import Input
-from tensorflow.python.keras.layers import Conv1D, LeakyReLU, Flatten, Dense, Concatenate, LSTM
+from tensorflow.python.keras.layers import Conv1D, LeakyReLU, Flatten, Dense, Concatenate, LSTM, Dropout
 from tensorflow.python.keras.models import Model, load_model
+from tf_keras.src.layers import BatchNormalization
 
 from Config import config
 from PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
@@ -214,13 +215,19 @@ def build_model(input_shapes):
 #                  f"n_mt_ohlcv.{config.processing_date_range}.csv.zip"), compression='zip')
 # n_mt_ohlcv
 # config.processing_date_range = "24-03-01.00-00T24-09-01.00-00"
-config.processing_date_range = "24-03-01.00-00T24-06-01.00-00"
-t = date_range(config.processing_date_range)
-n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
-mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
-base_ohlcv = single_timeframe(mt_ohlcv, '15min')
-X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_input_lengths, batch_size=10)
 
-# plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
+t_model = build_model(cnn_lstd_model_input_lengths)
 nop = 1
-t_model = train_model(X, y, cnn_lstd_model_input_lengths)
+
+# config.processing_date_range = "24-03-01.00-00T24-06-01.00-00"
+# t = date_range(config.processing_date_range)
+# n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
+# mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
+# base_ohlcv = single_timeframe(mt_ohlcv, '15min')
+# X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_input_lengths, batch_size=10)
+#
+# # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
+# nop = 1
+# t_model = train_model(X, y, cnn_lstd_model_input_lengths)
+
+

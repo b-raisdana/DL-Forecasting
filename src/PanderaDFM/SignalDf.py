@@ -2,15 +2,14 @@
 from datetime import datetime
 from typing import Annotated, Tuple
 
-import backtrader as bt
 import pandas as pd
 import pandera
 import pytz
 from pandas import Timestamp
 from pandera import typing as pt
 
-from PanderaDFM.ExtendedDf import ExtendedDf, BaseDFM
 from Model.Order import OrderSide
+from PanderaDFM.ExtendedDf import ExtendedDf, BaseDFM
 from helper.helper import log_w
 
 

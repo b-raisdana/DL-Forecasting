@@ -9,6 +9,7 @@ from Config import config, CandleSize
 from PanderaDFM.BasePattern import BasePattern, MultiTimeframeBasePattern
 from PanderaDFM.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
 from data_processing.atr import read_multi_timeframe_ohlcva
+from data_processing.fragmented_data import data_path
 from helper.data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, \
     anti_pattern_timeframe, \
     anti_trigger_timeframe, to_timeframe, trim_to_date_range
