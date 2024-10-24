@@ -13,7 +13,7 @@ from Config import config
 from helper.data_preparation import map_symbol
 from helper.helper import log, date_range, measure_time, log_d, log_e
 
-_ccxt_symbol_map = {
+ccxt_symbol_map = {
     'BTCUSDT': 'BTC/USDT',
     'ETHUSDT': 'ETH/USDT',
     'BNBUSDT': 'BNB/USDT',
@@ -39,7 +39,7 @@ def str_list_case(list_of_string: List[str], case: StringCase):
 
 
 def map_to_ccxt_symbol(symbol: str) -> str:
-    return map_symbol(symbol, _ccxt_symbol_map)
+    return map_symbol(symbol, ccxt_symbol_map)
 
 
 def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, base_timeframe=None,
