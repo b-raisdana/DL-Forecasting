@@ -4,34 +4,36 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from tensorflow.python.keras import Input
-from tensorflow.python.keras.layers import Conv1D, LeakyReLU, Flatten, Dense, Concatenate, LSTM, Dropout
-from tensorflow.python.keras.models import Model, load_model
-from tf_keras.src.layers import BatchNormalization
+from tensorflow.keras import Input
+from tensorflow.keras.layers import Conv1D, LeakyReLU, Flatten, Dense, Concatenate, LSTM, Dropout, BatchNormalization
+from tensorflow.keras.models import Model, load_model
+from tensorflow.python.keras.layers import Reshape
 
 from Config import config
 from PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
 from data_processing.fragmented_data import data_path
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import single_timeframe
-from helper.helper import date_range
+from helper.helper import date_range, log_d
 from training.trainer import mt_train_n_test
 
-cnn_lstd_model_input_lengths = {
-    'structure': 128,
-    'pattern': 256,
-    'trigger': 256,
-    'double': 256,
+cnn_lstd_model_x_lengths = {
+    'structure': (128, 5),
+    'pattern': (256, 5),
+    'trigger': (256, 5),
+    'double': (256, 5),
 }
 
 
-def train_model(X: Dict[str:pd.DataFrame], y: pd.DataFrame, input_shapes, model=None):
+def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shapes, batch_size, model=None, filters=64,
+                lstm_units_list: list = None, dense_units=64, cnn_count=3, cnn_kernel_growing_steps=2,
+                dropout_rate=0.3, rebuild_model:bool = False, epochs=1000):
     """
     Check if the model is already trained or partially trained. If not, build a new model.
     Continue training the model and save the trained model to 'cnn_lstm_model.h5' after each session.
 
     Args:
-        X (Dict[str, pd.DataFrame]): Dictionary containing time-series data for the model inputs.
+        input_x (Dict[str, pd.DataFrame]): Dictionary containing time-series data for the model inputs.
             The dictionary should have the following keys, each corresponding to a specific input component:
             - 'structure': DataFrame with shape (n_samples, 5), where the columns represent [n_open, n_high, n_low, n_close, n_volume].
             - 'pattern': DataFrame with shape (n_samples, 5), where the columns represent [n_open, n_high, n_low, n_close, n_volume].
@@ -39,9 +41,9 @@ def train_model(X: Dict[str:pd.DataFrame], y: pd.DataFrame, input_shapes, model=
             - 'double': DataFrame with shape (n_samples, 5), where the columns represent [n_open, n_high, n_low, n_close, n_volume].
             The number of time steps (n_samples) must be the same for all keys in `X` and should match the length of `y`.
 
-        y (pd.DataFrame): The target output, a DataFrame with the shape (n_samples, 1), where each entry corresponds to the target value for a time step.
+        input_y (pd.DataFrame): The target output, a DataFrame with the shape (n_samples, 1), where each entry corresponds to the target value for a time step.
 
-        input_shapes (dict): Dictionary containing the input shapes for the different branches of the model. The input shapes should correspond to the data for 'structure', 'pattern', 'trigger', and 'double' as specified in `X`.
+        x_shapes (dict): Dictionary containing the input shapes for the different branches of the model. The input shapes should correspond to the data for 'structure', 'pattern', 'trigger', and 'double' as specified in `X`.
 
         model (optional): A pre-trained model to load. If not provided, a new model will be built.
 
@@ -51,48 +53,48 @@ def train_model(X: Dict[str:pd.DataFrame], y: pd.DataFrame, input_shapes, model=
     Raises:
         RuntimeError: If the lengths of the inputs in `X` or `y` are not the same, a RuntimeError will be raised.
     """
-    structure_x = np.array(X['structure'][['n_open', 'n_high', 'n_low', 'n_close', 'n_volume', ]])
-    pattern_x = np.array(X['pattern'][['n_open', 'n_high', 'n_low', 'n_close', 'n_volume', ]])
-    trigger_x = np.array(X['trigger'][['n_open', 'n_high', 'n_low', 'n_close', 'n_volume', ]])
-    double_x = np.array(X['double'][['n_open', 'n_high', 'n_low', 'n_close', 'n_volume', ]])
 
     # Check that all input lengths match
     input_lens = {
-        'structure': len(X['structure']),
-        'pattern': len(X['pattern']),
-        'trigger': len(X['trigger']),
-        'double': len(X['double']),
-        'y': len(y),
+        'structure': len(input_x['structure']),
+        'pattern': len(input_x['pattern']),
+        'trigger': len(input_x['trigger']),
+        'double': len(input_x['double']),
+        'y': len(input_y),
     }
-
     unique_lengths = set(input_lens.values())
     if len(unique_lengths) > 1:
         raise RuntimeError(f'Batch sizes should be the same. input lengths: {input_lens}')
 
+    model_path = os.path.join(data_path(), 'cnn_lstm_model.h5')
     # Check if the model already exists, load if it does
     if model is None:
-        model_path = os.path.join(data_path(), 'cnn_lstm_model.h5')
-        if os.path.exists(model_path):
-            print("Loading existing model from disk...")
+        if not rebuild_model and os.path.exists(model_path):
+            log_d("Loading existing model from disk...")
             model = load_model(model_path)
         else:
-            print("Building new model...")
-            model = build_model(input_shapes)
+            log_d("Building new model...")
+            model = build_model(x_shapes,(input_y.shape[1], input_y.shape[2]), filters,
+                                lstm_units_list, dense_units, cnn_count,
+                                cnn_kernel_growing_steps, dropout_rate)
 
     # Train the model
-    history = model.fit([structure_x, pattern_x, trigger_x, double_x], y,
-                        epochs=10, batch_size=len(y))
-    print(history)
+    # history = model.fit([structure_x, pattern_x, trigger_x, double_x], input_y, epochs, batch_size=len(input_y))
+    history = model.fit([input_x['structure'], input_x['pattern'], input_x['trigger'], input_x['double']],
+                        input_y, epochs=epochs, batch_size=batch_size)
+    log_d(history)
     # Save the model after each training session to avoid losing progress
     model.save(model_path)
-    print("Model saved to disk.")
+    log_d("Model saved to disk.")
 
     return model
 
 
-def create_cnn_lstm(input_shape, model_prefix, filters=64, lstm_units=64, dense_units=64, cnn_count=3,
+def create_cnn_lstm(x_shape, model_prefix, filters=64, lstm_units_list: list = None, dense_units=64, cnn_count=2,
                     cnn_kernel_growing_steps=2, dropout_rate=0.3):
-    input_layer = Input(shape=input_shape, name=f'{model_prefix}_input')
+    if lstm_units_list is None:
+        lstm_units_list = [64, 64]
+    input_layer = Input(shape=x_shape, name=f'{model_prefix}_input')
 
     # CNN Layers with growing filters and kernel sizes
     conv = input_layer
@@ -101,17 +103,22 @@ def create_cnn_lstm(input_shape, model_prefix, filters=64, lstm_units=64, dense_
                       name=f'{model_prefix}_conv{i + 1}')(conv)
         conv = LeakyReLU(name=f'{model_prefix}_leaky_relu{i + 1}')(conv)
         conv = Dropout(dropout_rate, name=f'{model_prefix}_dropout_conv{i + 1}')(conv)
-        conv = BatchNormalization(name=f'{model_prefix}_batchnorm_conv{i + 1}')(conv)
+        conv = BatchNormalization(name=f'{model_prefix}_batch_norm_conv{i + 1}')(conv)
 
     # Flatten the CNN output
     flatten = Flatten(name=f'{model_prefix}_flatten')(conv)
 
-    # LSTM Layer with optional sequence return
-    lstm = LSTM(lstm_units, return_sequences=False, name=f'{model_prefix}_lstm')(tf.expand_dims(flatten, axis=1))
-    lstm = Dropout(dropout_rate, name=f'{model_prefix}_dropout_lstm')(lstm)
+    # Reshape for LSTM (LSTM expects 3D input: (batch_size, timesteps, features))
+    lstm_input = tf.expand_dims(flatten, axis=1)
 
-    # Dense layers with increasing complexity
-    dense = Dense(dense_units, name=f'{model_prefix}_dense1')(lstm)
+    # Stack multiple LSTM layers with varying units
+    for i, lstm_units in enumerate(lstm_units_list):
+        return_seq = True if i < len(lstm_units_list) - 1 else False  # Only last LSTM should not return sequences
+        lstm_input = LSTM(lstm_units, return_sequences=return_seq, name=f'{model_prefix}_lstm{i + 1}')(lstm_input)
+        lstm_input = Dropout(dropout_rate, name=f'{model_prefix}_dropout_lstm{i + 1}')(lstm_input)
+
+    # Dense layers
+    dense = Dense(dense_units, name=f'{model_prefix}_dense1')(lstm_input)
     dense = LeakyReLU(name=f'{model_prefix}_leaky_relu_dense1')(dense)
     dense = Dropout(dropout_rate, name=f'{model_prefix}_dropout_dense1')(dense)
 
@@ -119,16 +126,80 @@ def create_cnn_lstm(input_shape, model_prefix, filters=64, lstm_units=64, dense_
     dense = LeakyReLU(name=f'{model_prefix}_leaky_relu_dense2')(dense)
     dense = Dropout(dropout_rate, name=f'{model_prefix}_dropout_dense2')(dense)
 
-    # Final output layer
-    output_layer = Dense(1, activation='linear', name=f'{model_prefix}_output')(dense)
+    # Final output layer for 40 outputs (20 pairs of high and low)
+    output = Dense(1, activation='linear')(dense)  # Predicting 40 values (20 highs and 20 lows)
 
     # Model setup
-    model = Model(inputs=input_layer, outputs=output_layer, name=f'{model_prefix}_model')
+    model = Model(inputs=input_layer, outputs=output, name=f'{model_prefix}_model')
 
     # Compile the model
     model.compile(optimizer='adam', loss='mse')
 
     return model
+
+
+def build_model(x_shapes, y_shape:tuple[int, int], filters=64, lstm_units_list: list = None, dense_units=64, cnn_count=2,
+                cnn_kernel_growing_steps=2, dropout_rate=0.3):
+    structure_model = create_cnn_lstm(x_shapes['structure'], 'structure_model', filters,
+                                      lstm_units_list, dense_units, cnn_count,
+                                      cnn_kernel_growing_steps, dropout_rate)
+    pattern_model = create_cnn_lstm(x_shapes['pattern'], 'pattern_model', filters,
+                                    lstm_units_list, dense_units, cnn_count,
+                                    cnn_kernel_growing_steps, dropout_rate)
+    trigger_model = create_cnn_lstm(x_shapes['trigger'], 'trigger_model', filters,
+                                    lstm_units_list, dense_units, cnn_count,
+                                    cnn_kernel_growing_steps, dropout_rate)
+    double_model = create_cnn_lstm(x_shapes['double'], 'double_model', filters,
+                                   lstm_units_list, dense_units, cnn_count,
+                                   cnn_kernel_growing_steps, dropout_rate)
+
+    combined_output = Concatenate()(
+        [structure_model.output, pattern_model.output, trigger_model.output, double_model.output])
+
+    # Add an additional Dense layer with ReLU activation
+    combined_dense = Dense(128)(combined_output)
+    combined_dense = LeakyReLU()(combined_dense)
+
+    # Final output layer (for regression tasks, use linear activation; for classification, consider sigmoid/softmax)
+    # Final output layer for 40 outputs (20 pairs of high and low)
+    final_output = Dense(np.prod(np.array(y_shape)), activation='linear')(combined_dense)  # Predicting 40 values (20 highs and 20 lows)
+
+    # Optionally, reshape to (20, 2) to make it clear that we have 20 high-low pairs
+    final_output = Reshape(y_shape)(final_output)
+
+    # Define the final model
+    model = Model(inputs=[structure_model.input, pattern_model.input, trigger_model.input, double_model.input],
+                  outputs=final_output)
+
+    # Compile the model with mean squared error loss for regression tasks
+    model.compile(optimizer='adam', loss='mse')
+
+    # Model summary
+    model.summary()
+
+    return model
+
+
+# config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
+#                                                     end=pd.to_datetime('09-01-24'))
+# # devided by rolling mean, std
+# n_mt_ohlcv = pd.read_csv(
+#     os.path.join(r"C:\Code\dl-forcasting\data\Kucoin\Spot\BTCUSDT",
+#                  f"n_mt_ohlcv.{config.processing_date_range}.csv.zip"), compression='zip')
+# n_mt_ohlcv
+# config.processing_date_range = "24-03-01.00-00T24-09-01.00-00"
+config.processing_date_range = "24-03-01.00-00T24-06-01.00-00"
+t = date_range(config.processing_date_range)
+n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
+mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
+base_ohlcv = single_timeframe(mt_ohlcv, '15min')
+batch_size=10
+X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
+
+# plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
+nop = 1
+t_model = train_model(X, y, cnn_lstd_model_x_lengths, batch_size)
+
 """
 Potential Areas of Improvement for Professional Price Forecasting:
 
@@ -151,7 +222,7 @@ Potential Areas of Improvement for Professional Price Forecasting:
     Advanced Time-Series Models:
         While CNN-LSTM models can perform well, there are also models like Transformer-based architectures (e.g., Temporal Fusion Transformers) or even ARIMA (AutoRegressive Integrated Moving Average) models that are tailored specifically for time-series forecasting tasks.
         XGBoost and LightGBM models have also been shown to perform well in certain forecasting scenarios, where you can create lagged features and use tree-based models.
-        
+
 Stacked LSTM Layers:
 
     You could experiment with a stacked LSTM, which would allow the model to capture more complex patterns over time.
@@ -176,58 +247,3 @@ Hyperparameter Tuning:
 
     Use Grid Search or Random Search to fine-tune hyperparameters like filters, lstm_units, dropout_rate, and the number of CNN layers. This ensures the model is not underfitting or overfitting.
 """
-
-
-def build_model(input_shapes):
-    structure_model = create_cnn_lstm((input_shapes['structure'], 5), 'structure_model')
-    pattern_model = create_cnn_lstm((input_shapes['pattern'], 5), 'pattern_model')
-    trigger_model = create_cnn_lstm((input_shapes['trigger'], 5), 'trigger_model')
-    double_model = create_cnn_lstm((input_shapes['double'], 5), 'double_model')
-
-    combined_output = Concatenate()(
-        [structure_model.output, pattern_model.output, trigger_model.output, double_model.output])
-
-    # Add an additional Dense layer with ReLU activation
-    combined_dense = Dense(128)(combined_output)
-    combined_dense = LeakyReLU()(combined_dense)
-
-    # Final output layer (for regression tasks, use linear activation; for classification, consider sigmoid/softmax)
-    final_output = Dense(1, activation='linear')(combined_dense)
-
-    # Define the final model
-    model = Model(inputs=[structure_model.input, pattern_model.input, trigger_model.input, double_model.input],
-                  outputs=final_output)
-
-    # Compile the model with mean squared error loss for regression tasks
-    model.compile(optimizer='adam', loss='mse')
-
-    # Model summary
-    model.summary()
-
-    return model
-
-
-# config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
-#                                                     end=pd.to_datetime('09-01-24'))
-# # devided by rolling mean, std
-# n_mt_ohlcv = pd.read_csv(
-#     os.path.join(r"C:\Code\dl-forcasting\data\Kucoin\Spot\BTCUSDT",
-#                  f"n_mt_ohlcv.{config.processing_date_range}.csv.zip"), compression='zip')
-# n_mt_ohlcv
-# config.processing_date_range = "24-03-01.00-00T24-09-01.00-00"
-
-t_model = build_model(cnn_lstd_model_input_lengths)
-nop = 1
-
-# config.processing_date_range = "24-03-01.00-00T24-06-01.00-00"
-# t = date_range(config.processing_date_range)
-# n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
-# mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
-# base_ohlcv = single_timeframe(mt_ohlcv, '15min')
-# X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_input_lengths, batch_size=10)
-#
-# # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
-# nop = 1
-# t_model = train_model(X, y, cnn_lstd_model_input_lengths)
-
-

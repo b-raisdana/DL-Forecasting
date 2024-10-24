@@ -73,7 +73,7 @@ class ExtendedDf:
                 if not strict or key in cls.schema_data_frame_model.to_schema().columns.keys():
                     if key not in _index_names:
                         # _new[key] = pd.Series()
-                        # print(f"{key}({type(dictionary_of_data[key])})={dictionary_of_data[key]}")
+                        # log_d(f"{key}({type(dictionary_of_data[key])})={dictionary_of_data[key]}")
                         _new.loc[the_index, key] = dictionary_of_data[key]
                 elif key not in _index_names:
                     unused_keys += [key]

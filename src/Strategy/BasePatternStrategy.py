@@ -232,6 +232,6 @@ def test_strategy(cash: float, date_range_str: str = None):
     cerebro.broker.set_cash(cash)
     cerebro.broker.set_fundmode(False)  # 0.02 BTC ~= 1000 USD
 
-    print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
+    log_d('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
     cerebro.run()
     cerebro.plot(style='candle', dpi=900, savefig='plot.pdf')

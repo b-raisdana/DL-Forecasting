@@ -36,7 +36,7 @@ def date_range_of_data(data: pd.DataFrame) -> str:
     Example:
         # Assuming you have a DataFrame 'data' with an index containing timestamps
         date_range = range_of_data(data)
-        print(date_range)  # Output: 'yy-mm-dd.HH-MMTyy-mm-dd.HH-MM'
+        log_d(date_range)  # Output: 'yy-mm-dd.HH-MMTyy-mm-dd.HH-MM'
     """
     return f'{data.index.get_level_values("date").min().strftime("%y-%m-%d.%H-%M")}T' \
            f'{data.index.get_level_values("date").max().strftime("%y-%m-%d.%H-%M")}'

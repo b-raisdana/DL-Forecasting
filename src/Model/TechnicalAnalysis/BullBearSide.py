@@ -322,7 +322,7 @@ def expand_trends_by_near_tops(_timeframe_bull_bear_side_trends: pt.DataFrame[Bu
         updated_boundaries = add_toward_top_to_trend(single_timeframe_boundaries,
                                                      single_timeframe_peaks_n_valleys,
                                                      '15min')
-        print(updated_boundaries)
+        log_d(updated_boundaries)
     """
     if len(_timeframe_bull_bear_side_trends) == 46:
         pass

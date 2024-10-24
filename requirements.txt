@@ -12,7 +12,8 @@ scikit-learn
 pytz
 pandas_ta
 tensorflow[and-cuda]==2.13
-tf-keras
+# tensorflow-gpu>=2.3.0
+#tf-keras
 prophet
 # typing-extensions
 # matplotlib

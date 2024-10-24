@@ -91,7 +91,7 @@ def file_id(data: pd.DataFrame, name: str = '') -> str:
         Example:
             # Assuming you have a DataFrame 'data' and want to generate a file identifier
             identifier = file_id(data, name='my_data')
-            print(identifier)  # Output: 'my_data.yy-mm-dd.HH-MMTyy-mm-dd.HH-MM'
+            log_d(identifier)  # Output: 'my_data.yy-mm-dd.HH-MMTyy-mm-dd.HH-MM'
         """
     if name is None or name == '':
         return f'{date_range_of_data(data)}'
