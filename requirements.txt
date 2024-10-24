@@ -5,13 +5,14 @@ plotly
 pydantic
 pyarrow
 numpy
-matplotlib
+# matplotlib
 scipy
 scikit-learn
 # psutil
 pytz
 pandas_ta
-tensorflow[and-cuda]==2.13
+tensorflow==2.17.0
+# tensorflow[and-cuda]
 # tensorflow-gpu>=2.3.0
 #tf-keras
 prophet
@@ -20,7 +21,7 @@ prophet
 # conda install -c conda-forge ta-lib
 # TA-Lib~=0.4.19
 
-pytest
+# pytest
 pandera # conda install -c conda-forge pandera
 # backtrader[plotting]
 ccxt

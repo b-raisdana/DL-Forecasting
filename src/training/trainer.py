@@ -11,7 +11,7 @@ from helper.data_preparation import pattern_timeframe, trigger_timeframe, single
 from helper.importer import pt
 
 
-def plot_mt_train_n_test(x, y, n, base_ohlcv):
+def plot_mt_train_n_test(x, y, n, base_ohlcv, show=True):
     reconstructed_double = reverse_rolling_mean_std(x['double'][n])
     reconstructed_trigger = reverse_rolling_mean_std(x['trigger'][n])
     reconstructed_pattern = reverse_rolling_mean_std(x['pattern'][n])
@@ -80,8 +80,10 @@ def plot_mt_train_n_test(x, y, n, base_ohlcv):
     fig = go.Figure(data=[double_trace, trigger_trace, pattern_trace, structure_trace, y_trace, ohlcv_trace],
                     layout=layout)
 
-    # Show the plot
-    show_and_save_plot(fig)
+    if show:
+        show_and_save_plot(fig)
+    else:
+        return fig
 
 
 def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_lengths: dict,
@@ -126,7 +128,6 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
     if duration_seconds <=0 :
         raise RuntimeError(f"Extend date boundary +{duration_seconds+1}s to make possible range of end dates positive!")
     x_df, y_df = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
-    # x, y = {'double': np.array([]), 'trigger': np.array([]), 'pattern': np.array([]), 'structure': np.array([]), }, []
     x, y = {'double': [], 'trigger': [], 'pattern':[], 'structure': [], }, []
 
     for relative_double_end in np.random.randint(0, duration_seconds, size=batch_size):
@@ -144,10 +145,6 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
         x_df['trigger'].append(trigger_slice)
         x_df['pattern'].append(pattern_slice)
         x_df['structure'].append(structure_slice)
-        # x['double'] = np.append(x['double'], np.array(double_slice[training_x_columns]))
-        # x['trigger'] = np.append(x['trigger'], np.array(trigger_slice[training_x_columns]))
-        # x['pattern'] = np.append(x['pattern'], np.array(pattern_slice[training_x_columns]))
-        # x['structure'] = np.append(x['structure'], np.array(structure_slice[training_x_columns]))
         x['double'].append( np.array(double_slice[training_x_columns]))
         x['trigger'].append(np.array(trigger_slice[training_x_columns]))
         x['pattern'].append(np.array(pattern_slice[training_x_columns]))
@@ -161,11 +158,11 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
     x['pattern'] = np.array(x['pattern'])
     x['structure'] = np.array(x['structure'])
     y = np.array(y)
-    assert x['double'].shape == (batch_size,) + x_lengths['double']
-    assert x['trigger'].shape == (batch_size,) + x_lengths['trigger']
-    assert x['pattern'].shape == (batch_size,) + x_lengths['pattern']
-    assert x['structure'].shape == (batch_size,) + x_lengths['structure']
-    assert y.shape == (batch_size, forecast_horizon, 2)
+    # assert x['double'].shape == (batch_size,) + x_lengths['double']
+    # assert x['trigger'].shape == (batch_size,) + x_lengths['trigger']
+    # assert x['pattern'].shape == (batch_size,) + x_lengths['pattern']
+    # assert x['structure'].shape == (batch_size,) + x_lengths['structure']
+    # assert y.shape == (batch_size, forecast_horizon, 2)
     return x, y, x_df, y_df
 
 

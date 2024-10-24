@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import timedelta, datetime
 from typing import Dict
 
@@ -69,7 +70,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     if len(unique_lengths) > 1:
         raise RuntimeError(f'Batch sizes should be the same. input lengths: {input_lens}')
 
-    model_path = os.path.join(data_path(), 'cnn_lstm_model.h5')
+    model_path = os.path.join(data_path(), '..', '..', '..', 'cnn_lstm_model.h5')
     # Check if the model already exists, load if it does
     if model is None:
         if not rebuild_model and os.path.exists(model_path):
@@ -218,7 +219,7 @@ if __name__ == "__main__":
     print(sys.version)
     print("Version info.")
     print(sys.version_info)
-    config.processing_date_range = "24-03-01.00-00T24-06-01.00-00"
+    config.processing_date_range = "22-06-29.00-00T24-10-24.00-00"
     for start, end in overlapped_quarters(config.processing_date_range):
         config.processing_date_range = date_range_to_string(start=start, end=end)
         for symbol in [ccxt_symbol_map.keys()]:
@@ -226,7 +227,7 @@ if __name__ == "__main__":
             n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
             mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
             base_ohlcv = single_timeframe(mt_ohlcv, '15min')
-            batch_size = 10
+            batch_size = 1000
             X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
 
             # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
@@ -266,7 +267,7 @@ lstm_2 = LSTM(lstm_units, return_sequences=False, name=f'{model_prefix}_lstm_2')
 
 Attention Mechanism:
 
-    Adding an attention mechanism might help the model focus on more important time steps when making predictions. This is especially useful when the model is trying to predict prices based on historical data with varying importance at different points in time.
+    Adding an attention mechanism might help the model focus on more important time steps when making predictions. This is especially useful when the model is trying to predicting prices based on historical data with varying importance at different points in time.
 
 Incorporate Financial Indicators:
 
