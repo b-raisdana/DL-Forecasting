@@ -197,11 +197,11 @@ def build_model(x_shapes, y_shape: tuple[int, int], filters=64, lstm_units_list:
 # config.processing_date_range = "24-03-01.00-00T24-09-01.00-00"
 
 def ceil_to_slide(t_date: datetime, slide: timedelta):
-    if (t_date - datetime(t_date.year, t_date.month, t_date.day)) > 0:
-        t_date = datetime(t_date.year, t_date.month, t_date.day + 1)
-    days = (t_date - datetime(t_date.year, 1, 1)).days
+    if (t_date - datetime(t_date.year, t_date.month, t_date.day, tzinfo=t_date.tzinfo)) > datetime.timedelta(0):
+        t_date = datetime(t_date.year, t_date.month, t_date.day + 1, tzinfo=t_date.tzinfo)
+    days = (t_date - datetime(t_date.year, 1, 1, tzinfo=t_date.tzinfo)).days
     rounded_days = (days // slide.days) * slide.days + (slide.days if days % slide.days > 0 else 0)
-    return datetime(t_date.year, t_date.month, rounded_days)
+    return datetime(t_date.year, t_date.month, rounded_days, tzinfo=t_date.tzinfo)
 
 
 def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timedelta(days=30 * 1.5)):
@@ -214,6 +214,10 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
 
 
 if __name__ == "__main__":
+    print("Python version")
+    print(sys.version)
+    print("Version info.")
+    print(sys.version_info)
     config.processing_date_range = "24-03-01.00-00T24-06-01.00-00"
     for start, end in overlapped_quarters(config.processing_date_range):
         config.processing_date_range = date_range_to_string(start=start, end=end)

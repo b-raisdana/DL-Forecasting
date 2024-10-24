@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  dl-forcasting:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./src:/app/src  # Mount your source code directory
+    environment:
+      - PYTHONUNBUFFERED=1  # Optional: to get real-time output
