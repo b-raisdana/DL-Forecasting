@@ -13,12 +13,12 @@ from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
 from PanderaDFM.PeakValley import MultiTimeframePeakValley
 from Model.TechnicalAnalysis.PeakValley import major_timeframe
 from helper.data_preparation import single_timeframe
-from helper.helper import measure_time
+from helper.helper import profile_it
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 
 
-@measure_time
+@profile_it
 def plot_multi_timeframe_bbs_n_base_pattern(multi_timeframe_base_pattern: pt.DataFrame[MultiTimeframeBasePattern],
                                             multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA],
                                             multi_timeframe_bull_bear_side_trends: pt.DataFrame[

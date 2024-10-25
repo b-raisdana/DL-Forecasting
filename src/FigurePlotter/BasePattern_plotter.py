@@ -11,12 +11,12 @@ from FigurePlotter.plotter import file_id, show_and_save_plot
 from Model.Order import OrderSide, BracketOrderType
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
-from helper.helper import measure_time
+from helper.helper import profile_it
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 
 
-@measure_time
+@profile_it
 def plot_multi_timeframe_base_pattern(_multi_timeframe_base_pattern: pt.DataFrame[MultiTimeframeBasePattern],
                                       _multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA],
                                       orders_df: pd.DataFrame = None,

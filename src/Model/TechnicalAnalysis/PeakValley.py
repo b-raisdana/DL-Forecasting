@@ -9,10 +9,10 @@ from FigurePlotter.plotter import INFINITY_TIME_DELTA
 # from MetaTrader import MT
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
-from data_processing.fragmented_data import data_path
+from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import read_file, cast_and_validate, trim_to_date_range, \
     expand_date_range, after_under_process_date, empty_df, nearest_match, concat, index_names
-from helper.helper import measure_time, date_range
+from helper.helper import profile_it, date_range
 from data_processing.ohlcv import read_base_timeframe_ohlcv
 
 
@@ -525,7 +525,7 @@ def find_peaks_n_valleys(base_ohlcv: pd.DataFrame,
     return _peaks_n_valleys.sort_index(level='date') if sort_index else _peaks_n_valleys
 
 
-@measure_time
+@profile_it
 def major_timeframe(multi_timeframe_df: pd.DataFrame, timeframe: str) \
         -> pt.DataFrame[MultiTimeframePeakValley]:
     """
@@ -590,7 +590,7 @@ def multi_timeframe_peaks_n_valleys(expanded_date_range: str) -> pt.DataFrame[Mu
 # @measure_time
 def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = None):
     if file_path is None:
-        file_path = data_path()
+        file_path = symbol_data_path()
     biggest_timeframe = config.timeframes[-1]
     expanded_date_range = expand_date_range(date_range_str,
                                             time_delta=4 * pd.to_timedelta(biggest_timeframe),
@@ -658,7 +658,7 @@ def old_insert_previous_n_next_top(top_type: TopTYPE, peaks_n_valleys, ohlcv):
     return ohlcv
 
 
-@measure_time
+@profile_it
 def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValley], ohlcv: pt.DataFrame[OHLCV]) \
         -> pt.DataFrame[OHLCV]:
     # Define columns

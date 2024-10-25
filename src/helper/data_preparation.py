@@ -15,7 +15,7 @@ from pandera import typing as pt, DataType
 
 from Config import config
 from PanderaDFM.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
-from data_processing.fragmented_data import data_path
+from data_processing.fragmented_data import symbol_data_path
 from helper.helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity, log_d, log_w
 
 
@@ -99,7 +99,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
         :param caster_model:
     """
     if file_path is None:
-        file_path = data_path()
+        file_path = symbol_data_path()
     if date_range_str is None:
         date_range_str = config.processing_date_range
     df = None

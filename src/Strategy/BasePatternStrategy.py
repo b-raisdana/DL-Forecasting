@@ -13,7 +13,7 @@ from PanderaDFM.BasePattern import MultiTimeframeBasePattern, BasePattern
 from PanderaDFM.SignalDf import SignalDf
 from Strategy.ExtendedStrategy import ExtendedStrategy
 from data_processing.atr import read_multi_timeframe_ohlcva
-from helper.helper import log_d, measure_time
+from helper.helper import log_d, profile_it
 from data_processing.ohlcv import read_base_timeframe_ohlcv
 
 
@@ -24,7 +24,7 @@ class BasePatternStrategy(ExtendedStrategy):
         base_patterns = read_multi_timeframe_base_patterns(self.date_range_str)
         self.base_patterns = base_patterns[~base_patterns['ignore_backtesting']]
 
-    @measure_time
+    @profile_it
     def __init__(self):
         self.add_signal_source_data()
         super().__init__()

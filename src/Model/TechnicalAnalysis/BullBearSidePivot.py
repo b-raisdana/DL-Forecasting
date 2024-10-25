@@ -13,10 +13,10 @@ from PanderaDFM.Pivot import MultiTimeframePivotDFM
 from PeakValley import read_multi_timeframe_peaks_n_valleys, major_timeframe
 from PivotsHelper import pivots_level_n_margins, level_ttl
 from data_processing.atr import read_multi_timeframe_ohlcva
-from data_processing.fragmented_data import data_path
+from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import single_timeframe, trigger_timeframe, read_file, \
     cast_and_validate, anti_pattern_timeframe, after_under_process_date, empty_df, concat
-from helper.helper import measure_time
+from helper.helper import profile_it
 
 
 def remove_overlapping_trends(timeframe_trends: pt.DataFrame[BullBearSide]) -> pt.DataFrame[BullBearSide]:
@@ -130,7 +130,7 @@ def read_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None) \
     return result
 
 
-@measure_time
+@profile_it
 def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None,
                                                    file_path: str = None,
                                                    timeframe_shortlist: List['str'] = None):
@@ -153,7 +153,7 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None,
     :return:
     """
     if file_path is None:
-        file_path = data_path()
+        file_path = symbol_data_path()
     if date_range_str is None:
         date_range_str = config.processing_date_range
     multi_timeframe_pivots = multi_timeframe_bull_bear_side_pivots(date_range_str, timeframe_shortlist)

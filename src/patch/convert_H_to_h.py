@@ -4,7 +4,7 @@ import re
 import zipfile
 
 from Config import config  # Make sure to import your config module
-from data_processing.fragmented_data import data_path
+from data_processing.fragmented_data import symbol_data_path
 from helper.helper import log_d
 
 
@@ -50,7 +50,7 @@ def convert_hour_timeframes_case():
                 zip_file_path = os.path.join(directory_path, filename)
                 process_zip_file(zip_file_path, timeframe_with_h)
 
-    file_path = data_path()
+    file_path = symbol_data_path()
     process_all_zip_files(file_path)
 
 

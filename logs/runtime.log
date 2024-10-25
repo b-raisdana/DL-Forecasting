@@ -1,1 +1,81 @@
-DEBUG@10-24.21:42:46:...Starting
+DEBUG@10-25.10:37:44:...Starting
+DEBUG@10-25.10:37:46:mt_train_n_test(4h, 166969*Index(['open', 'close', 'high', 'low', 'volume', 'pre_open', 'mean_open',
+       'std_open', 'n_open', 'pre_close', 'mean_close', 'std_close', 'n_close',
+       'pre_high', 'mean_high', 'std_high', 'n_high', 'pre_low', 'mean_low',
+       'std_low', 'n_low', 'pre_volume', 'mean_volume', 'std_volume',
+       'n_volume'],
+      dtype='object'), {'structure': (128, 5), 'pattern': (256, 5), 'trigger': (256, 5), 'double': (256, 5)}, 1000) started
+INFO@10-25.10:37:50:mt_train_n_test(4h, 166969*Index(['open', 'close', 'high', 'low', 'volume', 'pre_open', 'mean_open',
+       'std_open', 'n_open', 'pre_close', 'mean_close', 'std_close', 'n_close',
+       'pre_high', 'mean_high', 'std_high', 'n_high', 'pre_low', 'mean_low',
+       'std_low', 'n_low', 'pre_volume', 'mean_volume', 'std_volume',
+       'n_volume'],
+      dtype='object'), {'structure': (128, 5), 'pattern': (256, 5), 'trigger': (256, 5), 'double': (256, 5)}, 1000) executed in [91m4.115 seconds
+DEBUG@10-25.10:37:50:Loading existing model from disk...
+DEBUG@10-25.12:56:20:<keras.src.callbacks.History object at 0x000001C61967BC10>
+DEBUG@10-25.12:56:24:Model saved to disk.
+DEBUG@10-25.13:06:00:mt_train_n_test(4h, 166969*Index(['open', 'close', 'high', 'low', 'volume', 'pre_open', 'mean_open',
+       'std_open', 'n_open', 'pre_close', 'mean_close', 'std_close', 'n_close',
+       'pre_high', 'mean_high', 'std_high', 'n_high', 'pre_low', 'mean_low',
+       'std_low', 'n_low', 'pre_volume', 'mean_volume', 'std_volume',
+       'n_volume'],
+      dtype='object'), {'structure': (128, 5), 'pattern': (256, 5), 'trigger': (256, 5), 'double': (256, 5)}, 1000) started
+INFO@10-25.13:06:13:mt_train_n_test(4h, 166969*Index(['open', 'close', 'high', 'low', 'volume', 'pre_open', 'mean_open',
+       'std_open', 'n_open', 'pre_close', 'mean_close', 'std_close', 'n_close',
+       'pre_high', 'mean_high', 'std_high', 'n_high', 'pre_low', 'mean_low',
+       'std_low', 'n_low', 'pre_volume', 'mean_volume', 'std_volume',
+       'n_volume'],
+      dtype='object'), {'structure': (128, 5), 'pattern': (256, 5), 'trigger': (256, 5), 'double': (256, 5)}, 1000) executed in [91m12.470 seconds
+DEBUG@10-25.13:06:13:Loading existing model from disk...
+DEBUG@10-25.14:27:10:<keras.src.callbacks.History object at 0x000001C612BADE80>
+DEBUG@10-25.14:27:12:Model saved to disk.
+DEBUG@10-25.14:36:35:mt_train_n_test(4h, 166969*Index(['open', 'close', 'high', 'low', 'volume', 'pre_open', 'mean_open',
+       'std_open', 'n_open', 'pre_close', 'mean_close', 'std_close', 'n_close',
+       'pre_high', 'mean_high', 'std_high', 'n_high', 'pre_low', 'mean_low',
+       'std_low', 'n_low', 'pre_volume', 'mean_volume', 'std_volume',
+       'n_volume'],
+      dtype='object'), {'structure': (128, 5), 'pattern': (256, 5), 'trigger': (256, 5), 'double': (256, 5)}, 1000) started
+INFO@10-25.14:36:47:mt_train_n_test(4h, 166969*Index(['open', 'close', 'high', 'low', 'volume', 'pre_open', 'mean_open',
+       'std_open', 'n_open', 'pre_close', 'mean_close', 'std_close', 'n_close',
+       'pre_high', 'mean_high', 'std_high', 'n_high', 'pre_low', 'mean_low',
+       'std_low', 'n_low', 'pre_volume', 'mean_volume', 'std_volume',
+       'n_volume'],
+      dtype='object'), {'structure': (128, 5), 'pattern': (256, 5), 'trigger': (256, 5), 'double': (256, 5)}, 1000) executed in [91m12.043 seconds
+DEBUG@10-25.14:36:47:Loading existing model from disk...
+DEBUG@10-25.17:13:25:<keras.src.callbacks.History object at 0x000001C61F601CD0>
+DEBUG@10-25.17:13:26:Model saved to disk.
+DEBUG@10-25.17:16:58:mt_train_n_test(4h, 166969*Index(['open', 'close', 'high', 'low', 'volume', 'pre_open', 'mean_open',
+       'std_open', 'n_open', 'pre_close', 'mean_close', 'std_close', 'n_close',
+       'pre_high', 'mean_high', 'std_high', 'n_high', 'pre_low', 'mean_low',
+       'std_low', 'n_low', 'pre_volume', 'mean_volume', 'std_volume',
+       'n_volume'],
+      dtype='object'), {'structure': (128, 5), 'pattern': (256, 5), 'trigger': (256, 5), 'double': (256, 5)}, 1000) started
+INFO@10-25.17:17:02:mt_train_n_test(4h, 166969*Index(['open', 'close', 'high', 'low', 'volume', 'pre_open', 'mean_open',
+       'std_open', 'n_open', 'pre_close', 'mean_close', 'std_close', 'n_close',
+       'pre_high', 'mean_high', 'std_high', 'n_high', 'pre_low', 'mean_low',
+       'std_low', 'n_low', 'pre_volume', 'mean_volume', 'std_volume',
+       'n_volume'],
+      dtype='object'), {'structure': (128, 5), 'pattern': (256, 5), 'trigger': (256, 5), 'double': (256, 5)}, 1000) executed in [91m4.079 seconds
+DEBUG@10-25.17:17:02:Loading existing model from disk...
+DEBUG@10-25.18:20:37:<keras.src.callbacks.History object at 0x000001C61B658610>
+DEBUG@10-25.18:20:40:Model saved to disk.
+DEBUG@10-25.18:30:04:mt_train_n_test(4h, 166969*Index(['open', 'close', 'high', 'low', 'volume', 'pre_open', 'mean_open',
+       'std_open', 'n_open', 'pre_close', 'mean_close', 'std_close', 'n_close',
+       'pre_high', 'mean_high', 'std_high', 'n_high', 'pre_low', 'mean_low',
+       'std_low', 'n_low', 'pre_volume', 'mean_volume', 'std_volume',
+       'n_volume'],
+      dtype='object'), {'structure': (128, 5), 'pattern': (256, 5), 'trigger': (256, 5), 'double': (256, 5)}, 1000) started
+INFO@10-25.18:30:16:mt_train_n_test(4h, 166969*Index(['open', 'close', 'high', 'low', 'volume', 'pre_open', 'mean_open',
+       'std_open', 'n_open', 'pre_close', 'mean_close', 'std_close', 'n_close',
+       'pre_high', 'mean_high', 'std_high', 'n_high', 'pre_low', 'mean_low',
+       'std_low', 'n_low', 'pre_volume', 'mean_volume', 'std_volume',
+       'n_volume'],
+      dtype='object'), {'structure': (128, 5), 'pattern': (256, 5), 'trigger': (256, 5), 'double': (256, 5)}, 1000) executed in [91m11.370 seconds
+DEBUG@10-25.18:30:16:Loading existing model from disk...
+DEBUG@10-25.20:02:21:<keras.src.callbacks.History object at 0x000001C6311F33D0>
+DEBUG@10-25.20:02:24:Model saved to disk.
+DEBUG@10-25.20:02:24:generate_base_timeframe_ohlcv(22-12-09.00-00T22-12-09.23-59, base_timeframe:None) started
+DEBUG@10-25.20:02:24:fetch_ohlcv(TON/USDT, timeframe:1min, start:2022-12-09 00:00:00+00:00, number_of_ticks:1440, params:{'timeframe': '1min'}) started
+INFO@10-25.20:02:30:fetch_ohlcv@2022-12-09 03:30:00#1000>1000
+INFO@10-25.20:02:30:fetch_ohlcv@2022-12-09 20:10:00#440>440
+INFO@10-25.20:02:30:fetch_ohlcv(TON/USDT, timeframe:1min, start:2022-12-09 00:00:00+00:00, number_of_ticks:1440, params:{'timeframe': '1min'}) executed in [91m6.446 seconds

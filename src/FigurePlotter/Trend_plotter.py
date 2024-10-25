@@ -3,15 +3,15 @@ import os.path
 import pandas as pd
 
 from Config import config, TREND
-from data_processing.fragmented_data import data_path
+from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import single_timeframe
 from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures
 from Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
 from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
-from helper.helper import measure_time
+from helper.helper import profile_it
 
 
-@measure_time
+@profile_it
 def plot_single_timeframe_candle_trend(ohlcv: pd.DataFrame, single_timeframe_candle_trend: pd.DataFrame,
                                        single_timeframe_peaks_n_valleys: pd.DataFrame, show=True, save=True,
                                        name='Single Timeframe Candle Trend'):
@@ -60,11 +60,11 @@ def plot_single_timeframe_candle_trend(ohlcv: pd.DataFrame, single_timeframe_can
     return fig
 
 
-@measure_time
+@profile_it
 def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys, ohlcv, show=True,
                                       save=True, path_of_plot=None):
     if path_of_plot is None:
-        path_of_plot = os.path.join(data_path(), config.path_of_plots)
+        path_of_plot = os.path.join(symbol_data_path(), config.path_of_plots)
 
     figures = []
     _multi_timeframe_peaks = peaks_only(multi_timeframe_peaks_n_valleys)

@@ -86,7 +86,7 @@ def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: boo
 log_d('...Starting')
 
 
-def measure_time(func):
+def profile_it(func):
     @functools.wraps(func)
     def _measure_time(*args, **kwargs):
         start_time = time.time()

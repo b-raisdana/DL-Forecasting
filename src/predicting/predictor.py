@@ -6,7 +6,7 @@ from tensorflow.keras.models import load_model
 from Config import config
 from PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
 from ai_modelling.cnn_lstm import cnn_lstd_model_x_lengths
-from data_processing.fragmented_data import data_path
+from data_processing.fragmented_data import symbol_data_path
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import single_timeframe
 from helper.importer import go
@@ -15,7 +15,7 @@ from training.trainer import mt_train_n_test, plot_mt_train_n_test
 
 def load_and_predict(input_data):
     # Load the model from disk
-    model_path = os.path.join(data_path(), '..', '..', '..', 'cnn_lstm_model.h5')
+    model_path = os.path.join(symbol_data_path(), '..', '..', '..', 'cnn_lstm_model.h5')
     if os.path.exists(model_path):
         print("Loading model from disk...")
         model = load_model(model_path)

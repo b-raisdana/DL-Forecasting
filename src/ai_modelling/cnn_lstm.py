@@ -8,18 +8,20 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras import Input
 from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.layers import Conv1D, LeakyReLU, Flatten, Dense, Concatenate, LSTM, Dropout, BatchNormalization
+from tensorflow.keras.layers import Conv1D, LeakyReLU, Flatten, Dense, Concatenate, Dropout, LSTM, BatchNormalization
 from tensorflow.keras.layers import Reshape
 from tensorflow.keras.models import Model, load_model
 
 from Config import config
 from PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
 from data_processing.fetch_ohlcv import ccxt_symbol_map
-from data_processing.fragmented_data import data_path
+from data_processing.fragmented_data import symbol_data_path
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import single_timeframe
 from helper.helper import date_range, log_d, date_range_to_string
 from training.trainer import mt_train_n_test
+
+print('tensorflow:' + tf.__version__)
 
 cnn_lstd_model_x_lengths = {
     'structure': (128, 5),
@@ -70,7 +72,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     if len(unique_lengths) > 1:
         raise RuntimeError(f'Batch sizes should be the same. input lengths: {input_lens}')
 
-    model_path = os.path.join(data_path(), '..', '..', '..', 'cnn_lstm_model.h5')
+    model_path = os.path.join(config.path_of_data, 'cnn_lstm_model.h5')
     # Check if the model already exists, load if it does
     if model is None:
         if not rebuild_model and os.path.exists(model_path):
@@ -198,11 +200,11 @@ def build_model(x_shapes, y_shape: tuple[int, int], filters=64, lstm_units_list:
 # config.processing_date_range = "24-03-01.00-00T24-09-01.00-00"
 
 def ceil_to_slide(t_date: datetime, slide: timedelta):
-    if (t_date - datetime(t_date.year, t_date.month, t_date.day, tzinfo=t_date.tzinfo)) > datetime.timedelta(0):
+    if (t_date - datetime(t_date.year, t_date.month, t_date.day, tzinfo=t_date.tzinfo)) > timedelta(0):
         t_date = datetime(t_date.year, t_date.month, t_date.day + 1, tzinfo=t_date.tzinfo)
     days = (t_date - datetime(t_date.year, 1, 1, tzinfo=t_date.tzinfo)).days
     rounded_days = (days // slide.days) * slide.days + (slide.days if days % slide.days > 0 else 0)
-    return datetime(t_date.year, t_date.month, rounded_days, tzinfo=t_date.tzinfo)
+    return datetime(t_date.year, 1, 1, tzinfo=t_date.tzinfo) + rounded_days * timedelta(days=1)
 
 
 def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timedelta(days=30 * 1.5)):
@@ -210,19 +212,16 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
         i_date_range = config.processing_date_range
     start, end = date_range(i_date_range)
     rounded_start = ceil_to_slide(start, slide)
-    list_of_periods = [(p_start, p_start + slide) for p_start in pd.date_range(rounded_start, end - length, freq=slide)]
+    list_of_periods = [(p_start, p_start + length) for p_start in pd.date_range(rounded_start, end - length, freq=slide)]
     return list_of_periods
 
 
 if __name__ == "__main__":
-    print("Python version")
-    print(sys.version)
-    print("Version info.")
-    print(sys.version_info)
-    config.processing_date_range = "22-06-29.00-00T24-10-24.00-00"
+    print("Python:" + sys.version)
+    config.processing_date_range = "22-12-29.00-00T24-10-24.00-00"
     for start, end in overlapped_quarters(config.processing_date_range):
         config.processing_date_range = date_range_to_string(start=start, end=end)
-        for symbol in [ccxt_symbol_map.keys()]:
+        for symbol, _ in ccxt_symbol_map.items():
             config.under_process_symbol = symbol
             n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
             mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)

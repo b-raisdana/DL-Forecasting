@@ -81,6 +81,8 @@ class Config:
     hat_trick_index = 0
     trigger_dept = 16
 
+    max_x_gap = 5
+
     dept_of_analysis = 3
 
     end_time = '2021-03-01 03:43:00'

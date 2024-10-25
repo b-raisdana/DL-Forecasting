@@ -13,7 +13,7 @@ from PanderaDFM.BullBearSide import BullBearSide, bull_bear_side_repr
 from PanderaDFM.OHLCV import OHLCV
 from Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
 from helper.data_preparation import single_timeframe
-from helper.helper import measure_time, log, log_w
+from helper.helper import profile_it, log, log_w
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 
@@ -73,7 +73,7 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pt.Data
     return fig
 
 
-@measure_time
+@profile_it
 def plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlcva, multi_timeframe_peaks_n_valleys,
                                                _multi_timeframe_bull_bear_side_trends, show: bool = True,
                                                save: bool = True,

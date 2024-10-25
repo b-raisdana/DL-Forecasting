@@ -4,10 +4,12 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
+from Config import config
 from FigurePlotter.plotter import show_and_save_plot
 from PanderaDFM.MultiTimeframe import MultiTimeframe
 from PreProcessing.encoding.rolling_mean_std import reverse_rolling_mean_std
 from helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
+from helper.helper import profile_it, log_d
 from helper.importer import pt
 
 
@@ -86,6 +88,7 @@ def plot_mt_train_n_test(x, y, n, base_ohlcv, show=True):
         return fig
 
 
+@profile_it
 def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_lengths: dict,
                     batch_size: int, forecast_horizon: int = 20, ):
     """
@@ -125,12 +128,16 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
     train_end_safe_end = \
         mt_any.index.get_level_values(level='date').max() - forecast_horizon * pd.to_timedelta(trigger_tf)
     duration_seconds = (train_end_safe_end - train_end_safe_start) / timedelta(seconds=1)
-    if duration_seconds <=0 :
-        raise RuntimeError(f"Extend date boundary +{duration_seconds+1}s to make possible range of end dates positive!")
+    if duration_seconds <= 0:
+        raise RuntimeError(
+            f"Extend date boundary +{duration_seconds + 1}s to make possible range of end dates positive!")
     x_df, y_df = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
-    x, y = {'double': [], 'trigger': [], 'pattern':[], 'structure': [], }, []
+    x, y = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
 
-    for relative_double_end in np.random.randint(0, duration_seconds, size=batch_size):
+    batch_remained = batch_size
+    while batch_remained > 0:
+        # for relative_double_end in np.random.randint(0, duration_seconds, size=batch_size):
+        relative_double_end = np.random.randint(0, duration_seconds)
         double_end: datetime = train_end_safe_end - relative_double_end * timedelta(seconds=1)
         trigger_end = double_end - x_lengths['double'][0] * pd.to_timedelta(double_tf)
         pattern_end = trigger_end - x_lengths['trigger'][0] * pd.to_timedelta(trigger_tf)
@@ -141,11 +148,24 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
         pattern_slice = pattern_df.loc[pd.IndexSlice[: pattern_end], :].iloc[-x_lengths['pattern'][0]:]
         structure_slice = structure_df.loc[pd.IndexSlice[: structure_end], :].iloc[-x_lengths['structure'][0]:]
 
+        try:
+            for timeframe, slice_df, relative_tf_name in [(structure_tf, structure_slice, 'structure'),
+                                                          (pattern_tf, pattern_slice, 'pattern'),
+                                                          (trigger_tf, trigger_slice, 'trigger'),
+                                                          (double_tf, double_slice, 'double')]:
+                if abs((slice_df.index.max() - slice_df.index.min()) / pd.to_timedelta(timeframe)
+                       - (x_lengths[relative_tf_name][0] - 1)) > config.max_x_gap:
+                    raise AssertionError(f"Gap of > {config.max_x_gap} bars found in {config.under_process_exchange}"
+                          f"/{config.under_process_symbol}/{timeframe}:"
+                          f"{slice_df.index.min()}-{slice_df.index.max()}")
+        except AssertionError as e:
+            log_d(e)
+            continue
         x_df['double'].append(double_slice)
         x_df['trigger'].append(trigger_slice)
         x_df['pattern'].append(pattern_slice)
         x_df['structure'].append(structure_slice)
-        x['double'].append( np.array(double_slice[training_x_columns]))
+        x['double'].append(np.array(double_slice[training_x_columns]))
         x['trigger'].append(np.array(trigger_slice[training_x_columns]))
         x['pattern'].append(np.array(pattern_slice[training_x_columns]))
         x['structure'].append(np.array(structure_slice[training_x_columns]))
@@ -153,6 +173,7 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
         future_slice = trigger_df.loc[pd.IndexSlice[double_end:], :].iloc[:forecast_horizon]
         y_df.append(future_slice)
         y.append(np.array(future_slice[training_y_columns]))
+        batch_remained -= 1
     x['double'] = np.array(x['double'])
     x['trigger'] = np.array(x['trigger'])
     x['pattern'] = np.array(x['pattern'])
@@ -163,8 +184,6 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
     # assert x['pattern'].shape == (batch_size,) + x_lengths['pattern']
     # assert x['structure'].shape == (batch_size,) + x_lengths['structure']
     # assert y.shape == (batch_size, forecast_horizon, 2)
+
+
     return x, y, x_df, y_df
-
-
-
-

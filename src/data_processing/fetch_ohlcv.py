@@ -11,7 +11,7 @@ from ccxt import RequestTimeout, NetworkError
 
 from Config import config
 from helper.data_preparation import map_symbol
-from helper.helper import log, date_range, measure_time, log_d, log_e
+from helper.helper import log, date_range, profile_it, log_d, log_e
 
 ccxt_symbol_map = {
     'BTCUSDT': 'BTC/USDT',
@@ -66,7 +66,7 @@ def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, base_ti
     return response
 
 
-@measure_time
+@profile_it
 def fetch_ohlcv(symbol, timeframe: str = None, start: datetime = None, number_of_ticks=None, params=None) \
         -> list[object]:
     if params is None:

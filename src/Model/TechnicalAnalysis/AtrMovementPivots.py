@@ -15,12 +15,12 @@ from PeakValley import read_multi_timeframe_peaks_n_valleys, peaks_only, valleys
     major_timeframe
 from data_processing.atr import read_multi_timeframe_ohlcva
 from Model.TechnicalAnalysis.ftc import insert_multi_timeframe_pivots_real_start
-from data_processing.fragmented_data import data_path
+from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import to_timeframe, single_timeframe, pattern_timeframe, trigger_timeframe
-from helper.helper import measure_time, date_range, date_range_to_string
+from helper.helper import profile_it, date_range, date_range_to_string
 
 
-@measure_time
+@profile_it
 def find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, mt_tops, structure_timeframe_shortlist,
                                              same_time_multiple_timeframes):
     all_mt_tops = mt_tops.copy()
@@ -68,7 +68,7 @@ def find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, m
 def generate_multi_timeframe_atr_movement_pivots(date_range_str: str = None, file_path: str = None,
                                                  timeframe_shortlist: List['str'] = None):
     if file_path is None:
-        file_path = data_path()
+        file_path = symbol_data_path()
     if date_range_str is None:
         date_range_str = config.processing_date_range
     if timeframe_shortlist is None:
@@ -93,7 +93,7 @@ def read_multi_timeframe_atr_movement_pivots(date_range_str: str = None) \
     return result
 
 
-@measure_time
+@profile_it
 def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None,
                         same_time_multiple_timeframes: bool = True) -> pt.DataFrame[MultiTimeframeAtrMovementPivotDFM]:
     """
@@ -155,7 +155,7 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
     return final_pivots
 
 
-@measure_time
+@profile_it
 def insert_major_timeframe(pivots, structure_timeframe_shortlist):
     for timeframe in structure_timeframe_shortlist[::-1][:-1]:
         timeframe_pivots = single_timeframe(pivots, timeframe)
@@ -177,7 +177,7 @@ def insert_major_timeframe(pivots, structure_timeframe_shortlist):
             "len(pivots[pivots['major_timeframe'] == True]) != pivots.index.get_level_values(level='date').unique()")
 
 
-@measure_time
+@profile_it
 def insert_pivot_movements(timeframe_tops: pt.DataFrame[PeakValley],
                            base_ohlcv: pt.DataFrame[OHLCV]) -> pt.DataFrame[PeakValley]:
     """
@@ -223,7 +223,7 @@ def insert_pivot_movements(timeframe_tops: pt.DataFrame[PeakValley],
     return timeframe_tops
 
 
-@measure_time
+@profile_it
 def insert_pivot_movement_times(timeframe_peak_or_valleys: pt.DataFrame[PeakValley], base_ohlcv: pt.DataFrame[OHLCV],
                                 top_type: TopTYPE) -> pt.DataFrame[MultiTimeframePeakValley]:
     """
@@ -282,7 +282,7 @@ def insert_pivot_movement_times(timeframe_peak_or_valleys: pt.DataFrame[PeakVall
     return timeframe_peak_or_valleys
 
 
-@measure_time
+@profile_it
 def insert_more_significant_tops(timeframe_tops: pt.DataFrame[PeakValley],
                                  compared_tops: pt.DataFrame[MultiTimeframePeakValley]) \
         -> pt.DataFrame[MultiTimeframePeakValley]:

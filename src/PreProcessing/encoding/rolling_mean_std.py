@@ -5,7 +5,7 @@ import pandas as pd
 
 from Config import config
 from PanderaDFM.MtRollingMeanStdOHLCV import MtRollingMeanStdOHLCV
-from data_processing.fragmented_data import data_path
+from data_processing.fragmented_data import symbol_data_path
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import expand_date_range, read_file, trim_to_date_range
 from helper.helper import date_range_to_string
@@ -44,7 +44,7 @@ def reverse_mt_rolling_mean_std(mt_rolling_mean_std):
 
 def generate_multi_timeframe_rolling_mean_std_ohlcv(date_range_str: str, file_path: str = None) -> None:
     if file_path is None:
-        file_path = data_path()
+        file_path = symbol_data_path()
     expander_duration = sum(
         [pd.to_timedelta(tf) * (lenght + 1) for tf, lenght in timeframe_normalization_length.items()],
         timedelta())

@@ -1,11 +1,11 @@
-from helper.helper import measure_time
+from helper.helper import profile_it
 
 
 def read_multi_timeframe_color_trend_pivots(date_range_str: str = None):
     raise Exception('Not implemented!')
 
 
-@measure_time
+@profile_it
 def generate_multi_timeframe_color_trend_pivots():
     """
         trend pivots:

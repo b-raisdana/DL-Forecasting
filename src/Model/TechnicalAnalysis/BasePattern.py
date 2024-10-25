@@ -9,11 +9,11 @@ from Config import config, CandleSize
 from PanderaDFM.BasePattern import BasePattern, MultiTimeframeBasePattern
 from PanderaDFM.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
 from data_processing.atr import read_multi_timeframe_ohlcva
-from data_processing.fragmented_data import data_path
+from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, \
     anti_pattern_timeframe, \
     anti_trigger_timeframe, to_timeframe, trim_to_date_range
-from helper.helper import date_range, date_range_to_string, measure_time
+from helper.helper import date_range, date_range_to_string, profile_it
 
 
 def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:
@@ -169,7 +169,7 @@ def add_high_and_low(timeframe_base_patterns: pt.DataFrame['BasePattern'], ohlcv
     return timeframe_base_patterns
 
 
-@measure_time
+@profile_it
 def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA], a_pattern_ohlcva: pt.DataFrame[OHLCVA],
                            a_trigger_ohlcva: pt.DataFrame[OHLCVA], timeframe: str,
                            base_timeframe_ohlcva: pt.DataFrame[OHLCVA],
@@ -288,7 +288,7 @@ def multi_timeframe_base_patterns(expanded_multi_timeframe_ohlcva: pt.DataFrame[
 def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path: str = None,
                                            timeframe_shortlist: List['str'] = None):
     if file_path is None:
-        file_path = data_path()
+        file_path = symbol_data_path()
     if date_range_str is None:
         date_range_str = config.processing_date_range
     if timeframe_shortlist is None:

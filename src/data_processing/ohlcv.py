@@ -8,15 +8,15 @@ from pandera import typing as pt
 from Config import config
 from PanderaDFM.OHLCV import MultiTimeframeOHLCV, OHLCV
 from data_processing.fetch_ohlcv import fetch_ohlcv_by_range
-from data_processing.fragmented_data import data_path
+from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
     after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df, concat
-from helper.helper import measure_time, date_range, date_range_to_string
+from helper.helper import profile_it, date_range, date_range_to_string
 
 
 def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = None):
     if file_path is None:
-        file_path = data_path()
+        file_path = symbol_data_path()
     biggest_timeframe = config.timeframes[-1]
     start, end = date_range(date_range_str)
     round_to_biggest_timeframe_end = to_timeframe(end, biggest_timeframe, ignore_cached_times=True, do_not_warn=True)
@@ -105,7 +105,7 @@ def cache_times(result):
 # @measure_time
 def generate_multi_timeframe_ohlcv(date_range_str: str = None, file_path: str = None) -> None:
     if file_path is None:
-        file_path = data_path()
+        file_path = symbol_data_path()
     start, end = date_range(date_range_str)
 
     # Split the date range into individual days
@@ -154,10 +154,10 @@ def read_base_timeframe_ohlcv(date_range_str: str, base_timeframe=None) \
     return result
 
 
-@measure_time
+@profile_it
 def generate_base_timeframe_ohlcv(date_range_str: str = None, file_path: str = None, base_timeframe=None) -> None:
     if file_path is None:
-        file_path = data_path()
+        file_path = symbol_data_path()
     start, end = date_range(date_range_str)
     # Split the date range into individual days
     current_day = start
@@ -178,7 +178,7 @@ def core_generate_ohlcv(date_range_str: str = None, file_path: str = None, base_
     if date_range_str is None:
         date_range_str = config.processing_date_range
     if file_path is None:
-        file_path = data_path()
+        file_path = symbol_data_path()
     raw_ohlcv = fetch_ohlcv_by_range(date_range_str, base_timeframe=base_timeframe)
     df = pd.DataFrame(raw_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['date'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)

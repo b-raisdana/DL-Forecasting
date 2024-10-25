@@ -9,10 +9,10 @@ from FigurePlotter.plotter import plot_multiple_figures, file_id, timeframe_colo
 from PanderaDFM.PeakValley import MultiTimeframePeakValley
 from Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
 from data_processing.atr import read_multi_timeframe_ohlcva
-from helper.helper import measure_time
+from helper.helper import profile_it
 
 
-@measure_time
+@profile_it
 def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pt.DataFrame[MultiTimeframePeakValley],
                                          date_range_str: str, show=True, save=True):
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
@@ -30,7 +30,7 @@ def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pt.Dat
     return fig
 
 
-@measure_time
+@profile_it
 def plot_peaks_n_valleys(ohlcva: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close', 'atr']),
                          peaks: pd = pd.DataFrame(columns=['high', 'timeframe']),
                          valleys: pd = pd.DataFrame(columns=['low', 'timeframe']),

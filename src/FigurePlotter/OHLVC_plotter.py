@@ -9,7 +9,7 @@ from FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_fi
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
 from helper.data_preparation import single_timeframe
-from helper.helper import log, measure_time
+from helper.helper import log, profile_it
 price_columns = {
     'open': 'gray',
     'high': 'green',
@@ -27,7 +27,7 @@ def trace_chart(i_fig, df, name_prefix, fig_row, fig_col):
         row=fig_row, col=fig_col)
     return i_fig
 
-@measure_time
+@profile_it
 def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bool = True, save: bool = True) -> None:
     figures = []
     for _, timeframe in enumerate(config.timeframes):
@@ -37,7 +37,7 @@ def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bo
                           save=save, show=show)
 
 
-@measure_time
+@profile_it
 def plot_multi_timeframe_ohlcv(multi_timeframe_ohlcv, date_range_str, show: bool = True, save: bool = True):
     figures = []
     for _, timeframe in enumerate(config.timeframes):
@@ -46,7 +46,7 @@ def plot_multi_timeframe_ohlcv(multi_timeframe_ohlcv, date_range_str, show: bool
     plot_multiple_figures(figures, name=f'multi_timeframe_ohlcv.{date_range_str}', show=show, save=save)
 
 
-@measure_time
+@profile_it
 def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
                # plot_base_ohlcv: bool = False,
                base_ohlcv: pt.DataFrame[OHLCV] = None,
@@ -93,7 +93,7 @@ def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']
     return fig
 
 
-@measure_time
+@profile_it
 def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name: str = '',
                 base_ohlcv: pt.DataFrame[OHLCV] = None) -> plgo.Figure:
     """
@@ -155,7 +155,7 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
     return fig
 
 
-@measure_time
+@profile_it
 def plot_ohlcva_with_subplot(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name: str = '',
                              base_ohlcv: pt.DataFrame[OHLCV] = None) -> plgo.Figure:
     """
