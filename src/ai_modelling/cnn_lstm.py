@@ -72,12 +72,16 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     if len(unique_lengths) > 1:
         raise RuntimeError(f'Batch sizes should be the same. input lengths: {input_lens}')
 
-    model_path = os.path.join(config.path_of_data, 'cnn_lstm_model.h5')
+    model_path_h5 = os.path.join(config.path_of_data, 'cnn_lstm_model.h5')
+    model_path_keras = os.path.join(config.path_of_data, 'cnn_lstm_model.keras')
     # Check if the model already exists, load if it does
     if model is None:
-        if not rebuild_model and os.path.exists(model_path):
-            log_d("Loading existing model from disk...")
-            model = load_model(model_path)
+        if not rebuild_model and os.path.exists(model_path_keras):
+            log_d("Loading existing keras model from disk...")
+            model = load_model(model_path_keras)
+        elif not rebuild_model and os.path.exists(model_path_h5):
+            log_d("Loading existing h5 model from disk...")
+            model = load_model(model_path_h5)
         else:
             log_d("Building new model...")
             model = build_model(x_shapes, (input_y.shape[1], input_y.shape[2]), filters,
@@ -85,14 +89,15 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
                                 cnn_kernel_growing_steps, dropout_rate)
 
     # Train the model
-    early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='val_loss', patience=100, restore_best_weights=True)
     history = model.fit([input_x['structure'], input_x['pattern'], input_x['trigger'], input_x['double']],
                         input_y, epochs=epochs, batch_size=batch_size, validation_split=0.2,
                         # Use a portion of your data for validation
                         callbacks=[early_stopping])
     log_d(history)
     # Save the model after each training session to avoid losing progress
-    model.save(model_path)
+    model.save(model_path_h5)
+    model.save(model_path_keras)
     log_d("Model saved to disk.")
 
     return model
@@ -221,12 +226,20 @@ if __name__ == "__main__":
     config.processing_date_range = "22-12-29.00-00T24-10-24.00-00"
     for start, end in overlapped_quarters(config.processing_date_range):
         config.processing_date_range = date_range_to_string(start=start, end=end)
-        for symbol, _ in ccxt_symbol_map.items():
+        for symbol in [
+            'BTCUSDT',
+            'ETHUSDT',
+            'BNBUSDT',
+            'EOSUSDT',
+            'TRXUSDT',
+            # 'TONUSDT',
+            'SOLUSDT',
+        ]:
             config.under_process_symbol = symbol
             n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
             mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
             base_ohlcv = single_timeframe(mt_ohlcv, '15min')
-            batch_size = 1000
+            batch_size = 200
             X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
 
             # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
