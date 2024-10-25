@@ -1,0 +1,14 @@
+DEBUG@10-25.21:52:13:...Starting
+DEBUG@10-25.21:52:19:mt_train_n_test(4h, 166969*Index(['open', 'close', 'high', 'low', 'volume', 'pre_open', 'mean_open',
+       'std_open', 'n_open', 'pre_close', 'mean_close', 'std_close', 'n_close',
+       'pre_high', 'mean_high', 'std_high', 'n_high', 'pre_low', 'mean_low',
+       'std_low', 'n_low', 'pre_volume', 'mean_volume', 'std_volume',
+       'n_volume'],
+      dtype='object'), {'structure': (128, 5), 'pattern': (256, 5), 'trigger': (256, 5), 'double': (256, 5)}, 200) started
+INFO@10-25.21:52:23:mt_train_n_test(4h, 166969*Index(['open', 'close', 'high', 'low', 'volume', 'pre_open', 'mean_open',
+       'std_open', 'n_open', 'pre_close', 'mean_close', 'std_close', 'n_close',
+       'pre_high', 'mean_high', 'std_high', 'n_high', 'pre_low', 'mean_low',
+       'std_low', 'n_low', 'pre_volume', 'mean_volume', 'std_volume',
+       'n_volume'],
+      dtype='object'), {'structure': (128, 5), 'pattern': (256, 5), 'trigger': (256, 5), 'double': (256, 5)}, 200) executed in [91m3.422 seconds
+DEBUG@10-25.21:52:23:Loading existing h5 model from disk...

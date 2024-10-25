@@ -11,7 +11,8 @@ scikit-learn
 # psutil
 pytz
 pandas_ta
-tensorflow==2.18.0
+tensorflow
+#==2.18.0
 # tensorflow[and-cuda]<=2.14.0
 
 # tensorflow-gpu>=2.3.0
