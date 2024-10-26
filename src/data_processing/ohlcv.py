@@ -102,7 +102,7 @@ def cache_times(result):
             single_timeframe(result, timeframe).index#.get_level_values('date').tolist()
 
 
-# @measure_time
+@profile_it
 def generate_multi_timeframe_ohlcv(date_range_str: str = None, file_path: str = None) -> None:
     if file_path is None:
         file_path = symbol_data_path()

@@ -8,7 +8,7 @@ from PanderaDFM.MtRollingMeanStdOHLCV import MtRollingMeanStdOHLCV
 from data_processing.fragmented_data import symbol_data_path
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import expand_date_range, read_file, trim_to_date_range
-from helper.helper import date_range_to_string
+from helper.helper import date_range_to_string, profile_it
 from helper.importer import pt, ta
 
 columns_list = ['open', 'close', 'high', 'low', 'volume']
@@ -71,6 +71,7 @@ def generate_multi_timeframe_rolling_mean_std_ohlcv(date_range_str: str, file_pa
                           compression='zip')
 
 
+@profile_it
 def read_multi_timeframe_rolling_mean_std_ohlcv(date_range_str: str = None) -> MtRollingMeanStdOHLCV:
     if date_range_str is None:
         date_range_str = config.processing_date_range

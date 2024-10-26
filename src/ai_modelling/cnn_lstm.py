@@ -18,7 +18,7 @@ from data_processing.fetch_ohlcv import ccxt_symbol_map
 from data_processing.fragmented_data import symbol_data_path
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import single_timeframe
-from helper.helper import date_range, log_d, date_range_to_string
+from helper.helper import date_range, log_d, date_range_to_string, profile_it
 from training.trainer import mt_train_n_test
 
 print('tensorflow:' + tf.__version__)
@@ -31,6 +31,7 @@ cnn_lstd_model_x_lengths = {
 }
 
 
+@profile_it
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shapes, batch_size, model=None, filters=64,
                 lstm_units_list: list = None, dense_units=64, cnn_count=3, cnn_kernel_growing_steps=2,
                 dropout_rate=0.3, rebuild_model: bool = False, epochs=1000):
@@ -103,6 +104,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     return model
 
 
+@profile_it
 def create_cnn_lstm(x_shape, model_prefix, filters=64, lstm_units_list: list = None, dense_units=64, cnn_count=2,
                     cnn_kernel_growing_steps=2, dropout_rate=0.3):
     if lstm_units_list is None:
@@ -151,6 +153,7 @@ def create_cnn_lstm(x_shape, model_prefix, filters=64, lstm_units_list: list = N
     return model
 
 
+@profile_it
 def build_model(x_shapes, y_shape: tuple[int, int], filters=64, lstm_units_list: list = None, dense_units=64,
                 cnn_count=2,
                 cnn_kernel_growing_steps=2, dropout_rate=0.3):
@@ -217,7 +220,8 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
         i_date_range = config.processing_date_range
     start, end = date_range(i_date_range)
     rounded_start = ceil_to_slide(start, slide)
-    list_of_periods = [(p_start, p_start + length) for p_start in pd.date_range(rounded_start, end - length, freq=slide)]
+    list_of_periods = [(p_start, p_start + length) for p_start in
+                       pd.date_range(rounded_start, end - length, freq=slide)]
     return list_of_periods
 
 
@@ -239,7 +243,7 @@ if __name__ == "__main__":
             n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
             mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
             base_ohlcv = single_timeframe(mt_ohlcv, '15min')
-            batch_size = 200
+            batch_size = 1000
             X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
 
             # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)

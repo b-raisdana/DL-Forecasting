@@ -11,8 +11,12 @@ import numpy as np
 import pandas as pd
 import pandera
 import pytz
+from colorama import init, Fore, Style
 
-from Config import Config, config
+from Config import config
+
+# Initialize colorama
+init(autoreset=True)
 
 
 class LogSeverity(Enum):
@@ -24,26 +28,13 @@ class LogSeverity(Enum):
 
 Pandera_DFM_Type = TypeVar('Pandera_DFM_Type', bound=pandera.DataFrameModel)
 
-
-class bcolors(Enum):
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-
 path_of_logs = config.path_of_logs  # 'logs'
 
 __severity_color_map = {
-    LogSeverity.INFO: bcolors.OKGREEN,
-    LogSeverity.WARNING: bcolors.WARNING,
-    LogSeverity.ERROR: bcolors.FAIL,
-    LogSeverity.DEBUG: bcolors.OKGREEN,
+    LogSeverity.INFO: Fore.GREEN,
+    LogSeverity.WARNING: Fore.YELLOW,
+    LogSeverity.ERROR: Fore.RED,
+    LogSeverity.DEBUG: Fore.CYAN,
 }
 
 log_file_handler = open(os.path.join(path_of_logs, 'runtime.log'), 'w')
@@ -73,10 +64,10 @@ def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: boo
     Returns:
         None
     """
-    severity_color = __severity_color_map[severity].value
-    time_color = bcolors.OKBLUE.value
+    severity_color = __severity_color_map[severity]  # .value
+    time_color = Fore.BLUE  # bcolors.OKBLUE.value
     print(f'{severity_color}{severity.value}@{time_color}{datetime.now().strftime("%m-%d.%H:%M:%S")}:'
-          f'{severity_color}{message}')
+          f'{severity_color}{message}{Style.RESET_ALL}')
     log_file_handler.write(f'{severity.value}@{datetime.now().strftime("%m-%d.%H:%M:%S")}:{message}\n')
     if stack_trace:
         stack = traceback.extract_stack(limit=2 + 1)[:-1]  # Remove the last item
@@ -105,12 +96,12 @@ def profile_it(func):
 
         end_time = time.time()
         execution_time = end_time - start_time
-        execution_tim_color = bcolors.OKBLUE if execution_time < 0.01 \
-            else bcolors.OKGREEN if execution_time < 0.1 \
-            else bcolors.WARNING if execution_time < 1 \
-            else bcolors.FAIL
+        execution_time_color = Fore.BLUE if execution_time < 0.01 \
+            else Fore.GREEN if execution_time < 0.1 \
+            else Fore.YELLOW if execution_time < 1 \
+            else Fore.RED
         log(f"{func.__name__}({function_parameters}) "
-            f"executed in {execution_tim_color.value}{execution_time:.3f} seconds", stack_trace=False)
+            f"executed in {execution_time_color}{execution_time:.3f} seconds", stack_trace=False)
         return result
 
     return _measure_time
