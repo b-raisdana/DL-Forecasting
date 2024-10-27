@@ -11,7 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the entire source code to the working directory
-COPY src/ .
+COPY app/ .
 
 # Set the command to run your script
 CMD ["python", "ai_modelling/cnn_lstm.py"]

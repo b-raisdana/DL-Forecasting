@@ -1,5 +1,5 @@
 /venv/
-.idea
+../.idea
 /ta-lib/
 /.pytest_cache/
 /MetaTrader5/logs/

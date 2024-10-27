@@ -6,6 +6,6 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./src:/app/src  # Mount your source code directory
+      - ./app:/app/app  # Mount your source code directory
     environment:
       - PYTHONUNBUFFERED=1  # Optional: to get real-time output
