@@ -18,7 +18,7 @@ from app.Config import config
 from app.PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
 from app.data_processing.ohlcv import read_multi_timeframe_ohlcv
 from app.helper.data_preparation import single_timeframe
-from app.helper.helper import date_range, log_d, date_range_to_string, profile_it
+from app.helper.helper import date_range, log_d, date_range_to_string, profile_it, log_e
 from app.training.trainer import mt_train_n_test
 
 print('tensorflow:' + tf.__version__)
@@ -263,18 +263,20 @@ if __name__ == "__main__":
                 # 'TONUSDT',
                 'SOLUSDT',
             ]:
-                log_d(f'Symbol:{symbol}##########################################')
-                config.under_process_symbol = symbol
-                n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
-                mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
-                base_ohlcv = single_timeframe(mt_ohlcv, '15min')
-                batch_size = 128
-                X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
+                try:
+                    log_d(f'Symbol:{symbol}##########################################')
+                    config.under_process_symbol = symbol
+                    n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
+                    mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
+                    base_ohlcv = single_timeframe(mt_ohlcv, '15min')
+                    batch_size = 128
+                    X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
 
-                # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
-                nop = 1
-                t_model = train_model(X, y, cnn_lstd_model_x_lengths, batch_size)
-
+                    # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
+                    nop = 1
+                    t_model = train_model(X, y, cnn_lstd_model_x_lengths, batch_size)
+                except Exception as e:
+                    log_e(e)
 """
 Potential Areas of Improvement for Professional Price Forecasting:
 
