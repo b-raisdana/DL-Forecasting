@@ -40,7 +40,7 @@ cnn_lstd_model_x_lengths = {
 #         return tf.expand_dims(inputs, axis=self.axis)
 
 
-@profile_it
+# @profile_it
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shapes, batch_size, model=None, filters=64,
                 lstm_units_list: list = None, dense_units=64, cnn_count=3, cnn_kernel_growing_steps=2,
                 dropout_rate=0.3, rebuild_model: bool = False, epochs=500):
