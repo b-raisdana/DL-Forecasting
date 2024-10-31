@@ -245,8 +245,8 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
 if __name__ == "__main__":
     print("Python:" + sys.version)
     config.processing_date_range = "22-12-29.00-00T24-10-24.00-00"
-    seed(42)
-    np.random.seed(42)
+    # seed(42)
+    # np.random.seed(42)
 
     while True:
         quarters = overlapped_quarters(config.processing_date_range)
