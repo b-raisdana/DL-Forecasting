@@ -8,13 +8,11 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras import Input
+from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Conv1D, LeakyReLU, Flatten, Dense, Concatenate, Dropout, LSTM, BatchNormalization
 from tensorflow.keras.layers import Reshape
 from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.callbacks import Callback
-from tensorflow.python.keras.utils.generic_utils import register_keras_serializable
-from tensorflow.python.ops.numpy_ops.np_random import random
 
 from app.Config import config
 from app.PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
@@ -34,6 +32,10 @@ cnn_lstd_model_x_lengths = {
 
 
 class CustomEpochLogger(Callback):
+    def __init__(self, model=None):
+        super().__init__()
+        self.model = model  # Save the model instance
+
     def on_epoch_end(self, epoch, logs=None):
         training_loss = logs.get('loss')
         validation_loss = logs.get('val_loss')
@@ -43,6 +45,9 @@ class CustomEpochLogger(Callback):
             f"Training Loss: {training_loss:.4f} - "
             f"Validation Loss: {validation_loss:.4f}")
 
+    def set_model(self, model):
+        super().set_model(model)  # Call the parent class method
+        self.model = model  # Update the model instance if needed
 
 @profile_it
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shapes, batch_size, model=None, filters=64,
@@ -111,6 +116,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
 
     # Train the model
     early_stopping = EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
+    epoch_logger = CustomEpochLogger()
     history = model.fit(
         x={'structure_model_input': input_x['structure'],
            'pattern_model_input': input_x['pattern'],
@@ -118,7 +124,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
            'double_model_input': input_x['double']},
         y=input_y, epochs=epochs, batch_size=batch_size, validation_split=0.2,
         # Use a portion of your data for validation
-        callbacks=[early_stopping, CustomEpochLogger])
+        callbacks=[early_stopping, epoch_logger])
     log_d(history)
     model.save(model_path_keras)
     log_d("Model saved to disk.")
