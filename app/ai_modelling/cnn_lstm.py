@@ -11,6 +11,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Conv1D, LeakyReLU, Flatten, Dense, Concatenate, Dropout, LSTM, BatchNormalization
 from tensorflow.keras.layers import Reshape
 from tensorflow.keras.models import Model, load_model
+from tensorflow.python.keras.utils.generic_utils import register_keras_serializable
 
 from app.Config import config
 from app.PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
@@ -28,7 +29,7 @@ cnn_lstd_model_x_lengths = {
     'double': (256, 5),
 }
 
-
+@register_keras_serializable()
 class ExpandDimsLayer(tf.keras.layers.Layer):
     def __init__(self, axis, **kwargs):
         super(ExpandDimsLayer, self).__init__(**kwargs)
@@ -119,7 +120,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
         callbacks=[early_stopping])
     log_d(history)
     # Save the model after each training session to avoid losing progress
-    model.save(model_path_h5)
+    # model.save(model_path_h5)
     model.save(model_path_keras)
     log_d("Model saved to disk.")
 
