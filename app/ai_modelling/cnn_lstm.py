@@ -30,14 +30,14 @@ cnn_lstd_model_x_lengths = {
 }
 
 
-@register_keras_serializable()
-class ExpandDimsLayer(tf.keras.layers.Layer):
-    def __init__(self, axis, **kwargs):
-        super(ExpandDimsLayer, self).__init__(**kwargs)
-        self.axis = axis
-
-    def call(self, inputs):
-        return tf.expand_dims(inputs, axis=self.axis)
+# @register_keras_serializable()
+# class ExpandDimsLayer(tf.keras.layers.Layer):
+#     def __init__(self, axis, **kwargs):
+#         super(ExpandDimsLayer, self).__init__(**kwargs)
+#         self.axis = axis
+#
+#     def call(self, inputs):
+#         return tf.expand_dims(inputs, axis=self.axis)
 
 
 @profile_it
