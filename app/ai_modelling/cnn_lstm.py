@@ -92,11 +92,9 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     # Check if the model already exists, load if it does
     if model is None:
         if not rebuild_model and os.path.exists(model_path_keras):
-            raise RuntimeError()
             log_d("Loading existing keras model from disk...")
             model = load_model(model_path_keras)
         elif not rebuild_model and os.path.exists(model_path_h5):
-            raise RuntimeError()
             log_d("Loading existing h5 model from disk...")
             model = load_model(model_path_h5)
         else:
