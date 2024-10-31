@@ -88,7 +88,7 @@ def plot_mt_train_n_test(x, y, n, base_ohlcv, show=True):
         return fig
 
 
-@profile_it
+# @profile_it
 def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_lengths: dict,
                     batch_size: int, forecast_horizon: int = 20, ):
     """
