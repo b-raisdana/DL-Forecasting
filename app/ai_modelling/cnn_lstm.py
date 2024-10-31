@@ -28,6 +28,13 @@ cnn_lstd_model_x_lengths = {
     'double': (256, 5),
 }
 
+class ExpandDimsLayer(tf.keras.layers.Layer):
+    def __init__(self, axis, **kwargs):
+        super(ExpandDimsLayer, self).__init__(**kwargs)
+        self.axis = axis
+
+    def call(self, inputs):
+        return tf.expand_dims(inputs, axis=self.axis)
 
 @profile_it
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shapes, batch_size, model=None, filters=64,
@@ -122,7 +129,9 @@ def create_cnn_lstm(x_shape, model_prefix, filters=64, lstm_units_list: list = N
     flatten = Flatten(name=f'{model_prefix}_flatten')(conv)
 
     # Reshape for LSTM (LSTM expects 3D input: (batch_size, timesteps, features))
-    lstm_input = tf.expand_dims(flatten, axis=1)
+    # lstm_input = tf.expand_dims(flatten, axis=1)
+    # Replace the original line with:
+    lstm_input = ExpandDimsLayer(axis=1)(flatten)
 
     # Stack multiple LSTM layers with varying units
     for i, lstm_units in enumerate(lstm_units_list):

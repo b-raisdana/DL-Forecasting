@@ -20,3 +20,5 @@
 /data/archive/
 /data/
 *.log
+/venv_3_12_6/
+/logs/
