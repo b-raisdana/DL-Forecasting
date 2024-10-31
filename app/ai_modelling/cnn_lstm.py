@@ -32,22 +32,23 @@ cnn_lstd_model_x_lengths = {
 
 
 class CustomEpochLogger(Callback):
-    def __init__(self, model=None):
-        super().__init__()
-        self.model = model  # Save the model instance
+    # def __init__(self, model=None):
+    #     super().__init__()
+    #     self.model = model  # Save the model instance
 
     def on_epoch_end(self, epoch, logs=None):
-        training_loss = logs.get('loss')
-        validation_loss = logs.get('val_loss')
-        print(
-            f"{config.under_process_symbol}:{config.processing_date_range}"
-            f"Epoch {epoch + 1}/{self.params['epochs']} - "
-            f"Training Loss: {training_loss:.4f} - "
-            f"Validation Loss: {validation_loss:.4f}")
+        # training_loss = logs.get('loss')
+        # validation_loss = logs.get('val_loss')
+        log_d(
+            f" {config.under_process_symbol}:{config.processing_date_range}"
+            # f"Epoch {epoch + 1}/{self.params['epochs']} - "
+            # f"Training Loss: {training_loss:.4f} - "
+            # f"Validation Loss: {validation_loss:.4f}"
+        )
 
     def set_model(self, model):
         super().set_model(model)  # Call the parent class method
-        self.model = model  # Update the model instance if needed
+        # self.model = model  # Update the model instance if needed
 
 @profile_it
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shapes, batch_size, model=None, filters=64,
