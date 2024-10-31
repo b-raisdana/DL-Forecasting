@@ -43,7 +43,7 @@ cnn_lstd_model_x_lengths = {
 @profile_it
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shapes, batch_size, model=None, filters=64,
                 lstm_units_list: list = None, dense_units=64, cnn_count=3, cnn_kernel_growing_steps=2,
-                dropout_rate=0.3, rebuild_model: bool = False, epochs=1000):
+                dropout_rate=0.3, rebuild_model: bool = False, epochs=500):
     """
     Check if the model is already trained or partially trained. If not, build a new model.
     Continue training the model and save the trained model to 'cnn_lstm_model.h5' after each session.
@@ -106,7 +106,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
                                 cnn_kernel_growing_steps=cnn_kernel_growing_steps, dropout_rate=dropout_rate)
 
     # Train the model
-    early_stopping = EarlyStopping(monitor='val_loss', patience=200, restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
     history = model.fit(
         x={'structure_model_input': input_x['structure'],
            'pattern_model_input': input_x['pattern'],
@@ -249,7 +249,7 @@ if __name__ == "__main__":
             n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
             mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
             base_ohlcv = single_timeframe(mt_ohlcv, '15min')
-            batch_size = 500
+            batch_size = 128
             X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
 
             # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
