@@ -135,9 +135,9 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
 
 @profile_it
 def create_cnn_lstm(x_shape, model_prefix, filters=64, lstm_units_list: list = None, dense_units=64, cnn_count=2,
-                    cnn_kernel_growing_steps=2, dropout_rate=0.3):
+                    cnn_kernel_growing_steps=2, dropout_rate=0.1):
     if lstm_units_list is None:
-        lstm_units_list = [64, 64]
+        lstm_units_list = [64, 64] # 256, 128
     input_layer = Input(shape=x_shape, name=f'{model_prefix}_input')
 
     # CNN Layers with growing filters and kernel sizes

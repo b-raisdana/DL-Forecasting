@@ -302,21 +302,22 @@ def read_without_index(data_frame_type, date_range_str, file_path, n_rows, skip_
 
 def read_by_date(data_frame_type, date_range_str, file_path, n_rows, skip_rows):
     csv_zip_file_path = os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip')
-    parquet_file_path = os.path.join(file_path, f'{data_frame_type}.{date_range_str}.parquet')
-    if os.path.exists(parquet_file_path):
-        try:
-            df = pd.read_parquet(parquet_file_path, engine='pyarrow')
-            # log_d(f"Loaded Parquet file: {parquet_file_path}")
-        except Exception as e:
-            log_d(f"Failed to load Parquet file: {e}")
-    else:
-        try:
-            df = pd.read_csv(csv_zip_file_path, sep=',', header=0,
-                             index_col='date', parse_dates=['date'],
-                             skiprows=skip_rows, nrows=n_rows)
-            df.to_parquet(parquet_file_path, engine='pyarrow', compression='Brotli')
-        except BadZipFile:
-            raise Exception(f'{csv_zip_file_path} is not a zip file!')
+    # parquet_file_path = os.path.join(file_path, f'{data_frame_type}.{date_range_str}.parquet')
+    # if os.path.exists(parquet_file_path):
+    #     try:
+    #         df = pd.read_parquet(parquet_file_path, engine='pyarrow')
+    #         # log_d(f"Loaded Parquet file: {parquet_file_path}")
+    #     except Exception as e:
+    #         log_d(f"Failed to load Parquet file: {e}")
+    # else:
+    try:
+        df = pd.read_csv(csv_zip_file_path, sep=',', header=0,
+                         index_col='date', parse_dates=['date'],
+                         skiprows=skip_rows, nrows=n_rows)
+        # df.to_parquet(parquet_file_path, engine='pyarrow', compression='Brotli')
+    except BadZipFile:
+        os.remove(csv_zip_file_path)
+        raise Exception(f'{csv_zip_file_path} is not a zip file!')
     # Convert the 'date' index to UTC if it's timezone-unaware
     if len(df) > 0:
         if not hasattr(df.index, 'tz'):
