@@ -107,21 +107,53 @@ def profile_it(func):
     return _measure_time
 
 
+# def get_function_parameters(args, kwargs):
+#     parameters = [
+#                      f'{len(arg)}*{arg.columns}' if isinstance(arg, pd.DataFrame)
+#                      else f'list{np.array(arg).shape}' if isinstance(arg, list)
+#                      else str(arg)
+#                      for arg in args
+#                  ] + [
+#                      f'{k}:{len(kwargs[k])}*{kwargs[k].columns}' if isinstance(kwargs[k], pd.DataFrame)
+#                      else f'{k}:list{np.array(kwargs[k]).shape}' if isinstance(kwargs[k], list)
+#                      else f'{k}:list{np.array(kwargs[k]).shape}' if isinstance(kwargs[k], list)
+#                      else f'{k}:{kwargs[k]}'
+#                      for k in kwargs.keys()
+#                  ]
+#     return ", ".join(parameters)
 def get_function_parameters(args, kwargs):
-    parameters = [
-                     f'{len(arg)}*{arg.columns}' if isinstance(arg, pd.DataFrame)
-                     else f'list{np.array(arg).shape}' if isinstance(arg, list)
-                     else str(arg)
-                     for arg in args
-                 ] + [
-                     f'{k}:{len(kwargs[k])}*{kwargs[k].columns}' if isinstance(kwargs[k], pd.DataFrame)
-                     else f'{k}:list{np.array(kwargs[k]).shape}' if isinstance(kwargs[k], list)
-                     else f'{k}:list{np.array(kwargs[k]).shape}' if isinstance(kwargs[k], list)
-                     else f'{k}:{kwargs[k]}'
-                     for k in kwargs.keys()
-                 ]
-    return ", ".join(parameters)
+    def process_item(item):
+        if isinstance(item, pd.DataFrame):
+            return f'{len(item)}*{item.columns}'
+        elif isinstance(item, list):
+            return f'list{np.array(item).shape}'
+        elif isinstance(item, np.ndarray):
+            return f'ndarray{item.shape}'
+        elif isinstance(item, dict):
+            # Handle dictionaries
+            return process_dict(item)
+        else:
+            return str(item)
 
+    def process_dict(d):
+        t_parameters = []
+        for key, value in d.items():
+            if isinstance(value, list):
+                t_parameters.append(f'{key}: list{np.array(value).shape}')
+            elif isinstance(value, pd.DataFrame):
+                t_parameters.append(f'{key}: {len(value)}*{value.columns}')
+            elif isinstance(value, np.ndarray):
+                t_parameters.append(f'{key}: ndarray{value.shape}')
+            elif isinstance(value, dict):
+                t_parameters.append(f'{key}: {{ {process_dict(value)} }}')
+            else:
+                t_parameters.append(f'{key}: {value}')
+        return ", ".join(t_parameters)
+
+    parameters = [process_item(arg) for arg in args]
+    parameters += [f'{k}: {process_item(kwargs[k])}' for k in kwargs.keys()]
+
+    return ", ".join(parameters)
 
 # Define a mapping from Pandera data types to pandas data types
 pandera_to_pandas_type_map = {

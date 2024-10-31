@@ -1,7 +1,7 @@
 import os
 import sys
 from datetime import timedelta, datetime
-from random import shuffle
+from random import shuffle, seed
 from typing import Dict
 
 import numpy as np
@@ -12,6 +12,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Conv1D, LeakyReLU, Flatten, Dense, Concatenate, Dropout, LSTM, BatchNormalization
 from tensorflow.keras.layers import Reshape
 from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.callbacks import Callback
 from tensorflow.python.keras.utils.generic_utils import register_keras_serializable
 from tensorflow.python.ops.numpy_ops.np_random import random
 
@@ -32,7 +33,18 @@ cnn_lstd_model_x_lengths = {
 }
 
 
-# @profile_it
+class CustomEpochLogger(Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        training_loss = logs.get('loss')
+        validation_loss = logs.get('val_loss')
+        print(
+            f"{config.under_process_symbol}:{config.processing_date_range}"
+            f"Epoch {epoch + 1}/{self.params['epochs']} - "
+            f"Training Loss: {training_loss:.4f} - "
+            f"Validation Loss: {validation_loss:.4f}")
+
+
+@profile_it
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shapes, batch_size, model=None, filters=64,
                 lstm_units_list: list = None, dense_units=64, cnn_count=3, cnn_kernel_growing_steps=2,
                 dropout_rate=0.3, rebuild_model: bool = False, epochs=500):
@@ -106,7 +118,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
            'double_model_input': input_x['double']},
         y=input_y, epochs=epochs, batch_size=batch_size, validation_split=0.2,
         # Use a portion of your data for validation
-        callbacks=[early_stopping])
+        callbacks=[early_stopping, CustomEpochLogger])
     log_d(history)
     model.save(model_path_keras)
     log_d("Model saved to disk.")
@@ -226,11 +238,14 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
 if __name__ == "__main__":
     print("Python:" + sys.version)
     config.processing_date_range = "22-12-29.00-00T24-10-24.00-00"
+    seed(42)
+    np.random.seed(42)
+
     while True:
         quarters = overlapped_quarters(config.processing_date_range)
         shuffle(quarters)
         for start, end in quarters:
-            log_d(f'quarter start:{start} end:{end}')
+            log_d(f'quarter start:{start} end:{end}##########################################')
             config.processing_date_range = date_range_to_string(start=start, end=end)
             for symbol in [
                 'BTCUSDT',
@@ -241,6 +256,7 @@ if __name__ == "__main__":
                 # 'TONUSDT',
                 'SOLUSDT',
             ]:
+                log_d(f'Symbol:{symbol}##########################################')
                 config.under_process_symbol = symbol
                 n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
                 mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
