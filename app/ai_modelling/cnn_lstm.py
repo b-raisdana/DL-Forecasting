@@ -28,6 +28,7 @@ cnn_lstd_model_x_lengths = {
     'double': (256, 5),
 }
 
+
 class ExpandDimsLayer(tf.keras.layers.Layer):
     def __init__(self, axis, **kwargs):
         super(ExpandDimsLayer, self).__init__(**kwargs)
@@ -36,10 +37,11 @@ class ExpandDimsLayer(tf.keras.layers.Layer):
     def call(self, inputs):
         return tf.expand_dims(inputs, axis=self.axis)
 
+
 @profile_it
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shapes, batch_size, model=None, filters=64,
                 lstm_units_list: list = None, dense_units=64, cnn_count=3, cnn_kernel_growing_steps=2,
-                dropout_rate=0.3, rebuild_model: bool = False, epochs=1000):
+                dropout_rate=0.3, rebuild_model: bool = False, epochs=2):
     """
     Check if the model is already trained or partially trained. If not, build a new model.
     Continue training the model and save the trained model to 'cnn_lstm_model.h5' after each session.
@@ -66,6 +68,13 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
         RuntimeError: If the lengths of the inputs in `X` or `y` are not the same, a RuntimeError will be raised.
     """
 
+    # Verify structure of input_x
+    for key in ['structure', 'pattern', 'trigger', 'double']:
+        if key not in input_x:
+            raise ValueError(f"Missing key '{key}' in input_x.")
+        if input_x[key].shape[1:] != x_shapes[key]:
+            raise ValueError(f"Shape mismatch for {key}: expected {x_shapes[key]}, got {input_x[key].shape[1:]}")
+
     # Check that all input lengths match
     input_lens = {
         'structure': len(input_x['structure']),
@@ -83,23 +92,33 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     # Check if the model already exists, load if it does
     if model is None:
         if not rebuild_model and os.path.exists(model_path_keras):
+            raise RuntimeError()
             log_d("Loading existing keras model from disk...")
             model = load_model(model_path_keras)
         elif not rebuild_model and os.path.exists(model_path_h5):
+            raise RuntimeError()
             log_d("Loading existing h5 model from disk...")
             model = load_model(model_path_h5)
         else:
             log_d("Building new model...")
-            model = build_model(x_shapes, (input_y.shape[1], input_y.shape[2]), filters,
-                                lstm_units_list, dense_units, cnn_count,
-                                cnn_kernel_growing_steps, dropout_rate)
+            model = build_model(x_shapes=x_shapes, y_shape=(input_y.shape[1], input_y.shape[2]), filters=filters,
+                                lstm_units_list=lstm_units_list, dense_units=dense_units, cnn_count=cnn_count,
+                                cnn_kernel_growing_steps=cnn_kernel_growing_steps, dropout_rate=dropout_rate)
 
     # Train the model
-    early_stopping = EarlyStopping(monitor='val_loss', patience=100, restore_best_weights=True)
-    history = model.fit([input_x['structure'], input_x['pattern'], input_x['trigger'], input_x['double']],
-                        input_y, epochs=epochs, batch_size=batch_size, validation_split=0.2,
-                        # Use a portion of your data for validation
-                        callbacks=[early_stopping])
+    early_stopping = EarlyStopping(monitor='val_loss', patience=200, restore_best_weights=True)
+    # history = model.fit([input_x['structure'], input_x['pattern'], input_x['trigger'], input_x['double']],
+    #                     input_y, epochs=epochs, batch_size=batch_size, validation_split=0.2,
+    #                     # Use a portion of your data for validation
+    #                     callbacks=[early_stopping])
+    history = model.fit(
+        x={'structure_model_input': input_x['structure'],
+           'pattern_model_input': input_x['pattern'],
+           'trigger_model_input': input_x['trigger'],
+           'double_model_input': input_x['double']},
+        y=input_y, epochs=epochs, batch_size=batch_size, validation_split=0.2,
+        # Use a portion of your data for validation
+        callbacks=[early_stopping])
     log_d(history)
     # Save the model after each training session to avoid losing progress
     model.save(model_path_h5)
@@ -130,7 +149,6 @@ def create_cnn_lstm(x_shape, model_prefix, filters=64, lstm_units_list: list = N
 
     # Reshape for LSTM (LSTM expects 3D input: (batch_size, timesteps, features))
     # lstm_input = tf.expand_dims(flatten, axis=1)
-    # Replace the original line with:
     lstm_input = ExpandDimsLayer(axis=1)(flatten)
 
     # Stack multiple LSTM layers with varying units
@@ -153,10 +171,7 @@ def create_cnn_lstm(x_shape, model_prefix, filters=64, lstm_units_list: list = N
 
     # Model setup
     model = Model(inputs=input_layer, outputs=output, name=f'{model_prefix}_model')
-
-    # Compile the model
     model.compile(optimizer='adam', loss='mse')
-
     return model
 
 
@@ -193,15 +208,26 @@ def build_model(x_shapes, y_shape: tuple[int, int], filters=64, lstm_units_list:
     final_output = Reshape(y_shape)(final_output)
 
     # Define the final model
-    model = Model(inputs=[structure_model.input, pattern_model.input, trigger_model.input, double_model.input],
+    # inputs =[Input(shape=x_shapes['structure'], name='structure_inp'),
+    #           Input(shape=x_shapes['pattern'], name='pattern_inp'),
+    #           Input(shape=x_shapes['trigger'], name='trigger_inp'),
+    #           Input(shape=x_shapes['double'], name='double_inp')]
+    # inputs = {
+    #     'structure_inp': Input(shape=x_shapes['structure'], name='structure_inp'),
+    #     'pattern_inp': Input(shape=x_shapes['pattern'], name='pattern_inp'),
+    #     'trigger_inp': Input(shape=x_shapes['trigger'], name='trigger_inp'),
+    #     'double_inp': Input(shape=x_shapes['double'], name='double_inp')}
+    inputs = {
+        'structure_model_input': structure_model.input,
+        'pattern_model_input': pattern_model.input,
+        'trigger_model_input': trigger_model.input,
+        'double_model_input': double_model.input}
+    # model = Model(inputs=[structure_model.input, pattern_model.input, trigger_model.input, double_model.input],
+    #               outputs=final_output)
+    model = Model(inputs=inputs,
                   outputs=final_output)
-
-    # Compile the model with mean squared error loss for regression tasks
     model.compile(optimizer='adam', loss='mse')
-
-    # Model summary
     model.summary()
-
     return model
 
 
@@ -250,7 +276,7 @@ if __name__ == "__main__":
             n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
             mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
             base_ohlcv = single_timeframe(mt_ohlcv, '15min')
-            batch_size = 1000
+            batch_size = 5
             X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
 
             # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
