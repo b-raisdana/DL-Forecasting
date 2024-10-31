@@ -116,6 +116,7 @@ def get_function_parameters(args, kwargs):
                  ] + [
                      f'{k}:{len(kwargs[k])}*{kwargs[k].columns}' if isinstance(kwargs[k], pd.DataFrame)
                      else f'{k}:list{np.array(kwargs[k]).shape}' if isinstance(kwargs[k], list)
+                     else f'{k}:list{np.array(kwargs[k]).shape}' if isinstance(kwargs[k], list)
                      else f'{k}:{kwargs[k]}'
                      for k in kwargs.keys()
                  ]
