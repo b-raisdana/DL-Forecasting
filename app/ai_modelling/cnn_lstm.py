@@ -1,6 +1,7 @@
 import os
 import sys
 from datetime import timedelta, datetime
+from random import shuffle
 from typing import Dict
 
 import numpy as np
@@ -12,6 +13,7 @@ from tensorflow.keras.layers import Conv1D, LeakyReLU, Flatten, Dense, Concatena
 from tensorflow.keras.layers import Reshape
 from tensorflow.keras.models import Model, load_model
 from tensorflow.python.keras.utils.generic_utils import register_keras_serializable
+from tensorflow.python.ops.numpy_ops.np_random import random
 
 from app.Config import config
 from app.PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
@@ -28,16 +30,6 @@ cnn_lstd_model_x_lengths = {
     'trigger': (256, 5),
     'double': (256, 5),
 }
-
-
-# @register_keras_serializable()
-# class ExpandDimsLayer(tf.keras.layers.Layer):
-#     def __init__(self, axis, **kwargs):
-#         super(ExpandDimsLayer, self).__init__(**kwargs)
-#         self.axis = axis
-#
-#     def call(self, inputs):
-#         return tf.expand_dims(inputs, axis=self.axis)
 
 
 # @profile_it
@@ -234,27 +226,31 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
 if __name__ == "__main__":
     print("Python:" + sys.version)
     config.processing_date_range = "22-12-29.00-00T24-10-24.00-00"
-    for start, end in overlapped_quarters(config.processing_date_range):
-        config.processing_date_range = date_range_to_string(start=start, end=end)
-        for symbol in [
-            'BTCUSDT',
-            'ETHUSDT',
-            'BNBUSDT',
-            'EOSUSDT',
-            'TRXUSDT',
-            # 'TONUSDT',
-            'SOLUSDT',
-        ]:
-            config.under_process_symbol = symbol
-            n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
-            mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
-            base_ohlcv = single_timeframe(mt_ohlcv, '15min')
-            batch_size = 128
-            X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
+    while True:
+        quarters = overlapped_quarters(config.processing_date_range)
+        shuffle(quarters)
+        for start, end in quarters:
+            log_d(f'quarter start:{start} end:{end}')
+            config.processing_date_range = date_range_to_string(start=start, end=end)
+            for symbol in [
+                'BTCUSDT',
+                'ETHUSDT',
+                'BNBUSDT',
+                'EOSUSDT',
+                'TRXUSDT',
+                # 'TONUSDT',
+                'SOLUSDT',
+            ]:
+                config.under_process_symbol = symbol
+                n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
+                mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
+                base_ohlcv = single_timeframe(mt_ohlcv, '15min')
+                batch_size = 128
+                X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
 
-            # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
-            nop = 1
-            t_model = train_model(X, y, cnn_lstd_model_x_lengths, batch_size)
+                # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
+                nop = 1
+                t_model = train_model(X, y, cnn_lstd_model_x_lengths, batch_size)
 
 """
 Potential Areas of Improvement for Professional Price Forecasting:
