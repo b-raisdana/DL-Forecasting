@@ -29,6 +29,7 @@ cnn_lstd_model_x_lengths = {
     'double': (256, 5),
 }
 
+
 @register_keras_serializable()
 class ExpandDimsLayer(tf.keras.layers.Layer):
     def __init__(self, axis, **kwargs):
@@ -41,7 +42,7 @@ class ExpandDimsLayer(tf.keras.layers.Layer):
 
 @profile_it
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shapes, batch_size, model=None, filters=64,
-                lstm_units_list: list = None, dense_units=64, cnn_count=3, cnn_kernel_growing_steps=2,
+                lstm_units_list: list = None, dense_units=64, cnn_count=1, cnn_kernel_growing_steps=2,
                 dropout_rate=0.3, rebuild_model: bool = False, epochs=2):
     """
     Check if the model is already trained or partially trained. If not, build a new model.
@@ -106,10 +107,6 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
 
     # Train the model
     early_stopping = EarlyStopping(monitor='val_loss', patience=200, restore_best_weights=True)
-    # history = model.fit([input_x['structure'], input_x['pattern'], input_x['trigger'], input_x['double']],
-    #                     input_y, epochs=epochs, batch_size=batch_size, validation_split=0.2,
-    #                     # Use a portion of your data for validation
-    #                     callbacks=[early_stopping])
     history = model.fit(
         x={'structure_model_input': input_x['structure'],
            'pattern_model_input': input_x['pattern'],
@@ -119,8 +116,6 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
         # Use a portion of your data for validation
         callbacks=[early_stopping])
     log_d(history)
-    # Save the model after each training session to avoid losing progress
-    # model.save(model_path_h5)
     model.save(model_path_keras)
     log_d("Model saved to disk.")
 
@@ -143,12 +138,11 @@ def create_cnn_lstm(x_shape, model_prefix, filters=64, lstm_units_list: list = N
         conv = Dropout(dropout_rate, name=f'{model_prefix}_dropout_conv{i + 1}')(conv)
         conv = BatchNormalization(name=f'{model_prefix}_batch_norm_conv{i + 1}')(conv)
 
-    # Flatten the CNN output
     flatten = Flatten(name=f'{model_prefix}_flatten')(conv)
 
     # Reshape for LSTM (LSTM expects 3D input: (batch_size, timesteps, features))
-    # lstm_input = tf.expand_dims(flatten, axis=1)
-    lstm_input = ExpandDimsLayer(axis=1)(flatten)
+    # lstm_input = ExpandDimsLayer(axis=1)(flatten)
+    lstm_input = Reshape((1, flatten.shape[-1]))(flatten)
 
     # Stack multiple LSTM layers with varying units
     for i, lstm_units in enumerate(lstm_units_list):
@@ -207,37 +201,17 @@ def build_model(x_shapes, y_shape: tuple[int, int], filters=64, lstm_units_list:
     final_output = Reshape(y_shape)(final_output)
 
     # Define the final model
-    # inputs =[Input(shape=x_shapes['structure'], name='structure_inp'),
-    #           Input(shape=x_shapes['pattern'], name='pattern_inp'),
-    #           Input(shape=x_shapes['trigger'], name='trigger_inp'),
-    #           Input(shape=x_shapes['double'], name='double_inp')]
-    # inputs = {
-    #     'structure_inp': Input(shape=x_shapes['structure'], name='structure_inp'),
-    #     'pattern_inp': Input(shape=x_shapes['pattern'], name='pattern_inp'),
-    #     'trigger_inp': Input(shape=x_shapes['trigger'], name='trigger_inp'),
-    #     'double_inp': Input(shape=x_shapes['double'], name='double_inp')}
     inputs = {
         'structure_model_input': structure_model.input,
         'pattern_model_input': pattern_model.input,
         'trigger_model_input': trigger_model.input,
         'double_model_input': double_model.input}
-    # model = Model(inputs=[structure_model.input, pattern_model.input, trigger_model.input, double_model.input],
-    #               outputs=final_output)
     model = Model(inputs=inputs,
                   outputs=final_output)
     model.compile(optimizer='adam', loss='mse')
     model.summary()
     return model
 
-
-# config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
-#                                                     end=pd.to_datetime('09-01-24'))
-# # devided by rolling mean, std
-# n_mt_ohlcv = pd.read_csv(
-#     os.path.join(r"C:\Code\dl-forcasting\data\Kucoin\Spot\BTCUSDT",
-#                  f"n_mt_ohlcv.{config.processing_date_range}.csv.zip"), compression='zip')
-# n_mt_ohlcv
-# config.processing_date_range = "24-03-01.00-00T24-09-01.00-00"
 
 def ceil_to_slide(t_date: datetime, slide: timedelta):
     if (t_date - datetime(t_date.year, t_date.month, t_date.day, tzinfo=t_date.tzinfo)) > timedelta(0):
