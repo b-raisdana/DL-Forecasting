@@ -31,7 +31,6 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = No
 
     ohlcv = read_base_timeframe_ohlcv(extended_timerange_str)
 
-    # ohlcv['timeframe '] = config.timeframes[0]
     multi_timeframe_ohlcv = ohlcv.copy()
     multi_timeframe_ohlcv.insert(0, 'timeframe', config.timeframes[0])
     multi_timeframe_ohlcv = multi_timeframe_ohlcv.set_index('timeframe', append=True)
@@ -179,7 +178,8 @@ def core_generate_ohlcv(date_range_str: str = None, file_path: str = None, base_
         date_range_str = config.processing_date_range
     if file_path is None:
         file_path = symbol_data_path()
-    raw_ohlcv = fetch_ohlcv_by_range(date_range_str, base_timeframe=base_timeframe)
+    # raw_ohlcv = fetch_ohlcv_by_range(date_range_str, base_timeframe=base_timeframe)
+    raw_ohlcv = []
     df = pd.DataFrame(raw_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['date'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
     df = df.set_index('date')
