@@ -42,6 +42,8 @@ def map_to_ccxt_symbol(symbol: str) -> str:
 
 def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, base_timeframe=None,
                          limit_to_under_process_period: bool = None) -> list[object]:
+    # if config.do_not_fetch_prices:
+    #     return []
     if limit_to_under_process_period is None:
         limit_to_under_process_period = config.limit_to_under_process_period
     if date_range_str is None:

@@ -48,6 +48,7 @@ class Config:
     under_process_symbol = 'BTCUSDT'
     under_process_exchange = 'Kucoin'
     under_process_market = 'Spot'
+    # do_not_fetch_prices = False
     files_to_load = [
         '17-01-01.0-01TO17-12-31.23-59.1min',
         '17-01-01.0-01TO17-12-31.23-59.5min',

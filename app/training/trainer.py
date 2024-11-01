@@ -9,7 +9,7 @@ from app.FigurePlotter.plotter import show_and_save_plot
 from app.PanderaDFM.MultiTimeframe import MultiTimeframe
 from app.PreProcessing.encoding.rolling_mean_std import reverse_rolling_mean_std
 from app.helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
-from app.helper.helper import profile_it, log_d
+from app.helper.helper import profile_it, log_d, date_range
 from app.helper.importer import pt
 
 
@@ -88,7 +88,7 @@ def plot_mt_train_n_test(x, y, n, base_ohlcv, show=True):
         return fig
 
 
-# @profile_it
+@profile_it
 def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_lengths: dict,
                     batch_size: int, forecast_horizon: int = 20, ):
     """
@@ -129,8 +129,11 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
         mt_any.index.get_level_values(level='date').max() - forecast_horizon * pd.to_timedelta(trigger_tf)
     duration_seconds = (train_end_safe_end - train_end_safe_start) / timedelta(seconds=1)
     if duration_seconds <= 0:
+        start, end = date_range(config.processing_date_range)
         raise RuntimeError(
-            f"Extend date boundary +{duration_seconds + 1}s to make possible range of end dates positive!")
+            f"Extend date boundary +{-duration_seconds}s({duration_seconds / (60*60*24)}days, "
+            f"start:{start}<{start+duration_seconds*timedelta(seconds=1)} or "
+            f"end:{end}>{end-duration_seconds*timedelta(seconds=1)}) to make possible range of end dates positive!")
     x_df, y_df = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
     x, y = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
 
@@ -186,4 +189,4 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
     # assert y.shape == (batch_size, forecast_horizon, 2)
 
 
-    return x, y, x_df, y_df
+    return x, y, x_df, y_df, trigger_tf

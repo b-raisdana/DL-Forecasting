@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 from datetime import timedelta, datetime
@@ -135,7 +136,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
 
 @profile_it
 def create_cnn_lstm(x_shape, model_prefix, filters=64, lstm_units_list: list = None, dense_units=64, cnn_count=2,
-                    cnn_kernel_growing_steps=2, dropout_rate=0.1):
+                    cnn_kernel_growing_steps=2, dropout_rate=0.05):#dropout_rate=0.1
     if lstm_units_list is None:
         lstm_units_list = [64, 64] # 256, 128
     input_layer = Input(shape=x_shape, name=f'{model_prefix}_input')
@@ -243,8 +244,15 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Script for processing OHLCV data.")
+    # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
+    #                     help="Flag to indicate if prices should not be fetched (default: False).")
+    args = parser.parse_args()
     print("Python:" + sys.version)
-    config.processing_date_range = "22-12-29.00-00T24-09-19.00-00"
+
+    # Apply config from arguments
+    config.processing_date_range = "24-08-15.00-00T24-10-30.00-00"
+    # config.do_not_fetch_prices = args.do_not_fetch_prices
     # seed(42)
     # np.random.seed(42)
 
@@ -270,7 +278,7 @@ if __name__ == "__main__":
                     mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
                     base_ohlcv = single_timeframe(mt_ohlcv, '15min')
                     batch_size = 128
-                    X, y, X_df, y_df = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
+                    X, y, X_df, y_df, y_timeframe = mt_train_n_test('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
 
                     # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
                     nop = 1
