@@ -121,6 +121,8 @@ def plot_short_profit(t):
                     name='short_risk')
     fig.add_scatter(x=t.index, y=t['short_drawdown'], mode='lines', line=dict(color='pink', width=1),
                     name='short_drawdown')
+    # fig.add_scatter(x=t.index, y=t['short_profit'], mode='lines', line=dict(color='cyan', width=1),
+    #                 name='short_profit')
     fig.add_scatter(x=t.index, y=t['weighted_short_profit'], mode='lines', line=dict(color='blue', width=1),
                     name='weighted_short_profit')
     fig.add_scatter(x=t.index, y=t['short_signal'], mode='lines', line=dict(color='green', width=1),
@@ -142,6 +144,8 @@ def plot_long_profit(t):
                     name='long_risk')
     fig.add_scatter(x=t.index, y=t['long_drawdown'], mode='lines', line=dict(color='pink', width=1),
                     name='long_drawdown')
+    # fig.add_scatter(x=t.index, y=t['long_profit'], mode='lines', line=dict(color='cyan', width=1),
+    #                 name='long_profit')
     fig.add_scatter(x=t.index, y=t['weighted_long_profit'], mode='lines', line=dict(color='blue', width=1),
                     name='weighted_long_profit')
     fig.add_scatter(x=t.index, y=t['long_signal'], mode='lines', line=dict(color='green', width=1),
