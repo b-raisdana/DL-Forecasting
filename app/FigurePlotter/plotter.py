@@ -104,7 +104,7 @@ def show_and_save_plot(fig: plgo.Figure, save: bool = True, show: bool = True, n
     if path_of_plot is None:
         path_of_plot = os.path.join(symbol_data_path(), app_config.path_of_plots)
     if name_without_prefix is None:
-        name_without_prefix = f'{int(datetime.now().timestamp())}'
+        name_without_prefix = f'{int(datetime.now().timestamp()*1000)}'
     file_path = os.path.join(path_of_plot, f'{name_without_prefix}.html')
     with open(file_path, "w", encoding="utf-8") as file:
         file.write(fig.to_html())
