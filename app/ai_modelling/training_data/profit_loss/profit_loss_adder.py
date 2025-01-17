@@ -665,10 +665,11 @@ def tops_mean(series: pd.Series, window, mode: Literal['smallest', 'largest'], p
 
 
 def scale_prediction(prediction, price_scaler_shift, price_scaler_size):
-    prediction['min_low'] = (prediction['min_low'] - price_scaler_shift) / price_scaler_size
-    prediction['max_high'] = (prediction['max_high'] - price_scaler_shift) / price_scaler_size
-    prediction['long_profit'] = (prediction['long_profit']) / price_scaler_size
-    prediction['short_profit'] = (prediction['short_profit']) / price_scaler_size
+    prediction['min_low'] = (prediction['min_low'] + price_scaler_shift) * price_scaler_size
+    prediction['max_high'] = (prediction['max_high'] + price_scaler_shift) * price_scaler_size
+    prediction['long_profit'] = (prediction['long_profit']) * price_scaler_size
+    prediction['short_profit'] = (prediction['short_profit']) * price_scaler_size
+
 
 @profile_it
 @profile_it
@@ -770,6 +771,7 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     structure_df = single_timeframe(mt_ohlcv, structure_tf)
     pattern_df = single_timeframe(mt_ohlcv, pattern_tf)
     trigger_df = single_timeframe(mt_ohlcv, trigger_tf)
+    trigger_df['atr'] = ta.atr(high=trigger_df['high'], low=trigger_df['low'], close=trigger_df['close'])
     double_df = single_timeframe(mt_ohlcv, double_tf)
     prediction_df = add_long_n_short_profit(ohlc=trigger_df,
                                             position_max_bars=forecast_trigger_bars, trigger_tf=trigger_tf)
@@ -815,8 +817,7 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
             log_d(e)
             continue
         scaler_price_scale, scaler_price_shift, volume_scale = scaler_trainer(
-            {
-                'double':double_slice, 'pattern':pattern_slice, 'structure':structure_slice, 'trigger':trigger_slice})
+            {'double': double_slice, 'pattern': pattern_slice, 'structure': structure_slice, 'trigger': trigger_slice})
         sc_double_slice = scale(double_slice, scaler_price_shift, scaler_price_scale, volume_scale)
         sc_trigger_slice = scale(trigger_slice, scaler_price_shift, scaler_price_scale, volume_scale)
         sc_pattern_slice = scale(pattern_slice, scaler_price_shift, scaler_price_scale, volume_scale)
@@ -829,10 +830,10 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
         Xs['trigger'].append(np.array(sc_trigger_slice[training_x_columns]))
         Xs['pattern'].append(np.array(sc_pattern_slice[training_x_columns]))
         Xs['structure'].append(np.array(sc_structure_slice[training_x_columns]))
-        prediction = scale_prediction(prediction, scaler_price_shift, scaler_price_scale,)
+        prediction = scale_prediction(prediction, scaler_price_shift, scaler_price_scale, )
         y_dfs.append(prediction)
-        sc_prediction_testing_slice = (prediction_testing_slice - scaler_price_shift) / (
-                scaler_price_scale - scaler_price_shift)
+        sc_prediction_testing_slice = \
+            scale(prediction_testing_slice , scaler_price_shift, scaler_price_scale, volume_scale)
         y_tester_dfs.append(sc_prediction_testing_slice)
         ys.append(np.array(y_dfs[-1]))
         batch_remained -= 1
@@ -847,14 +848,14 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
 def scale(df, price_shift, price_scale, volume_scale):
     df = df.copy()
     for column in ['open', 'high', 'low', 'close']:
-        df[column] = (df[column] - price_shift) / price_scale
+        df[column] = (df[column] + price_shift) * price_scale
     df['volume'] = df['volume'] * volume_scale
     return df
 
 
 def scaler_trainer(slices: Dict[str, pd.DataFrame]):
-    price_scale = ta.atr(high=slices['trigger']['high'], low=slices['trigger']['low'],close=slices['trigger']['close'])
+    price_scale = (1 / slices['trigger']['atr'].mean())
     price_shift = - slices['trigger'].iloc[-1]['close']
     t_slice = pd.concat(slices)
-    volume_scale = t_slice['low'].mean()
+    volume_scale = 1 / t_slice['volume'].mean()
     return price_scale, price_shift, volume_scale
