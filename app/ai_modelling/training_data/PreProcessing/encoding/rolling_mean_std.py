@@ -3,7 +3,7 @@ from datetime import timedelta
 
 import pandas as pd
 
-from app.Config import config
+from app.Config import app_config
 from app.PanderaDFM.MtRollingMeanStdOHLCV import MtRollingMeanStdOHLCV
 from app.data_processing.fragmented_data import symbol_data_path
 from app.data_processing.ohlcv import read_multi_timeframe_ohlcv
@@ -74,7 +74,7 @@ def generate_multi_timeframe_rolling_mean_std_ohlcv(date_range_str: str, file_pa
 @profile_it
 def read_multi_timeframe_rolling_mean_std_ohlcv(date_range_str: str = None) -> MtRollingMeanStdOHLCV:
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     result = read_file(date_range_str, 'rolling_mean_std_multi_timeframe_ohlcv',
                        generate_multi_timeframe_rolling_mean_std_ohlcv,
                        MtRollingMeanStdOHLCV)

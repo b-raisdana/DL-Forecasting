@@ -3,7 +3,7 @@ from typing import List
 import pandas as pd
 from pandera import typing as pt
 
-from app.Config import config
+from app.Config import app_config
 from app.FigurePlotter.BasePattern_plotter import draw_band_activators, draw_base, draw_band_orders_df
 from app.FigurePlotter.BullBearSide_plotter import plot_single_timeframe_bull_bear_side_trends
 from app.FigurePlotter.plotter import plot_multiple_figures
@@ -29,7 +29,7 @@ def plot_multi_timeframe_bbs_n_base_pattern(multi_timeframe_base_pattern: pt.Dat
         -> None:
     multi_timeframe_ohlcva = multi_timeframe_ohlcva.sort_index(level='date')
     end_of_dates = multi_timeframe_ohlcva.index.get_level_values('date').max()
-    end_of_prices = multi_timeframe_ohlcva.loc[(config.timeframes[0], end_of_dates)]['close']
+    end_of_prices = multi_timeframe_ohlcva.loc[(app_config.timeframes[0], end_of_dates)]['close']
     multi_timeframe_base_pattern['effective_end'] = \
         multi_timeframe_base_pattern[['end', 'ttl']].min(axis=1, skipna=True)
     multi_timeframe_base_pattern.loc[multi_timeframe_base_pattern['effective_end'] > end_of_dates, 'effective_end'] = \
@@ -39,7 +39,7 @@ def plot_multi_timeframe_bbs_n_base_pattern(multi_timeframe_base_pattern: pt.Dat
 
     figures = []
     if timeframe_shortlist is None:
-        timeframe_shortlist = config.timeframes
+        timeframe_shortlist = app_config.timeframes
     for timeframe in timeframe_shortlist:
         # draw BBS
         fig = plot_single_timeframe_bull_bear_side_trends(
@@ -50,13 +50,13 @@ def plot_multi_timeframe_bbs_n_base_pattern(multi_timeframe_base_pattern: pt.Dat
             name=f'{timeframe} boundaries')
         # draw Base Pattern for lower timeframes.
         lower_timeframe_base_pattern = multi_timeframe_base_pattern[multi_timeframe_base_pattern.index \
-            .get_level_values(level='timeframe').isin(config.timeframes[:config.timeframes.index(timeframe)])]
+            .get_level_values(level='timeframe').isin(app_config.timeframes[:app_config.timeframes.index(timeframe)])]
         for (base_timeframe, base_date), base_info in lower_timeframe_base_pattern.iterrows():
-            if base_timeframe not in config.timeframes[:-2]:
+            if base_timeframe not in app_config.timeframes[:-2]:
                 raise AssertionError(f'timeframe({timeframe}) not in config.timeframes[:-2]')
             real_start = base_date + \
                          pd.to_timedelta(
-                             base_timeframe) * config.base_pattern_index_shift_after_last_candle_in_the_sequence
+                             base_timeframe) * app_config.base_pattern_index_shift_after_last_candle_in_the_sequence
             legend_group, text = draw_base(base_info=base_info, fig=fig, index_date=base_date, real_start=real_start,
                                            base_timeframe=base_timeframe)
             draw_band_activators(base_info, fig, legend_group, real_start, text)

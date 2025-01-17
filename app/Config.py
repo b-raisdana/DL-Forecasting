@@ -144,20 +144,20 @@ class MyEncoder(json.JSONEncoder):
 
 
 myEncoder = MyEncoder()
-config = Config()
-config_as_json = myEncoder.encode(config)
+app_config = Config()
+config_as_json = myEncoder.encode(app_config)
 config_digest = str.translate(base64.b64encode(hashlib.md5(config_as_json.encode('utf-8')).digest())
                               .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', })
 
-dump_filename = os.path.join(config.path_of_logs, f'Config.{config_digest}.json')
-if not os.path.exists(config.path_of_logs):
-    os.makedirs(config.path_of_logs)
+dump_filename = os.path.join(app_config.path_of_logs, f'Config.{config_digest}.json')
+if not os.path.exists(app_config.path_of_logs):
+    os.makedirs(app_config.path_of_logs)
 if not os.path.exists(dump_filename):
     with open(dump_filename, 'w+') as config_file:
         config_file.write(str(config_as_json))
 
-config.id = config_digest
-config.GLOBAL_CACHE = {}
+app_config.id = config_digest
+app_config.GLOBAL_CACHE = {}
 
 # def check_working_directory():
 #     current_directory = os.path.abspath(os.path.curdir)

@@ -13,7 +13,7 @@ import pandera
 import pytz
 from colorama import init, Fore, Style
 
-from app.Config import config
+from app.Config import app_config
 
 # Initialize colorama
 init(autoreset=True)
@@ -28,7 +28,7 @@ class LogSeverity(Enum):
 
 Pandera_DFM_Type = TypeVar('Pandera_DFM_Type', bound=pandera.DataFrameModel)
 
-path_of_logs = config.path_of_logs  # 'logs'
+path_of_logs = app_config.path_of_logs  # 'logs'
 
 __severity_color_map = {
     LogSeverity.INFO: Fore.GREEN,

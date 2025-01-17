@@ -9,18 +9,16 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras import Input
-from tensorflow.keras.callbacks import Callback
-from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Conv1D, LeakyReLU, Flatten, Dense, Concatenate, Dropout, LSTM, BatchNormalization
 from tensorflow.keras.layers import Reshape
-from tensorflow.keras.models import Model, load_model
+from tensorflow.python.keras.callbacks import Callback, EarlyStopping
+from tensorflow.python.keras.models import load_model, Model
 
-from app.Config import config
-from app.ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
+from app.Config import app_config
+from app.ai_modelling.training.training_batches import plot_train_data_of_mt_n_profit
+from app.ai_modelling.training_data.profit_loss.profit_loss_adder import train_data_of_mt_n_profit
 from app.data_processing.ohlcv import read_multi_timeframe_ohlcv
-from app.helper.data_preparation import single_timeframe
 from app.helper.helper import date_range, log_d, date_range_to_string, profile_it, log_e
-from app.ai_modelling.training.training_batches import train_data_of_mt_n_profit
 
 print('tensorflow:' + tf.__version__)
 
@@ -41,7 +39,7 @@ class CustomEpochLogger(Callback):
         # training_loss = logs.get('loss')
         # validation_loss = logs.get('val_loss')
         log_d(
-            f" {config.under_process_symbol}:{config.processing_date_range}"
+            f" {app_config.under_process_symbol}:{app_config.processing_date_range}"
             # f"Epoch {epoch + 1}/{self.params['epochs']} - "
             # f"Training Loss: {training_loss:.4f} - "
             # f"Validation Loss: {validation_loss:.4f}"
@@ -50,6 +48,7 @@ class CustomEpochLogger(Callback):
     def set_model(self, model):
         super().set_model(model)  # Call the parent class method
         # self.model = model  # Update the model instance if needed
+
 
 @profile_it
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shapes, batch_size, model=None, filters=64,
@@ -100,8 +99,8 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     if len(unique_lengths) > 1:
         raise RuntimeError(f'Batch sizes should be the same. input lengths: {input_lens}')
 
-    model_path_h5 = os.path.join(config.path_of_data, 'cnn_lstm_model.h5')
-    model_path_keras = os.path.join(config.path_of_data, 'cnn_lstm_model.keras')
+    model_path_h5 = os.path.join(app_config.path_of_data, 'cnn_lstm_model.h5')
+    model_path_keras = os.path.join(app_config.path_of_data, 'cnn_lstm_model.keras')
     # Check if the model already exists, load if it does
     if model is None:
         if not rebuild_model and os.path.exists(model_path_keras):
@@ -136,9 +135,9 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
 
 @profile_it
 def create_cnn_lstm(x_shape, model_prefix, filters=64, lstm_units_list: list = None, dense_units=64, cnn_count=2,
-                    cnn_kernel_growing_steps=2, dropout_rate=0.05):#dropout_rate=0.1
+                    cnn_kernel_growing_steps=2, dropout_rate=0.05):  # dropout_rate=0.1
     if lstm_units_list is None:
-        lstm_units_list = [64, 64] # 256, 128
+        lstm_units_list = [64, 64]  # 256, 128
     input_layer = Input(shape=x_shape, name=f'{model_prefix}_input')
 
     # CNN Layers with growing filters and kernel sizes
@@ -235,13 +234,22 @@ def ceil_to_slide(t_date: datetime, slide: timedelta):
 
 def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timedelta(days=30 * 1.5)):
     if i_date_range is None:
-        i_date_range = config.processing_date_range
+        i_date_range = app_config.processing_date_range
     start, end = date_range(i_date_range)
     rounded_start = ceil_to_slide(start, slide)
     list_of_periods = [(p_start, p_start + length) for p_start in
                        pd.date_range(rounded_start, end - length, freq=slide)]
     return list_of_periods
 
+''' todo:
++ scale profits
+1. add OBV MACD
+2. add CCI
+3. add RSI
+4. add fibo BB + max hit
+5. add MFI
+6. Add Ichimoku
+'''
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script for processing OHLCV data.")
@@ -251,41 +259,41 @@ if __name__ == "__main__":
     print("Python:" + sys.version)
 
     # Apply config from arguments
-    config.processing_date_range = "24-08-15.00-00T24-10-30.00-00"
+    app_config.processing_date_range = "22-08-15.00-00T24-10-30.00-00"
     # config.do_not_fetch_prices = args.do_not_fetch_prices
     # seed(42)
     # np.random.seed(42)
 
     while True:
-        quarters = overlapped_quarters(config.processing_date_range)
+        quarters = overlapped_quarters(app_config.processing_date_range)
         shuffle(quarters)
         for start, end in quarters:
             log_d(f'quarter start:{start} end:{end}##########################################')
-            config.processing_date_range = date_range_to_string(start=start, end=end)
+            app_config.processing_date_range = date_range_to_string(start=start, end=end)
             for symbol in [
-                'BTCUSDT',
-                'ETHUSDT',
+                # 'BTCUSDT',
+                # # 'ETHUSDT',
                 'BNBUSDT',
                 'EOSUSDT',
-                'TRXUSDT',
-                # 'TONUSDT',
-                'SOLUSDT',
+                # 'TRXUSDT',
+                'TONUSDT',
+                # 'SOLUSDT',
             ]:
-                try:
-                    log_d(f'Symbol:{symbol}##########################################')
-                    config.under_process_symbol = symbol
-                    n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
-                    mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
-                    base_ohlcv = single_timeframe(mt_ohlcv, '15min')
-                    batch_size = 128
-                    Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
-                        train_data_of_mt_n_profit('4h', n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size))
-
-                    # plot_mt_train_n_test(X_df, y_df, 3, base_ohlcv)
-                    nop = 1
-                    t_model = train_model(Xs, ys, cnn_lstd_model_x_lengths, batch_size)
-                except Exception as e:
-                    log_e(e)
+                # try:
+                log_d(f'Symbol:{symbol}##########################################')
+                app_config.under_process_symbol = symbol
+                # n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
+                mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
+                # base_ohlcv = single_timeframe(mt_ohlcv, '15min')
+                batch_size = 128
+                Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
+                    train_data_of_mt_n_profit('4h', mt_ohlcv, cnn_lstd_model_x_lengths, batch_size))
+                for i in range(0,batch_size, int(batch_size/3)):
+                    plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
+                nop = 1
+                t_model = train_model(Xs, ys, cnn_lstd_model_x_lengths, batch_size)
+                # except Exception as e:
+                #     log_e(e)
 """
 Potential Areas of Improvement for Professional Price Forecasting:
 

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from tensorflow.python.keras.models import load_model
 
-from app.Config import config
+from app.Config import app_config
 from app.FigurePlotter.plotter import show_and_save_plot
 from app.ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
 from app.ai_modelling.modelling.cnn_lstm import cnn_lstd_model_x_lengths
@@ -17,7 +17,7 @@ from app.ai_modelling.training.training_batches import train_data_of_mt_n_profit
 @profile_it
 def load_and_predict(input_x):
     # Load the model from disk
-    model_path = os.path.join(config.path_of_data, 'cnn_lstm_model.keras')
+    model_path = os.path.join(app_config.path_of_data, 'cnn_lstm_model.keras')
     if os.path.exists(model_path):
         print("Loading model from disk...")
         model = load_model(model_path)
@@ -176,29 +176,16 @@ def plot_mt_predict(x_df: dict[str, pd.DataFrame], y_df: pd.DataFrame, predictio
 
 
 if __name__ == "__main__":
-    # Define the path to your saved model
-
-    # # Prepare your input data (assuming you have already preprocessed it)
-    # # This should be a list of numpy arrays, one for each input branch of your model
-    # input_structure = np.random.rand(1, 5)  # Example shape (1, 5)
-    # input_pattern = np.random.rand(1, 5)  # Example shape (1, 5)
-    # input_trigger = np.random.rand(1, 5)  # Example shape (1, 5)
-    # input_double = np.random.rand(1, 5)  # Example shape (1, 5)
     symbol = 'BTCUSDT'
-    config.under_process_symbol = symbol
-    config.processing_date_range = "24-08-20.00-00T24-10-31.00-00"
-    n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
-    mt_ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
+    app_config.under_process_symbol = symbol
+    app_config.processing_date_range = "24-08-20.00-00T24-10-31.00-00"
+    n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(app_config.processing_date_range)
+    mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
     structure_tf = '4h'
     base_ohlcv = single_timeframe(mt_ohlcv, '15min')
     batch_size = 1
     Xs, ys, x_dfs, y_dfs, y_timeframe, y_tester_dfs = \
-        train_data_of_mt_n_profit(structure_tf, n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
-
-    # Load the model and make predictions
-    # try:
+        zz_train_data_of_mt_n_profit(structure_tf, n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
     t_predictions = load_and_predict(Xs)
     print("Predictions:", t_predictions)
     plot_mt_predict(x_dfs, y_dfs, t_predictions, y_timeframe, 0, base_ohlcv)
-    # except Exception as e:
-    #     print("An error occurred:", e)

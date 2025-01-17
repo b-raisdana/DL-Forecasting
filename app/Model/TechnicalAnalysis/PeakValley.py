@@ -4,7 +4,7 @@ from typing import Literal
 import pandas as pd
 import pandera.typing as pt
 
-from app.Config import config, TopTYPE
+from app.Config import app_config, TopTYPE
 from app.FigurePlotter.plotter import INFINITY_TIME_DELTA
 # from MetaTrader import MT
 from app.PanderaDFM.OHLCV import OHLCV
@@ -146,8 +146,8 @@ def insert_crossing2(base: pd.DataFrame, target: pd.DataFrame,
             crossed_bases, target = \
                 find_crossing_single_iteration(bases_to_compare, base_target_column, target,
                                                target_compare_column, direction, more_significant,
-                                               bases_shall_have_crossing=config.check_assertions)
-            if config.check_assertions and len(crossed_bases) == 0 and number_of_crossed_bases == 9999999999999:
+                                               bases_shall_have_crossing=app_config.check_assertions)
+            if app_config.check_assertions and len(crossed_bases) == 0 and number_of_crossed_bases == 9999999999999:
                 raise AssertionError("Did not found any crossing in first iteration")
             number_of_crossed_bases = len(crossed_bases)
             if number_of_crossed_bases > 0:
@@ -159,7 +159,7 @@ def insert_crossing2(base: pd.DataFrame, target: pd.DataFrame,
                     bases_with_known_crossing_target = concat(
                         bases_with_known_crossing_target, bases_to_compare.loc[crossed_bases.index])
                 bases_to_compare = bases_to_compare.drop(crossed_bases.index)
-        if config.check_assertions and len(bases_to_compare) > 0:
+        if app_config.check_assertions and len(bases_to_compare) > 0:
             raise AssertionError("Expected to find crossing for all bases after drop_base_without_crossing2...")
         if len(bases_with_known_crossing_target) > 0:
             bases_with_known_crossing_target.set_index('iloc', inplace=True)
@@ -289,7 +289,7 @@ def find_crossing_single_iteration(bases_to_compare, base_compare_column, target
     bases_to_compare = bases_to_compare.drop(columns=[direction + '_distance'], errors='ignore')
 
     base_dates = bases_to_compare.index.get_level_values(level='date')
-    if config.check_assertions and not base_dates.is_unique:
+    if app_config.check_assertions and not base_dates.is_unique:
         raise AssertionError("find_crossings only implemented for unique base_dates!")
     if hasattr(target.index, 'names') and 'timeframe' in target.index.names:
         raise ValueError('timeframe' in target.index.names)
@@ -334,7 +334,7 @@ def find_crossing_single_iteration(bases_to_compare, base_compare_column, target
     target['target_date'] = target.index
     crossed_bases = target[target[f'{direction}_crossing']] \
         .groupby(by=[f'{reverse}_base_index']).agg({'target_date': date_chooser})
-    if config.check_assertions and bases_shall_have_crossing:
+    if app_config.check_assertions and bases_shall_have_crossing:
         if crossed_bases['target_date'].isna().any().any():
             raise AssertionError("crossed_bases['target_date'].isna().any().any()")
     if return_both:
@@ -462,11 +462,11 @@ def map_strength_to_frequency(peaks_valleys: pd.DataFrame) -> pt.DataFrame[PeakV
     # peaks_valleys.insert(len(peaks_valleys.columns), 'timeframe', None)
     peaks_valleys['timeframe'] = None
 
-    for i in range(len(config.timeframes)):
+    for i in range(len(app_config.timeframes)):
         for t_peak_valley_index in peaks_valleys[
-            peaks_valleys['strength'] > pd.to_timedelta(config.timeframes[i])
+            peaks_valleys['strength'] > pd.to_timedelta(app_config.timeframes[i])
         ].index.values:
-            peaks_valleys.at[t_peak_valley_index, 'timeframe'] = config.timeframes[i]
+            peaks_valleys.at[t_peak_valley_index, 'timeframe'] = app_config.timeframes[i]
     peaks_valleys = peaks_valleys[pd.notna(peaks_valleys['timeframe'])]
     return peaks_valleys
 
@@ -544,11 +544,11 @@ def major_timeframe(multi_timeframe_df: pd.DataFrame, timeframe: str) \
 
 def higher_or_eq_timeframe(multi_timeframe_df: pd.DataFrame, timeframe: str):
     try:
-        index = config.timeframes.index(timeframe)
+        index = app_config.timeframes.index(timeframe)
     except ValueError:
-        raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
+        raise Exception(f'timeframe:{timeframe} should be in [{app_config.timeframes}]!')
     # result = peaks_n_valleys.loc[peaks_n_valleys.index.isin(config.timeframes[index:], level='timeframe')]
-    result = multi_timeframe_df.loc[multi_timeframe_df.index.get_level_values('timeframe').isin(config.timeframes[index:])]
+    result = multi_timeframe_df.loc[multi_timeframe_df.index.get_level_values('timeframe').isin(app_config.timeframes[index:])]
     return result
 
 
@@ -559,8 +559,8 @@ def top_timeframe(tops: pt.DataFrame[PeakValley]) -> pt.DataFrame[PeakValley]:
     :param tops:
     :return:
     """
-    tops['timeframe'] = config.timeframes[0]
-    for _, timeframe in enumerate(config.timeframes[1:]):
+    tops['timeframe'] = app_config.timeframes[0]
+    for _, timeframe in enumerate(app_config.timeframes[1:]):
         eq_or_higher_timeframe = (tops['strength'] >= pd.to_timedelta(timeframe).total_seconds() * 2)
         tops.loc[eq_or_higher_timeframe, 'timeframe'] = timeframe
         if eq_or_higher_timeframe.any() == 0:
@@ -591,7 +591,7 @@ def multi_timeframe_peaks_n_valleys(expanded_date_range: str) -> pt.DataFrame[Mu
 def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = None):
     if file_path is None:
         file_path = symbol_data_path()
-    biggest_timeframe = config.timeframes[-1]
+    biggest_timeframe = app_config.timeframes[-1]
     expanded_date_range = expand_date_range(date_range_str,
                                             time_delta=4 * pd.to_timedelta(biggest_timeframe),
                                             mode='both')
@@ -672,7 +672,7 @@ def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValle
     # Using `shift()` to create the previous and next columns
     tops[prev_index_col] = tops.index.get_level_values('date').unique().to_series().shift(1).tolist()
     tops[prev_value_col] = tops[high_or_low].shift(-1)
-    previous_tops = pd.DataFrame(index=tops.index.get_level_values('date').shift(1, config.timeframes[0])).sort_index()
+    previous_tops = pd.DataFrame(index=tops.index.get_level_values('date').shift(1, app_config.timeframes[0])).sort_index()
     previous_tops[prev_index_col] = tops.index.get_level_values('date').unique().tolist()
     previous_tops[prev_value_col] = tops[high_or_low].tolist()
     # merge the previous and next values
@@ -680,7 +680,7 @@ def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValle
                           left_index=True, right_index=True, direction='backward', suffixes=('_x', ''))
     tops[next_index_col] = tops.index.get_level_values('date').unique().to_series().shift(-1).tolist()
     tops[next_value_col] = tops[high_or_low].shift(1)
-    next_tops = pd.DataFrame(index=tops.index.get_level_values('date').shift(-1, config.timeframes[0])).sort_index()
+    next_tops = pd.DataFrame(index=tops.index.get_level_values('date').shift(-1, app_config.timeframes[0])).sort_index()
     next_tops[next_index_col] = tops.index.get_level_values('date').unique().tolist()
     next_tops[next_value_col] = tops[high_or_low].tolist()
     # merge the previous and next values

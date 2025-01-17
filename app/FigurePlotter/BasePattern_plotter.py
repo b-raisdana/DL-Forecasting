@@ -5,7 +5,7 @@ import plotly.graph_objs
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 
-from app.Config import config
+from app.Config import app_config
 from app.FigurePlotter.OHLVC_plotter import plot_merged_timeframe_ohlcva
 from app.FigurePlotter.plotter import file_id, show_and_save_plot
 from app.Model.Order import OrderSide, BracketOrderType
@@ -25,16 +25,16 @@ def plot_multi_timeframe_base_pattern(_multi_timeframe_base_pattern: pt.DataFram
     fig: plgo.Figure = plot_merged_timeframe_ohlcva(_multi_timeframe_ohlcva)
     _multi_timeframe_ohlcva = _multi_timeframe_ohlcva.sort_index(level='date')
     end_of_dates = _multi_timeframe_ohlcva.index.get_level_values('date').max()
-    end_of_prices = _multi_timeframe_ohlcva.loc[(config.timeframes[0], end_of_dates)]['close']
+    end_of_prices = _multi_timeframe_ohlcva.loc[(app_config.timeframes[0], end_of_dates)]['close']
     _multi_timeframe_base_pattern['effective_end'] = \
         _multi_timeframe_base_pattern[['end', 'ttl']].min(axis=1, skipna=True)
     _multi_timeframe_base_pattern.loc[_multi_timeframe_base_pattern['effective_end'] > end_of_dates, 'effective_end'] = \
         end_of_dates
     assert _multi_timeframe_base_pattern['effective_end'].notna().all()
     for (timeframe, index_date), base_pattern in _multi_timeframe_base_pattern.iterrows():
-        if timeframe in config.timeframes:  # [2:-2]:
+        if timeframe in app_config.timeframes:  # [2:-2]:
             start = index_date + \
-                    pd.to_timedelta(timeframe) * config.base_pattern_index_shift_after_last_candle_in_the_sequence
+                    pd.to_timedelta(timeframe) * app_config.base_pattern_index_shift_after_last_candle_in_the_sequence
             legend_group, text = draw_base(base_pattern, fig, index_date, start, timeframe)
             draw_band_activators(base_pattern, fig, legend_group, start, text)
             if (orders_df is not None) and (not orders_df.empty):
@@ -82,7 +82,7 @@ def draw_band_orders_df(orders_df: pd.DataFrame, fig: plotly.graph_objs.Figure,
     ), 'info_order_group_id'].unique().tolist()
     for order_group_id in order_group_ids:
         original_order, stop_loss_order, take_profit_order = df_triple_orders_of_group(order_group_id, orders_df)
-        if config.check_assertions and len(original_order) == 0 or len(stop_loss_order) == 0 or len(
+        if app_config.check_assertions and len(original_order) == 0 or len(stop_loss_order) == 0 or len(
                 take_profit_order) == 0:
             raise AssertionError("original_order.empty or stop_loss_order.empty or take_profit_order.empty")
         start = datetime.strptime(original_order['date'], "%Y-%m-%d %H:%M:%S%z")
@@ -94,7 +94,7 @@ def draw_band_orders_df(orders_df: pd.DataFrame, fig: plotly.graph_objs.Figure,
             end, end_price, ended = order_end_information(end_of_dates, end_of_prices, stop_loss_order,
                                                           take_profit_order)
             side = OrderSide.Buy if float(original_order['created_size']) > 0 else OrderSide.Sell
-            if config.check_assertions:
+            if app_config.check_assertions:
                 if side == OrderSide.Buy:
                     if not float(original_order['created_size']) > 0:
                         raise AssertionError("not original_order['created_size'] > 0")
@@ -122,7 +122,7 @@ def order_end_information(end_of_dates, end_of_prices, stop_loss_order, take_pro
         end = end_of_dates
         end_price = end_of_prices
         ended = False
-    if config.check_assertions and not end_price > 0:
+    if app_config.check_assertions and not end_price > 0:
         raise AssertionError("not end_price > 0")
     return end, end_price, ended
 
@@ -155,7 +155,7 @@ def draw_base_pattern_orders(fig, legend_group: str, side: OrderSide, start: dat
         f"PNL{'???' if not ended else ''}{pnl_value:.1f}",  # /{pnl_percent}"
     ]
     )
-    if config.check_assertions and abs(pnl_value) < 0.5:
+    if app_config.check_assertions and abs(pnl_value) < 0.5:
         raise AssertionError("abs(pnl_value)")
     # draw stop-loss box
     xs = [start, end, end, start]

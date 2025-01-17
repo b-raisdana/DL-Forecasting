@@ -7,7 +7,7 @@ import pandas as pd
 import pytz
 from ccxt import RequestTimeout, NetworkError
 
-from app.Config import config
+from app.Config import app_config
 from app.helper.data_preparation import map_symbol
 from app.helper.helper import log, date_range, profile_it, log_e
 
@@ -45,20 +45,20 @@ def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, base_ti
     # if config.do_not_fetch_prices:
     #     return []
     if limit_to_under_process_period is None:
-        limit_to_under_process_period = config.limit_to_under_process_period
+        limit_to_under_process_period = app_config.limit_to_under_process_period
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     if symbol is None:
-        symbol = map_to_ccxt_symbol(config.under_process_symbol)
+        symbol = map_to_ccxt_symbol(app_config.under_process_symbol)
     if base_timeframe is None:
-        base_timeframe = config.timeframes[0]
+        base_timeframe = app_config.timeframes[0]
     start, end = date_range(date_range_str)
 
     if limit_to_under_process_period:
-        _, under_process_period_end = date_range(config.processing_date_range)
+        _, under_process_period_end = date_range(app_config.processing_date_range)
         if start > under_process_period_end:
             return []
-    duration = end - start + pd.to_timedelta(config.timeframes[0])
+    duration = end - start + pd.to_timedelta(app_config.timeframes[0])
     limit = int(duration / pd.to_timedelta(base_timeframe))
 
     response = fetch_ohlcv(symbol, timeframe=base_timeframe, start=start, number_of_ticks=limit,
@@ -74,7 +74,7 @@ def fetch_ohlcv(symbol, timeframe: str = None, start: datetime = None, number_of
     assert start.tzinfo == pytz.utc
     exchange = ccxt.kucoin()
     if timeframe is None:
-        timeframe = config.timeframes[0]
+        timeframe = app_config.timeframes[0]
 
     # Convert pandas timeframe to CCXT timeframe
     ccxt_timeframe = pandas_to_ccxt_timeframes[timeframe]

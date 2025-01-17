@@ -6,7 +6,7 @@ import pandas as pd
 from pandera import typing as pt
 
 from app.Model.TechnicalAnalysis.BasePattern import read_multi_timeframe_base_patterns
-from app.Config import config
+from app.Config import app_config
 from app.FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
 from app.Model.Order import OrderSide, BracketOrderType
 from app.PanderaDFM.BasePattern import MultiTimeframeBasePattern, BasePattern
@@ -40,8 +40,8 @@ class BasePatternStrategy(ExtendedStrategy):
 
                 # assure closing of the original and profit orders
                 original_order, stop_order, profit_order = self.get_order_group(order)
-                if config.check_assertions and (not original_order.status == bt.Order.Completed or
-                                                not profit_order.status == bt.Order.Canceled):
+                if app_config.check_assertions and (not original_order.status == bt.Order.Completed or
+                                                    not profit_order.status == bt.Order.Canceled):
                     raise AssertionError("(not original_order.status == bt.Order.Completed or "
                                          "not profit_order.status == bt.Order.Canceled)")
                 # repeat the signal
@@ -56,7 +56,7 @@ class BasePatternStrategy(ExtendedStrategy):
                 repeat_signal['stop_loss_order_id'] = pd.NA
                 repeat_signal['take_profit_order_id'] = pd.NA
                 self.signal_df.loc[original_signal_index, 'end'] = self.candle().date
-                if config.check_assertions and str(self.signal_df.index.names) != str(
+                if app_config.check_assertions and str(self.signal_df.index.names) != str(
                         ['date', 'ref_date', 'ref_timeframe', 'side']):
                     raise AssertionError(
                         f"Order of signal_df indexes "
@@ -118,8 +118,8 @@ class BasePatternStrategy(ExtendedStrategy):
 
     def is_trading_fee_reasonable(self, limit_price, take_profit):
         commission_rate = self.broker.getcommissioninfo()['commission']
-        average_cost_of_trade = ((config.base_pattern_risk_reward_rate + 1) * commission_rate) * limit_price
-        if abs(take_profit - limit_price) < (average_cost_of_trade * config.trading_fee_safe_side_multiplier):
+        average_cost_of_trade = ((app_config.base_pattern_risk_reward_rate + 1) * commission_rate) * limit_price
+        if abs(take_profit - limit_price) < (average_cost_of_trade * app_config.trading_fee_safe_side_multiplier):
             return False
         return True
 
@@ -143,9 +143,9 @@ class BasePatternStrategy(ExtendedStrategy):
                 return x - y
 
         limit_price = opr(base_pattern[f'internal_{high_low}'],
-                          base_pattern['atr'] * config.base_pattern_order_limit_price_margin_percentage)
+                          base_pattern['atr'] * app_config.base_pattern_order_limit_price_margin_percentage)
         stop_loss = base_pattern[f'internal_{reverse_high_low}']
-        take_profit = opr(base_pattern[f'internal_{high_low}'], base_length * config.base_pattern_risk_reward_rate)
+        take_profit = opr(base_pattern[f'internal_{high_low}'], base_length * app_config.base_pattern_risk_reward_rate)
         trigger_price = base_pattern[f'internal_{high_low}']
         if not self.is_trading_fee_reasonable(limit_price, take_profit):
             return self.signal_df
@@ -156,7 +156,7 @@ class BasePatternStrategy(ExtendedStrategy):
             effective_end = base_pattern['end']
         else:
             effective_end = base_pattern['ttl']
-        if config.check_assertions and pd.isna(effective_end):
+        if app_config.check_assertions and pd.isna(effective_end):
             raise AssertionError("pd.isna(effective_end)")
         # todo: optimize and simplify by removing signals and putting orders directly.
 
@@ -194,7 +194,7 @@ class BasePatternStrategy(ExtendedStrategy):
             for (timeframe, start), base_pattern in upper_overlapping_base_patterns.iterrows():
                 # if self.candle_overlaps_base(base_pattern):
                 self.add_signal(timeframe, start, base_pattern, band='upper')
-                if config.check_assertions and pd.notna(self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated']):
+                if app_config.check_assertions and pd.notna(self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated']):
                     raise AssertionError("pd.notna(self.base_patterns.loc[(timeframe, start), 'upper_band_signa...")
                 self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated'] = self.candle().date
         below_overlapping_base_patterns = self.overlapping_base_patterns(
@@ -202,7 +202,7 @@ class BasePatternStrategy(ExtendedStrategy):
         if len(below_overlapping_base_patterns) > 0:
             for (timeframe, start), base_pattern in below_overlapping_base_patterns.iterrows():
                 self.add_signal(timeframe, start, base_pattern, band='below')
-                if config.check_assertions and pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated']):
+                if app_config.check_assertions and pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated']):
                     raise AssertionError("pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signa...")
                 self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated'] = \
                     self.candle().date
@@ -217,7 +217,7 @@ class BasePatternStrategy(ExtendedStrategy):
 
 def test_strategy(cash: float, date_range_str: str = None):
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     cerebro = bt.Cerebro()
     cerebro.addstrategy(BasePatternStrategy)
     cerebro.broker.setcommission(commission=0.001)

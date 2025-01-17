@@ -13,7 +13,7 @@ from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandas._typing import Axes
 from pandera import typing as pt, DataType
 
-from app.Config import config
+from app.Config import app_config
 from app.PanderaDFM.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
 from app.data_processing.fragmented_data import symbol_data_path
 from app.helper.helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity, log_d, log_w
@@ -101,7 +101,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
     if file_path is None:
         file_path = symbol_data_path()
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     df = None
     try:
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
@@ -277,7 +277,7 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
         ohlcv_data = read_with_timeframe('ohlcv', '21-07-01.00-00T21-07-02', '/path/to/data/', n_rows=1000, skip_rows=0)
     """
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     df = read_by_date(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
     # df.set_index('date', inplace=True)
 
@@ -334,9 +334,9 @@ def single_timeframe(multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type], ti
     if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(
             f'multi_timeframe_data expected to have "timeframe" in indexes:[{multi_timeframe_data.index.names}]')
-    if timeframe not in config.timeframes:
+    if timeframe not in app_config.timeframes:
         raise Exception(
-            f'timeframe:{timeframe} is not in supported timeframes:{config.timeframes}')
+            f'timeframe:{timeframe} is not in supported timeframes:{app_config.timeframes}')
     if multi_timeframe_data.index.names.index('timeframe') != 0:
         raise AssertionError("multi_timeframe_data.index.names.index('timeframe') != 0")
     if index_only:
@@ -428,12 +428,12 @@ def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str
 
 def check_time_in_cache(time, timeframe):
     cache_key = f'valid_times_{timeframe}'
-    if cache_key not in config.GLOBAL_CACHE.keys():
+    if cache_key not in app_config.GLOBAL_CACHE.keys():
         raise Exception(f'{cache_key} not initialized in config.GLOBAL_CACHE')
     if isinstance(time, DatetimeIndex) or isinstance(time, pd.Series):
-        if not time.isin(config.GLOBAL_CACHE[cache_key]).all():
+        if not time.isin(app_config.GLOBAL_CACHE[cache_key]).all():
             raise Exception(f'Some times: {time} not found in config.GLOBAL_CACHE[valid_times_{timeframe}]!')
-    elif time not in config.GLOBAL_CACHE[cache_key]:
+    elif time not in app_config.GLOBAL_CACHE[cache_key]:
         raise Exception(f'time {time} not found in config.GLOBAL_CACHE[valid_times_{timeframe}]!')
 
 
@@ -501,7 +501,7 @@ def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe
                                  return_bool: bool = False, ignore_processing_date_range: bool = True,
                                  processing_date_range: str = None):
     result = True
-    for timeframe in config.timeframes:
+    for timeframe in app_config.timeframes:
         _timeframe_df = single_timeframe(multi_timeframe_df, timeframe)
         result = result & times_tester(_timeframe_df, date_range_str, timeframe, return_bool,
                                        ignore_processing_date_range, processing_date_range)
@@ -509,13 +509,13 @@ def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe
 
 
 def shift_timeframe(timeframe, shifter):
-    index = config.timeframes.index(timeframe)
+    index = app_config.timeframes.index(timeframe)
     if type(shifter) == int:
-        return config.timeframes[index + shifter]
+        return app_config.timeframes[index + shifter]
     elif type(shifter) == str:
-        if shifter not in config.timeframe_shifter.keys():
-            raise Exception(f'Shifter expected be in [{config.timeframe_shifter.keys()}]')
-        return config.timeframes[index + config.timeframe_shifter[shifter]]
+        if shifter not in app_config.timeframe_shifter.keys():
+            raise Exception(f'Shifter expected be in [{app_config.timeframe_shifter.keys()}]')
+        return app_config.timeframes[index + app_config.timeframe_shifter[shifter]]
     else:
         raise Exception(f'shifter expected be int or str got type({type(shifter)}) in {shifter}')
 
@@ -688,27 +688,27 @@ def index_names(data):
 
 
 def trigger_timeframe(timeframe):
-    if config.timeframes.index(timeframe) < -config.timeframe_shifter['trigger']:
+    if app_config.timeframes.index(timeframe) < -app_config.timeframe_shifter['trigger']:
         raise Exception(f'{timeframe} has not a trigger time!')
-    return shift_timeframe(timeframe, config.timeframe_shifter['trigger'])
+    return shift_timeframe(timeframe, app_config.timeframe_shifter['trigger'])
 
 
 def pattern_timeframe(timeframe):
-    if config.timeframes.index(timeframe) < -config.timeframe_shifter['pattern']:
+    if app_config.timeframes.index(timeframe) < -app_config.timeframe_shifter['pattern']:
         raise Exception(f'{timeframe} has not a pattern time!')
-    return shift_timeframe(timeframe, config.timeframe_shifter['pattern'])
+    return shift_timeframe(timeframe, app_config.timeframe_shifter['pattern'])
 
 
 def anti_pattern_timeframe(timeframe):
-    if config.timeframes.index(timeframe) > len(config.timeframes) + config.timeframe_shifter['pattern'] - 1:
+    if app_config.timeframes.index(timeframe) > len(app_config.timeframes) + app_config.timeframe_shifter['pattern'] - 1:
         raise Exception(f'{timeframe} has not an anit-pattern time!')
-    return shift_timeframe(timeframe, -config.timeframe_shifter['pattern'])
+    return shift_timeframe(timeframe, -app_config.timeframe_shifter['pattern'])
 
 
 def anti_trigger_timeframe(timeframe):
-    if config.timeframes.index(timeframe) > len(config.timeframes) + config.timeframe_shifter['trigger'] - 1:
+    if app_config.timeframes.index(timeframe) > len(app_config.timeframes) + app_config.timeframe_shifter['trigger'] - 1:
         raise Exception(f'{timeframe} has not an anti-trigger time!')
-    return shift_timeframe(timeframe, -config.timeframe_shifter['trigger'])
+    return shift_timeframe(timeframe, -app_config.timeframe_shifter['trigger'])
 
 
 def map_symbol(symbol: str, map_dictionary: dict) -> str:
@@ -732,7 +732,7 @@ def extract_file_info(file_name: str) -> FileInfoSet:
         raise Exception("Invalid filename format:" + file_name)
     data = match.groupdict()
     if 'symbol' not in data.keys() or data['symbol'] is None:
-        data['symbol'] = config.under_process_symbol
+        data['symbol'] = app_config.under_process_symbol
     return FileInfoSet(**data)
 
 
@@ -758,7 +758,7 @@ def expand_date_range(date_range_str: str, time_delta: timedelta, mode: Literal[
                       limit_to_processing_period: bool = None) \
         -> str:
     if limit_to_processing_period is None:
-        limit_to_processing_period = config.limit_to_under_process_period
+        limit_to_processing_period = app_config.limit_to_under_process_period
     start, end = date_range(date_range_str)
     if mode == 'start':
         start = start - time_delta
@@ -770,7 +770,7 @@ def expand_date_range(date_range_str: str, time_delta: timedelta, mode: Literal[
     else:
         raise Exception(f'mode={mode} not implemented')
     if limit_to_processing_period:
-        _, processing_period_end = date_range(config.processing_date_range)
+        _, processing_period_end = date_range(app_config.processing_date_range)
         end = min(end, processing_period_end)
     if end < start:
         raise RuntimeError("end < start")
@@ -779,7 +779,7 @@ def expand_date_range(date_range_str: str, time_delta: timedelta, mode: Literal[
 
 def after_under_process_date(date_range_str):
     start, _ = date_range(date_range_str)
-    _, end = date_range(config.processing_date_range)
+    _, end = date_range(app_config.processing_date_range)
     if start > end:
         allow_zero_size = True
     else:
@@ -793,7 +793,7 @@ def times_in_date_range(date_range_str: str, timeframe: str,
     start, end = date_range(date_range_str)
     if ignore_out_of_process_period:
         if processing_date_range is None:
-            processing_date_range = config.processing_date_range
+            processing_date_range = app_config.processing_date_range
         under_process_scope_start, under_process_scope_end = date_range(processing_date_range)
         end = min(end, under_process_scope_end)
         start = max(start, under_process_scope_start)

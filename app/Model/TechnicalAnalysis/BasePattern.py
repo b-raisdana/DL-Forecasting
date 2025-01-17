@@ -5,7 +5,7 @@ from typing import List, Literal, Union
 import pandas as pd
 from pandera import typing as pt, Timestamp
 
-from app.Config import config, CandleSize
+from app.Config import app_config, CandleSize
 from app.PanderaDFM.BasePattern import BasePattern, MultiTimeframeBasePattern
 from app.PanderaDFM.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
 from app.data_processing.atr import read_multi_timeframe_ohlcva
@@ -27,7 +27,7 @@ def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:
     :param ohlcva:
     :return:
     """
-    if config.check_assertions and not ohlcva['atr'].notna().all():
+    if app_config.check_assertions and not ohlcva['atr'].notna().all():
         raise AssertionError("not ohlcva['atr'].notna().all()")
     ohlcva['length'] = ohlcva['high'] - ohlcva['low']
     ohlcva['atr_ratio'] = ohlcva['length'] / ohlcva['atr']
@@ -59,7 +59,7 @@ def sequence_of_spinning(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_of
     - Index[Timestamp]: Index of Spinning candles followed by N Spinning candles.
     """
     if number_of_base_spinning_candles is None:
-        number_of_base_spinning_candles = config.base_pattern_number_of_spinning_candles
+        number_of_base_spinning_candles = app_config.base_pattern_number_of_spinning_candles
     if len(ohlcva) < number_of_base_spinning_candles + 1:
         raise ValueError(f"Insufficient data ({len(ohlcva)}) "
                          f"for the specified number of base spinning candles ({number_of_base_spinning_candles})")
@@ -105,7 +105,7 @@ def base_from_sequence(_sequence_of_spinning: pt.DataFrame[OHLCVA], ohlcva: pt.D
                                                                          number_of_base_spinning_candles, timeframe)
 
     # Check if all columns are above the threshold
-    is_base = (overlap_columns > config.base_pattern_candle_min_backward_coverage).all(axis='columns')
+    is_base = (overlap_columns > app_config.base_pattern_candle_min_backward_coverage).all(axis='columns')
 
     # timeframe_base_patterns is the last candle of enough (config.base_pattern_candle_min_backward_coverage)
     # sequential candles
@@ -176,7 +176,7 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA], a_pattern_ohlcva: pt.Da
                            number_of_base_spinning_candles: int = None,
                            ) -> pt.DataFrame[BasePattern]:
     if number_of_base_spinning_candles is None:
-        number_of_base_spinning_candles = config.base_pattern_number_of_spinning_candles
+        number_of_base_spinning_candles = app_config.base_pattern_number_of_spinning_candles
 
     _sequence_of_spinning_indexes = sequence_of_spinning(ohlcva, timeframe, number_of_base_spinning_candles)
     _sequence_of_spinning = ohlcva.loc[_sequence_of_spinning_indexes].copy()
@@ -184,7 +184,7 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA], a_pattern_ohlcva: pt.Da
     timeframe_base_patterns = base_from_sequence(_sequence_of_spinning, ohlcva, number_of_base_spinning_candles,
                                                  timeframe)
     timeframe_base_patterns['ttl'] = \
-        timeframe_base_patterns.index + pd.to_timedelta(timeframe) * config.base_pattern_ttl
+        timeframe_base_patterns.index + pd.to_timedelta(timeframe) * app_config.base_pattern_ttl
     timeframe_base_patterns['atr'] = ohlcva.loc[timeframe_base_patterns.index, 'atr'].tolist()
     # a_pattern_times = to_timeframe(timeframe_base_patterns.index, anti_pattern_timeframe(timeframe))
     # timeframe_base_patterns['a_pattern_atr'] = a_pattern_ohlcva.loc[a_pattern_times, 'atr'].tolist()
@@ -241,7 +241,7 @@ def update_zero_trigger_candles(timeframe_base_patterns: pt.DataFrame['BasePatte
 def verify_backtesting_ability_by_base_timeframe_atr(base_patterns: pt.DataFrame[MultiTimeframeBasePattern],
                                                      expanded_multi_timeframe_ohlcva: pt.DataFrame[
                                                          MultiTimeframeOHLCVA]):
-    base_timeframe_ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, config.timeframes[0])
+    base_timeframe_ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, app_config.timeframes[0])
     """
     The base patterns with size of less than
     """
@@ -252,7 +252,7 @@ def verify_backtesting_ability_by_base_timeframe_atr(base_patterns: pt.DataFrame
     base_patterns['ignore_backtesting'] = (
             base_patterns['size'] <
             (
-                    base_patterns['base_timeframe_atr'] * config.base_pattern_small_to_trace_in_base_candles_atr_factor
+                    base_patterns['base_timeframe_atr'] * app_config.base_pattern_small_to_trace_in_base_candles_atr_factor
             )
     )
     return base_patterns
@@ -262,12 +262,12 @@ def multi_timeframe_base_patterns(expanded_multi_timeframe_ohlcva: pt.DataFrame[
                                   timeframe_shortlist: List['str'] = None) -> pt.DataFrame[MultiTimeframeBasePattern]:
     if timeframe_shortlist is None:
         # the last 3 timeframes will not have an anti_trigger_timeframe!
-        timeframe_shortlist = config.timeframes[:-2]
+        timeframe_shortlist = app_config.timeframes[:-2]
     else:
-        if any([t in timeframe_shortlist for t in config.timeframes[-2:]]):
+        if any([t in timeframe_shortlist for t in app_config.timeframes[-2:]]):
             raise Exception(f"timeframes {timeframe_shortlist} should have Anti-Trigger time!")
     _multi_timeframe_base_patterns = empty_df(MultiTimeframeBasePattern)
-    base_timeframe_ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, config.timeframes[0])
+    base_timeframe_ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, app_config.timeframes[0])
     for timeframe in timeframe_shortlist:
         ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, timeframe)
         a_pattern_ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, anti_pattern_timeframe(timeframe))
@@ -290,12 +290,12 @@ def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path
     if file_path is None:
         file_path = symbol_data_path()
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     if timeframe_shortlist is None:
         # the last 3 timeframes will not have an anti_trigger_timeframe!
-        timeframe_shortlist = config.timeframes[:-2]
+        timeframe_shortlist = app_config.timeframes[:-2]
     else:
-        if any([t in timeframe_shortlist for t in config.timeframes[-2:]]):
+        if any([t in timeframe_shortlist for t in app_config.timeframes[-2:]]):
             raise Exception(f"timeframes {timeframe_shortlist} should have Anti-Trigger time!")
     start, end = date_range(date_range_str)
     expanded_start = \
@@ -312,7 +312,7 @@ def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path
 
 def read_multi_timeframe_base_patterns(date_range_str: str = None) -> pt.DataFrame[MultiTimeframeBasePattern]:
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_base_pattern',
                        generate_multi_timeframe_base_patterns, MultiTimeframeBasePattern)
     return result
@@ -334,7 +334,7 @@ def first_passed_candle(base_index: datetime, end, level: float, base_timeframe_
     else:
         raise Exception(f"band should be 'upper' or 'below' but '{direction}' given!")
     start = base_index + pd.to_timedelta(
-        timeframe) * config.base_pattern_index_shift_after_last_candle_in_the_sequence
+        timeframe) * app_config.base_pattern_index_shift_after_last_candle_in_the_sequence
     passing_candles = base_timeframe_ohlcva.sort_index(level='date').loc[start:end].loc[
         compare(level, base_timeframe_ohlcva[high_low])]
     if len(passing_candles) > 0:
@@ -372,13 +372,13 @@ def update_band_status(inactive_bases: pt.DataFrame[BasePattern], base_timeframe
 
 def timeframe_effective_bases(_multi_timeframe_base_pattern, timeframe):
     try:
-        index = config.timeframes.index(timeframe)
+        index = app_config.timeframes.index(timeframe)
     except ValueError:
-        raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
-    if index < (len(config.timeframes) - 1):
+        raise Exception(f'timeframe:{timeframe} should be in [{app_config.timeframes}]!')
+    if index < (len(app_config.timeframes) - 1):
         result = _multi_timeframe_base_pattern.loc[
             _multi_timeframe_base_pattern.index.get_level_values('timeframe') \
-                .isin(config.timeframes[:index + 1])]
+                .isin(app_config.timeframes[:index + 1])]
         return result
     else:
         return _multi_timeframe_base_pattern

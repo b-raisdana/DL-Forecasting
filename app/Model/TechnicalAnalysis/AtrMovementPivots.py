@@ -5,7 +5,7 @@ import pandas as pd
 from pandera import typing as pt
 
 from ClassicPivot import insert_pivot_info, update_pivot_deactivation, insert_pivot_type_n_level
-from app.Config import config, TopTYPE
+from app.Config import app_config, TopTYPE
 from app.PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDFM, MultiTimeframeAtrMovementPivotDf, \
     AtrMovementPivotDf
 from app.PanderaDFM.OHLCV import OHLCV
@@ -53,10 +53,10 @@ def find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, m
                 timeframe_pivots.set_index('timeframe', inplace=True, append=True)
                 timeframe_pivots = timeframe_pivots.swaplevel()
                 pivots = MultiTimeframeAtrMovementPivotDf.concat(pivots, timeframe_pivots)
-                if config.check_assertions and not ((len(mt_tops.drop(
+                if app_config.check_assertions and not ((len(mt_tops.drop(
                         index=mt_tops[mt_tops.index.get_level_values('date') \
                                 .isin(timeframe_pivots.index.get_level_values('date'))].index)) + len(timeframe_pivots))
-                                                    == len(mt_tops)):
+                                                        == len(mt_tops)):
                     AssertionError("not ((len(mt_tops.drop(...")
                 if not same_time_multiple_timeframes:
                     mt_tops.drop(
@@ -70,14 +70,14 @@ def generate_multi_timeframe_atr_movement_pivots(date_range_str: str = None, fil
     if file_path is None:
         file_path = symbol_data_path()
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     if timeframe_shortlist is None:
-        timeframe_shortlist = config.structure_timeframes
+        timeframe_shortlist = app_config.structure_timeframes
     else:
         # if any([t in timeframe_shortlist for t in config.timeframes[-2:]]):
-        if any([t not in config.structure_timeframes for t in timeframe_shortlist]):
+        if any([t not in app_config.structure_timeframes for t in timeframe_shortlist]):
             raise Exception(f"timeframes {timeframe_shortlist} should be in structure_timeframes:"
-                            f"{config.structure_timeframes}!")
+                            f"{app_config.structure_timeframes}!")
     t_atr_movement_pivots = atr_movement_pivots(date_range_str=date_range_str,
                                                 structure_timeframe_shortlist=timeframe_shortlist)
     t_atr_movement_pivots.to_csv(os.path.join(file_path, f'multi_timeframe_atr_movement_pivots.{date_range_str}.zip'),
@@ -87,7 +87,7 @@ def generate_multi_timeframe_atr_movement_pivots(date_range_str: str = None, fil
 def read_multi_timeframe_atr_movement_pivots(date_range_str: str = None) \
         -> pt.DataFrame[MultiTimeframeAtrMovementPivotDFM]:
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     result = MultiTimeframeAtrMovementPivotDf.read_file(date_range_str, 'multi_timeframe_atr_movement_pivots',
                                                         generate_multi_timeframe_atr_movement_pivots)
     return result
@@ -112,9 +112,9 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
     :return:
     """
     if structure_timeframe_shortlist is None:
-        structure_timeframe_shortlist = config.structure_timeframes
+        structure_timeframe_shortlist = app_config.structure_timeframes
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     mt_tops: pt.DataFrame[MultiTimeframePeakValley] = read_multi_timeframe_peaks_n_valleys(date_range_str)
     start, end = date_range(date_range_str)
     mt_tops_mapped_time = [to_timeframe(date, timeframe, ignore_cached_times=True, do_not_warn=True)
@@ -122,7 +122,7 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
     expanded_atr_start = min(mt_tops_mapped_time)
     expanded_atr_date_range_str = date_range_to_string(start=min(start, expanded_atr_start), end=end)
     mt_ohlcva = read_multi_timeframe_ohlcva(expanded_atr_date_range_str)
-    base_timeframe_ohlcva = single_timeframe(mt_ohlcva, config.timeframes[0])
+    base_timeframe_ohlcva = single_timeframe(mt_ohlcva, app_config.timeframes[0])
     peaks_and_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     # filter to tops of structure timeframes
     mt_tops = mt_tops[mt_tops.index.get_level_values('timeframe').isin(structure_timeframe_shortlist)]
@@ -163,14 +163,14 @@ def insert_major_timeframe(pivots, structure_timeframe_shortlist):
             pivots.index.get_level_values(level='date').isin(timeframe_pivots.index.get_level_values(level='date'))
             & (pivots.index.get_level_values(level='timeframe') == pattern_timeframe(timeframe))
             ]
-        if config.check_assertions and len(timeframe_pivots) != len(same_time_pattern_timeframe_pivots):
+        if app_config.check_assertions and len(timeframe_pivots) != len(same_time_pattern_timeframe_pivots):
             raise AssertionError("Expected every pivot overlaps with a pivot in pattern time. "
                                  "len(timeframe_pivots) != len(same_time_pattern_timeframe_pivots)")
     pivots['timeframe_timedelta'] = pd.to_timedelta(pivots.index.get_level_values(level='timeframe'))
     unique_date_pivots = pivots.groupby(level='date')['timeframe_timedelta'].idxmax().tolist()
     pivots['major_timeframe'] = False
     pivots.loc[unique_date_pivots, 'major_timeframe'] = True
-    if config.check_assertions and len(pivots[pivots['major_timeframe']]) != len(
+    if app_config.check_assertions and len(pivots[pivots['major_timeframe']]) != len(
             pivots.index.get_level_values(level='date').unique()):
         raise AssertionError(
             "For each date/time which is a pivot expected to have one and only one major-timeframe pivot."

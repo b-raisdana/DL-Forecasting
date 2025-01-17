@@ -3,7 +3,7 @@ from typing import List
 import pandas as pd
 from pandera import typing as pt
 
-from app.Config import config, TopTYPE
+from app.Config import app_config, TopTYPE
 from app.PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from app.PanderaDFM.BullBearSide import BullBearSide
 from app.PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
@@ -31,7 +31,7 @@ def merge_bbs_overlap(time_frame_bbs: pt.DataFrame[BullBearSide]):
         .rename(columns={'movement_start_time': 'next_movement_start_time',
                          'movement_end_time': 'next_movement_end_time'})
     next_movements['shifted_movement_start_time'] = \
-        next_movements['next_movement_start_time'] - pd.to_timedelta(config.timeframes[0])
+        next_movements['next_movement_start_time'] - pd.to_timedelta(app_config.timeframes[0])
     next_movements['next_movement_index'] = next_movements.index
     next_movements.sort_values(by='next_movement_start_time', inplace=True)
     time_frame_bbs['date_backup'] = time_frame_bbs.index
@@ -325,7 +325,7 @@ def merge_bbs_overlap(time_frame_bbs: pt.DataFrame[BullBearSide]):
 def zz_ftc_of_range_by_time(pivots_with_ftc_range_start_time, multi_timeframe_base_patterns, pivots_timeframe):
     if len(pivots_with_ftc_range_start_time) > 0:
         pass
-    pivot_lower_timeframes = config.timeframes[config.timeframes.index(pivots_timeframe):0:-1]
+    pivot_lower_timeframes = app_config.timeframes[app_config.timeframes.index(pivots_timeframe):0:-1]
     pivots_with_ftc_range_start_time['ftc_list'] = pd.NA
     remained_pivots = pivots_with_ftc_range_start_time.copy()
     for timeframe in pivot_lower_timeframes:
@@ -347,12 +347,12 @@ def ftc_of_range_by_price(pivots: pt.DataFrame[Pivot2DFM],
                           mt_base_patterns: pt.DataFrame[MultiTimeframeBasePattern], pivots_timeframe):
     if len(pivots['real_movement'].dropna()) > 0:
         pass
-    pivot_lower_timeframes = config.timeframes[config.timeframes.index(pivots_timeframe)::-1]
+    pivot_lower_timeframes = app_config.timeframes[app_config.timeframes.index(pivots_timeframe)::-1]
     # todo: test
     if 'real_movement' not in pivots.columns:
         raise ValueError("'real_movement' not in pivots.columns")
     pivots['ftc_range_start_value'] = \
-        pivots['level'] - pivots['real_movement'] * config.ftc_price_range_percentage
+        pivots['level'] - pivots['real_movement'] * app_config.ftc_price_range_percentage
     pivots['ftc_range_low'] = pivots[['ftc_range_start_value', 'level']].min(axis='columns', skipna=False)
     pivots['ftc_range_high'] = pivots[['ftc_range_start_value', 'level']].max(axis='columns', skipna=False)
 
@@ -419,9 +419,9 @@ def multi_timeframe_ftc(
         multi_timeframe_base_patterns: pt.DataFrame[MultiTimeframeBasePattern],
         timeframe_shortlist: List[str] = None):
     if timeframe_shortlist is None:
-        timeframe_shortlist = config.structure_timeframes[::-1]
+        timeframe_shortlist = app_config.structure_timeframes[::-1]
     else:  # filter and order
-        timeframe_shortlist = [timeframe for timeframe in config.structure_timeframes[::-1]
+        timeframe_shortlist = [timeframe for timeframe in app_config.structure_timeframes[::-1]
                                if timeframe in timeframe_shortlist]
     mt_pivot.loc[:, 'ftc_list'] = pd.NA
     timeframe_shortlist = [timeframe for timeframe in timeframe_shortlist

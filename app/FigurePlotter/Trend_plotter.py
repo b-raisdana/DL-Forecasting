@@ -2,7 +2,7 @@ import os.path
 
 import pandas as pd
 
-from app.Config import config, TREND
+from app.Config import app_config, TREND
 from app.data_processing.fragmented_data import symbol_data_path
 from app.helper.data_preparation import single_timeframe
 from app.FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures
@@ -64,12 +64,12 @@ def plot_single_timeframe_candle_trend(ohlcv: pd.DataFrame, single_timeframe_can
 def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys, ohlcv, show=True,
                                       save=True, path_of_plot=None):
     if path_of_plot is None:
-        path_of_plot = os.path.join(symbol_data_path(), config.path_of_plots)
+        path_of_plot = os.path.join(symbol_data_path(), app_config.path_of_plots)
 
     figures = []
     _multi_timeframe_peaks = peaks_only(multi_timeframe_peaks_n_valleys)
     _multi_timeframe_valleys = valleys_only(multi_timeframe_peaks_n_valleys)
-    for _, timeframe in enumerate(config.timeframes):
+    for _, timeframe in enumerate(app_config.timeframes):
         figures.append(
             plot_single_timeframe_candle_trend(ohlcv, single_timeframe(multi_timeframe_candle_trend, timeframe),
                                                major_timeframe(multi_timeframe_peaks_n_valleys, timeframe),

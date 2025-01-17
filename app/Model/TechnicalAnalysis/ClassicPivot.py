@@ -6,7 +6,7 @@ import pandas as pd
 from pandera import typing as pt
 
 from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots
-from app.Config import config, TopTYPE
+from app.Config import app_config, TopTYPE
 from app.PanderaDFM.OHLCV import OHLCV
 from app.PanderaDFM.OHLCVA import OHLCVA
 from app.PanderaDFM.Pivot import MultiTimeframePivotDFM
@@ -26,8 +26,8 @@ def insert_passing_time(pivots: pt.DataFrame[Pivot2DFM], ohlcv: pt.DataFrame[OHL
     if 'passing_time' not in pivots.columns:
         pivots['passing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
     support_pivots = pivots[~(pivots['is_resistance'].astype(bool))]
-    if config.check_assertions and any(pivots.loc[support_pivots.index, 'external_margin'] >
-                                       pivots.loc[support_pivots.index, 'internal_margin']):
+    if app_config.check_assertions and any(pivots.loc[support_pivots.index, 'external_margin'] >
+                                           pivots.loc[support_pivots.index, 'internal_margin']):
         raise AssertionError(
             "any(pivots.loc[support_pivots.index, 'external_margin'] > pivots.loc[support_pivots.index, "
             "'internal_margin'])")
@@ -38,8 +38,8 @@ def insert_passing_time(pivots: pt.DataFrame[Pivot2DFM], ohlcv: pt.DataFrame[OHL
                          )['right_crossing_time']
 
     resistance_pivots = pivots[pivots['is_resistance'].astype(bool)]
-    if config.check_assertions and any(pivots.loc[resistance_pivots.index, 'external_margin'] <
-                                       pivots.loc[resistance_pivots.index, 'internal_margin']):
+    if app_config.check_assertions and any(pivots.loc[resistance_pivots.index, 'external_margin'] <
+                                           pivots.loc[resistance_pivots.index, 'internal_margin']):
         raise AssertionError("any(pivots.loc[resistance_pivots.index, 'external_margin'] < "
                              "pivots.loc[resistance_pivots.index, 'internal_margin'])")
     pivots.loc[resistance_pivots.index, 'passing_time'] = \
@@ -79,7 +79,7 @@ def deactivate_on_passing_times(pivots: pt.DataFrame['Pivot2DFM'], ohlcv: pt.Dat
 # @measure_time
 def duplicate_on_passing_times(pivots: pt.DataFrame['Pivot2DFM'], ohlcv: pt.DataFrame[OHLCV], ):
     # todo: it is too slow!
-    if config.check_assertions and 'passing_time' in pivots.columns:
+    if app_config.check_assertions and 'passing_time' in pivots.columns:
         raise AssertionError("'passing_time' in pivots.columns")
     if 'passing_time' not in pivots.columns:
         pivots['passing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
@@ -114,9 +114,9 @@ def duplicate_on_passing_times(pivots: pt.DataFrame['Pivot2DFM'], ohlcv: pt.Data
 # @measure_time
 def inactivate_3rd_hit(pivots: pt.DataFrame['Pivot2DFM'], ohlcv: pt.DataFrame[OHLCV]):
     pivots = update_hit(pivots, ohlcv)
-    deactivate_by_hit = pivots[pivots[f'hit_end_{config.pivot_number_of_active_hits}'].notna()].index
+    deactivate_by_hit = pivots[pivots[f'hit_end_{app_config.pivot_number_of_active_hits}'].notna()].index
     pivots.loc[deactivate_by_hit, 'deactivated_at'] = \
-        pivots.loc[deactivate_by_hit, f'hit_end_{config.pivot_number_of_active_hits}']
+        pivots.loc[deactivate_by_hit, f'hit_end_{app_config.pivot_number_of_active_hits}']
 
 
 # @measure_time
@@ -162,7 +162,7 @@ def insert_is_overlap_of(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivo
             ]
         if len(overlapped_pivots) > 0:
             overlapped_timeframes = overlapped_pivots.index.get_level_values(level='timeframe').unique()
-            timeframe = [t for t in config.timeframes[::-1] if t in overlapped_timeframes][0]
+            timeframe = [t for t in app_config.timeframes[::-1] if t in overlapped_timeframes][0]
             (master_pivot_timeframe, master_pivot_date) = \
                 overlapped_pivots[overlapped_pivots['timeframe'] == timeframe].sort_index(level='date').iloc[0].index
             multi_timeframe_pivots.loc[mt_index, 'master_pivot_timeframe'] = master_pivot_timeframe
@@ -173,7 +173,7 @@ def insert_is_overlap_of(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivo
 def update_hit(timeframe_pivots: pt.DataFrame[Pivot2DFM], ohlcv) -> pt.DataFrame[Pivot2DFM]:
     if timeframe_pivots.index.get_level_values('date').isna().any():
         pass  # todo: test
-    if config.check_assertions and 'passing_time' not in timeframe_pivots.columns:
+    if app_config.check_assertions and 'passing_time' not in timeframe_pivots.columns:
         AssertionError("Expected passing_time be calculated before: "
                        "'passing_time' not in active_timeframe_pivots.columns")
     may_have_hit = timeframe_pivots.index
@@ -191,7 +191,7 @@ def update_hit(timeframe_pivots: pt.DataFrame[Pivot2DFM], ohlcv) -> pt.DataFrame
         insert_hits(timeframe_pivots, f'boundary_of_hit_end_0', 0,
                     ohlcv, 'end'))[f'hit_end_0']
 
-    for n in range(1, config.pivot_number_of_active_hits + 1):
+    for n in range(1, app_config.pivot_number_of_active_hits + 1):
         timeframe_pivots[f'boundary_of_hit_start_{n}'] = pd.Series(dtype='datetime64[ns, UTC]')
         timeframe_pivots[f'boundary_of_hit_end_{n}'] = pd.Series(dtype='datetime64[ns, UTC]')
         # filter for next iteration

@@ -7,7 +7,7 @@ import pandas as pd
 import pandera
 from pandera import typing as pt, DataType
 
-from app.Config import config
+from app.Config import app_config
 from app.data_processing.fragmented_data import symbol_data_path
 from app.helper.data_preparation import concat, after_under_process_date, datarange_is_not_cachable, \
     all_annotations, read_without_index
@@ -43,7 +43,7 @@ class ExtendedDf:
 
     @classmethod
     def new(cls, dictionary_of_data: dict = None, strict: bool = True) -> pt.DataFrame['BasePanderaDFM']:
-        if config.check_assertions and cls._sample_df is None:
+        if app_config.check_assertions and cls._sample_df is None:
             raise AssertionError(f"{cls}._sample_obj should be defined before!")
         if cls._empty_df is None:
             _empty = cls._sample_df.drop(cls._sample_df.index)
@@ -98,7 +98,7 @@ class ExtendedDf:
         if not zero_size_allowed:
             if len(df) == 0:
                 raise Exception('Zero size data not allowed in parameters!')
-        if config.check_assertions and cls.schema_data_frame_model is None:
+        if app_config.check_assertions and cls.schema_data_frame_model is None:
             raise AssertionError(f"Define cls.schema_data_frame_model in child class:{cls.__name__}")
         try:
             result = cls.schema_data_frame_model.validate(df)
@@ -159,7 +159,7 @@ class ExtendedDf:
         if file_path is None:
             file_path = symbol_data_path()
         if date_range_str is None:
-            date_range_str = config.processing_date_range
+            date_range_str = app_config.processing_date_range
         df = None
         try:
             df = cls.read_and_index(data_frame_type, date_range_str, file_path, n_rows, skip_rows)

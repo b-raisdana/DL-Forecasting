@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 
-from app.Config import config, Config
+from app.Config import app_config, Config
 
 
 def load_ohlcv_list():
@@ -14,10 +14,10 @@ def symbol_data_path(path_of_data:str = None, exchange:str = None, market:str = 
     if path_of_data is None:
         path_of_data = Config.path_of_data
     if exchange is None:
-        exchange = config.under_process_exchange
+        exchange = app_config.under_process_exchange
     if market is None:
-        market = config.under_process_market
+        market = app_config.under_process_market
     if trading_pair is None:
-        trading_pair = config.under_process_symbol
+        trading_pair = app_config.under_process_symbol
     return os.path.join(path_of_data, exchange, market, trading_pair)
 

@@ -5,7 +5,7 @@ from typing import Tuple, List, Optional, Literal
 import pandas as pd
 import pandera.typing as pt
 
-from app.Config import TopTYPE, config, TREND
+from app.Config import TopTYPE, app_config, TREND
 from app.Model.TechnicalAnalysis.PeakValley import valleys_only, peaks_only, major_timeframe, \
     read_multi_timeframe_peaks_n_valleys, insert_previous_n_next_top
 from app.PanderaDFM.BullBearSide import MultiTimeframeBullBearSide, BullBearSide, bull_bear_side_repr
@@ -201,7 +201,7 @@ def shifted_time_and_value(df: pd.DataFrame, direction: Literal['next', 'previou
         shift_value = 1
     else:
         raise Exception(f'Invalid direction: {direction} should be "next" or "previous"')
-    shifted_top_indexes = df.index.shift(shift_value, freq=config.timeframes[0])
+    shifted_top_indexes = df.index.shift(shift_value, freq=app_config.timeframes[0])
     shifted_tops = pd.DataFrame(index=shifted_top_indexes).sort_index()
     shifted_tops[f'{direction}_{shifted_columns_prefix}_time'] = df.index.tolist()
     shifted_tops[f'{direction}_{shifted_columns_prefix}_value'] = df[source_value_column].tolist()
@@ -361,7 +361,7 @@ def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pt.DataF
     trends = empty_df(MultiTimeframeBullBearSide)
 
     if timeframe_shortlist is None:
-        timeframe_shortlist = config.timeframes
+        timeframe_shortlist = app_config.timeframes
     for timeframe in timeframe_shortlist:
         timeframe_candle_trend = single_timeframe(multi_timeframe_candle_trend, timeframe)
         if len(timeframe_candle_trend) < 3:
@@ -459,7 +459,7 @@ def ignore_weak_trend(boundaries: pt.DataFrame[BullBearSide]) -> pt.DataFrame[Bu
         # Assuming you have a DataFrame '_boundaries' with the required columns and data
         filtered_boundaries = ignore_weak_trend(_boundaries)
     """
-    boundaries.loc[boundaries['strength'] < config.momentum_trand_strength_factor, 'bull_bear_side'] \
+    boundaries.loc[boundaries['strength'] < app_config.momentum_trand_strength_factor, 'bull_bear_side'] \
         = TREND.SIDE.value
     return boundaries
 
@@ -593,7 +593,7 @@ def read_multi_timeframe_candle_trend(date_range_str: str = None) -> pt.DataFram
 def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str = None, file_path: str = None,
                                                    timeframe_shortlist: List['str'] = None):
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     if file_path is None:
         file_path = symbol_data_path()
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
@@ -619,7 +619,7 @@ def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortli
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str).sort_index(level='date')
     multi_timeframe_candle_trend = empty_df(MultiTimeframeCandleTrend)
     if timeframe_shortlist is None:
-        timeframe_shortlist = config.timeframes
+        timeframe_shortlist = app_config.timeframes
     for timeframe in timeframe_shortlist:  # peaks_n_valleys.index.unique(level='timeframe'):
         t_candle_trend = \
             single_timeframe_candles_trend(single_timeframe(multi_timeframe_ohlcv, timeframe),

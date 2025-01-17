@@ -4,7 +4,7 @@ import pandas as pd
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 
-from app.Config import config
+from app.Config import app_config
 from app.FigurePlotter.BasePattern_plotter import draw_base
 from app.FigurePlotter.OHLVC_plotter import plot_ohlcv, add_atr_scatter
 from app.FigurePlotter.plotter import show_and_save_plot, update_figure_layout
@@ -22,20 +22,20 @@ def plot_multi_timeframe_pivots(mt_pivots: pt.DataFrame[MultiTimeframePivot2DFM]
                                 show_boundaries:bool = True, show_duplicates: bool = True, show_ftc: bool = True,
                                 date_range_str: str = None, show: bool = True, save: bool = True) -> plgo.Figure:
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     # Create the figure using plot_peaks_n_valleys function
     if multi_timeframe_ohlcva is None:
         multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
     end_time = max(multi_timeframe_ohlcva.index.get_level_values('date'))
-    base_ohlcv = single_timeframe(multi_timeframe_ohlcva, config.timeframes[0])
+    base_ohlcv = single_timeframe(multi_timeframe_ohlcva, app_config.timeframes[0])
 
     # plot multiple timeframes candle chart all together.
     resistance_timeframes = mt_pivots[mt_pivots['is_resistance']] \
         .index.get_level_values(level='timeframe').unique()
     support_timeframes = mt_pivots[~mt_pivots['is_resistance']] \
         .index.get_level_values(level='timeframe').unique()
-    fig = plot_ohlcv(ohlcv=base_ohlcv, show=False, save=False, name=config.timeframes[0])
-    for timeframe in config.timeframes[1:]:
+    fig = plot_ohlcv(ohlcv=base_ohlcv, show=False, save=False, name=app_config.timeframes[0])
+    for timeframe in app_config.timeframes[1:]:
         ohlcva = single_timeframe(multi_timeframe_ohlcva, timeframe)
         fig.add_trace(plgo.Candlestick(x=ohlcva.index,
                                        open=ohlcva['open'],
@@ -147,7 +147,7 @@ def plot_multi_timeframe_pivots(mt_pivots: pt.DataFrame[MultiTimeframePivot2DFM]
                                         real_start = ftc['date'] + \
                                                      pd.to_timedelta(
                                                          ftc[
-                                                             'timeframe']) * config.base_pattern_index_shift_after_last_candle_in_the_sequence
+                                                             'timeframe']) * app_config.base_pattern_index_shift_after_last_candle_in_the_sequence
                                         ftc['effective_end'] = min(
                                             ftc['end'] if pd.notna(ftc['end']) else ftc['ttl'],
                                             ftc['ttl'] if pd.notna(ftc['ttl']) else ftc['end'],

@@ -3,7 +3,7 @@ import os
 import re
 import zipfile
 
-from app.Config import config  # Make sure to import your config module
+from app.Config import app_config  # Make sure to import your config module
 from app.data_processing.fragmented_data import symbol_data_path
 from app.helper.helper import log_d
 
@@ -44,7 +44,7 @@ def convert_hour_timeframes_case():
                 # Add a file to the zip file with the modified content
                 zip_file.writestr(file_to_write, modified_content)
     def process_all_zip_files(directory_path):
-        timeframe_with_h = [timeframe for timeframe in config.timeframes if 'h' in timeframe.lower()]
+        timeframe_with_h = [timeframe for timeframe in app_config.timeframes if 'h' in timeframe.lower()]
         for filename in os.listdir(directory_path):
             if filename.startswith('multi_timeframe_') and filename.endswith('.zip'):
                 zip_file_path = os.path.join(directory_path, filename)

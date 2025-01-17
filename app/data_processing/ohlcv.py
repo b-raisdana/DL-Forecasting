@@ -5,7 +5,7 @@ import pandas as pd
 import pytz
 from pandera import typing as pt
 
-from app.Config import config
+from app.Config import app_config
 from app.PanderaDFM.OHLCV import MultiTimeframeOHLCV, OHLCV
 from app.data_processing.fetch_ohlcv import fetch_ohlcv_by_range
 from app.data_processing.fragmented_data import symbol_data_path
@@ -33,10 +33,10 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = No
     ohlcv = read_base_timeframe_ohlcv(date_range_str)
 
     multi_timeframe_ohlcv = ohlcv.copy()
-    multi_timeframe_ohlcv.insert(0, 'timeframe', config.timeframes[0])
+    multi_timeframe_ohlcv.insert(0, 'timeframe', app_config.timeframes[0])
     multi_timeframe_ohlcv = multi_timeframe_ohlcv.set_index('timeframe', append=True)
     multi_timeframe_ohlcv = multi_timeframe_ohlcv.swaplevel()
-    for _, timeframe in enumerate(config.timeframes[1:]):
+    for _, timeframe in enumerate(app_config.timeframes[1:]):
         if timeframe == '1W':
             frequency = 'W-MON'
         elif timeframe == 'M':
@@ -67,7 +67,7 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = No
 # @measure_time
 def core_read_multi_timeframe_ohlcv(date_range_str: str = None) -> MultiTimeframeOHLCV:
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcv', core_generate_multi_timeframe_ohlcv,
                        MultiTimeframeOHLCV)
     cache_times(result)
@@ -88,7 +88,7 @@ def read_daily_multi_timeframe_ohlcv(day: datetime) -> MultiTimeframeOHLCV:
 
 def read_multi_timeframe_ohlcv(date_range_str: str) -> pt.DataFrame[MultiTimeframeOHLCV]:
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcv', generate_multi_timeframe_ohlcv,
                        MultiTimeframeOHLCV)
     cache_times(result)
@@ -96,9 +96,9 @@ def read_multi_timeframe_ohlcv(date_range_str: str) -> pt.DataFrame[MultiTimefra
 
 
 def cache_times(result):
-    for timeframe in config.timeframes:
+    for timeframe in app_config.timeframes:
         # if f'valid_times_{timeframe}' not in config.GLOBAL_CACHE.keys():
-        config.GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
+        app_config.GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
             single_timeframe(result, timeframe).index#.get_level_values('date').tolist()
 
 
@@ -131,7 +131,7 @@ def core_read_ohlcv(date_range_str: str = None,
                     # base_timeframe=None
                     ) -> pt.DataFrame[OHLCV]:
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     result = read_file(date_range_str, f'ohlcv', core_generate_ohlcv, OHLCV,)
                        # generator_params={'base_timeframe': base_timeframe})
     return result
@@ -150,7 +150,7 @@ def read_daily_ohlcv(day: datetime, base_timeframe=None) -> pt.DataFrame[OHLCV]:
 def read_base_timeframe_ohlcv(date_range_str: str, base_timeframe=None) \
         -> pt.DataFrame[OHLCV]:
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     result = read_file(date_range_str, f'ohlcv', generate_base_timeframe_ohlcv, OHLCV,
                        generator_params={'base_timeframe': base_timeframe})
     return result
@@ -172,13 +172,13 @@ def generate_base_timeframe_ohlcv(date_range_str: str = None, file_path: str = N
     df = pd.concat(daily_dataframes)
     df = df.sort_index(level='date')
     df = trim_to_date_range(date_range_str, df)
-    assert times_tester(df, date_range_str, config.timeframes[0])
+    assert times_tester(df, date_range_str, app_config.timeframes[0])
     df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'), compression='zip')
 
 
 def core_generate_ohlcv(date_range_str: str = None, file_path: str = None):
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     if file_path is None:
         file_path = symbol_data_path()
     # if config.do_not_fetch_prices:
@@ -190,7 +190,7 @@ def core_generate_ohlcv(date_range_str: str = None, file_path: str = None):
     df = df.set_index('date')
     df = df.drop(columns=['timestamp'])
     cast_and_validate(df, OHLCV, zero_size_allowed=after_under_process_date(date_range_str))
-    assert times_tester(df, date_range_str, timeframe=config.timeframes[0])
+    assert times_tester(df, date_range_str, timeframe=app_config.timeframes[0])
     df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'), compression='zip')
     # if config.load_data_to_meta_trader:
     #     MT.extract_to_data_path(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'))

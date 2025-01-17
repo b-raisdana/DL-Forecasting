@@ -11,8 +11,7 @@ scikit-learn
 # psutil
 pytz
 pandas_ta
-#tensorflow
-tensorflow[cuda]==2.16.1
+tensorflow
 colorama
 #==2.18.0
 # tensorflow[and-cuda]<=2.14.0

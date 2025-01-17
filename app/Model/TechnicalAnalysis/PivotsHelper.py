@@ -2,7 +2,7 @@ import datetime
 
 import pandas as pd
 
-from app.Config import TopTYPE, config
+from app.Config import TopTYPE, app_config
 from PeakValley import peaks_only, valleys_only
 
 
@@ -73,8 +73,8 @@ def peak_or_valley_pivots_level_n_margins(timeframe_pivots: pd.DataFrame, pivot_
                          "but 'timeframe' in timeframe_pivots.index.names")
     if _type.value not in [e.value for e in TopTYPE]:
         raise ValueError("Invalid type. Use either 'peak' or 'valley'.")
-    if timeframe not in config.timeframes:
-        raise ValueError(f"'{timeframe}' is not a valid timeframe. Please select from {config.timeframe}.")
+    if timeframe not in app_config.timeframes:
+        raise ValueError(f"'{timeframe}' is not a valid timeframe. Please select from {app_config.timeframe}.")
     if len(pivot_time_peaks_or_valleys) == 0:
         return timeframe_pivots
 
@@ -88,9 +88,9 @@ def peak_or_valley_pivots_level_n_margins(timeframe_pivots: pd.DataFrame, pivot_
     timeframe_pivots.loc[pivot_time_peaks_or_valleys.index, 'level'] = \
         timeframe_pivots.loc[pivot_time_peaks_or_valleys.index, 'level_y']
     timeframe_pivots = timeframe_pivots.drop('level_y', axis='columns')
-    if config.check_assertions and 'level' not in timeframe_pivots.columns:
+    if app_config.check_assertions and 'level' not in timeframe_pivots.columns:
         raise AssertionError("'level' not in timeframe_pivots.columns")
-    if config.check_assertions and timeframe_pivots[['level']].isna().any().any():
+    if app_config.check_assertions and timeframe_pivots[['level']].isna().any().any():
         raise AssertionError("timeframe_pivots[['level']].isna().any().any()")
     timeframe_pivots = pivot_margins(timeframe_pivots, _type, pivot_time_peaks_or_valleys, candle_body_source,
                                      breakout_margin_atr)
@@ -141,17 +141,17 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE,  # pivot_peaks_or_valley
     # pivots['timeframe_invalid'] = False
     if _type.value == TopTYPE.PEAK.value:
         pivots['external_margin'] = pivots['level'] + pivots['breakout_margin_atr']
-        if config.check_assertions and any(pivots['external_margin'] < pivots['internal_margin']):
+        if app_config.check_assertions and any(pivots['external_margin'] < pivots['internal_margin']):
             # pivots['timeframe_invalid'] = True
             # """ AAA in 02-28 08:04 nearest_body of candle_body_source is higher than level + breakout_margin_atr!!!"""  # todo: test
             raise AssertionError(
                 "any(pivots.loc[pivot_times, 'external_margin'] < pivots.loc[pivot_times, 'internal_margin'])")
     else:
         pivots['external_margin'] = pivots['level'] - pivots['breakout_margin_atr']
-        if config.check_assertions and any(pivots['external_margin'] > pivots['internal_margin']):
+        if app_config.check_assertions and any(pivots['external_margin'] > pivots['internal_margin']):
             raise AssertionError("config.check_assertions and any(pivots.loc[pivot_times, 'external_margin'] > "
                                  "pivots.loc[pivot_times, 'internal_margin'])")
-    if config.check_assertions and pivots[['internal_margin', 'external_margin']].isna().any().any():
+    if app_config.check_assertions and pivots[['internal_margin', 'external_margin']].isna().any().any():
         # pivots['timeframe_invalid'] = True
         raise AssertionError("pivots[['internal_margin', 'external_margin']].isna().any().any()")
     return pivots

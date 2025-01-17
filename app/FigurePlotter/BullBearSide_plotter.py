@@ -6,7 +6,7 @@ from plotly import graph_objects as plgo
 
 from app.Model.TechnicalAnalysis import PeakValley
 from app.Model.TechnicalAnalysis.BullBearSide import most_two_significant_tops
-from app.Config import TREND, config, TopTYPE
+from app.Config import TREND, app_config, TopTYPE
 from app.FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
 from app.FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures, update_figure_layout
 from app.PanderaDFM.BullBearSide import BullBearSide, bull_bear_side_repr
@@ -80,7 +80,7 @@ def plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlcva, multi_tim
                                                timeframe_shortlist: List['str'] = None):
     figures = []
     if timeframe_shortlist is None:
-        timeframe_shortlist = config.timeframes
+        timeframe_shortlist = app_config.timeframes
     for timeframe in timeframe_shortlist:
         _figure = plot_single_timeframe_bull_bear_side_trends(
             single_timeframe_ohlcva=single_timeframe(multi_timeframe_ohlcva, timeframe),

@@ -5,7 +5,7 @@ import pandas as pd
 from pandera import typing as pt
 
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
-from app.Config import config
+from app.Config import app_config
 # from MetaTrader import MT
 from app.PanderaDFM.BullBearSide import BullBearSide
 from app.PanderaDFM.BullBearSidePivot import BullBearSidePivot
@@ -60,14 +60,14 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, structure_
     :return:
     """
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
 
     multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
     multi_timeframe_pivots = empty_df(MultiTimeframePivotDFM)
     if structure_timeframe_shortlist is None:
-        structure_timeframe_shortlist = config.structure_timeframes[::-1]
+        structure_timeframe_shortlist = app_config.structure_timeframes[::-1]
     for timeframe in structure_timeframe_shortlist:
         timeframe_peaks_n_valleys = major_timeframe(multi_timeframe_peaks_n_valleys, timeframe)
         timeframe_ohlcva = single_timeframe(multi_timeframe_ohlcva, timeframe)
@@ -155,7 +155,7 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None,
     if file_path is None:
         file_path = symbol_data_path()
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     multi_timeframe_pivots = multi_timeframe_bull_bear_side_pivots(date_range_str, timeframe_shortlist)
     # plot_multi_timeframe_pivots(multi_timeframe_pivots, name='multi_timeframe_bull_bear_side_pivots')
     multi_timeframe_pivots = multi_timeframe_pivots.sort_index(level='date')

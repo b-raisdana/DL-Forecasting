@@ -7,7 +7,7 @@ from typing import List
 import pandas as pd
 from plotly import graph_objects as plgo
 
-from app.Config import config
+from app.Config import app_config
 from app.data_processing.fragmented_data import symbol_data_path
 from app.helper.data_preparation import date_range_of_data
 from app.helper.helper import profile_it
@@ -19,7 +19,7 @@ DEBUG = False
 def plot_multiple_figures(figures: List[plgo.Figure], name: str, save: bool = True, show: bool = True,
                           path_of_plot: str = None):
     if path_of_plot is None:
-        path_of_plot = os.path.join(symbol_data_path(), config.path_of_plots)
+        path_of_plot = os.path.join(symbol_data_path(), app_config.path_of_plots)
     figures_html = []
     for i, figure in enumerate(figures):
         figures_html.append(figure.to_html())
@@ -65,7 +65,7 @@ def save_figure(fig: plgo.Figure, file_name: str, file_path: str = '') -> None:
         This function uses the Plotly 'write_html' method to save the figure as an HTML file.
     """
     if file_path == '':
-        file_path = os.path.join(symbol_data_path(), config.path_of_plots)
+        file_path = os.path.join(symbol_data_path(), app_config.path_of_plots)
     if not os.path.exists(file_path):
         os.mkdir(file_path)
 
@@ -102,7 +102,7 @@ def file_id(data: pd.DataFrame, name: str = '') -> str:
 def show_and_save_plot(fig: plgo.Figure, save: bool = True, show: bool = True, name_without_prefix: str = None,
                        path_of_plot: str = None):
     if path_of_plot is None:
-        path_of_plot = os.path.join(symbol_data_path(), config.path_of_plots)
+        path_of_plot = os.path.join(symbol_data_path(), app_config.path_of_plots)
     if name_without_prefix is None:
         name_without_prefix = f'{int(datetime.now().timestamp())}'
     file_path = os.path.join(path_of_plot, f'{name_without_prefix}.html')
@@ -121,25 +121,25 @@ def show_and_save_plot(fig: plgo.Figure, save: bool = True, show: bool = True, n
 
 def update_figure_layout(fig):
     fig.update_layout({
-        'width': config.figure_width,  # Set the width of the plot
-        'height': config.figure_height,
+        'width': app_config.figure_width,  # Set the width of the plot
+        'height': app_config.figure_height,
         'legend': {
             'font': {
-                'size': config.figure_font_size
+                'size': app_config.figure_font_size
             },
             'tracegroupgap': 1,
         },
         'legend_title': {
             'font': {
-                'size': config.figure_font_size
+                'size': app_config.figure_font_size
             },
         },
         'hoverlabel': {
             'font': {
-                'size': config.figure_font_size
+                'size': app_config.figure_font_size
             },
             'grouptitlefont': {
-                'size': config.figure_font_size
+                'size': app_config.figure_font_size
             },
         },
         'hovermode': 'x unified',
@@ -147,10 +147,10 @@ def update_figure_layout(fig):
 
 
 def timeframe_color(timeframe: str) -> str:
-    h = (config.timeframes.index(timeframe) * 20 + 120) % 360
+    h = (app_config.timeframes.index(timeframe) * 20 + 120) % 360
     s, b = (1, 1)
     r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h / 360, s, b)]
     return f'rgb({r},{g},{b})'
 
 
-INFINITY_TIME_DELTA = config.INFINITY_TIME_DELTA
+INFINITY_TIME_DELTA = app_config.INFINITY_TIME_DELTA

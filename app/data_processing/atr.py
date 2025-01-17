@@ -7,7 +7,7 @@ import pandas_ta as ta  # noqa
 import pytz
 from pandera import typing as pt
 
-from app.Config import config
+from app.Config import app_config
 from app.PanderaDFM.MultiTimeframe import MultiTimeframe
 from app.PanderaDFM.OHLCV import OHLCV
 from app.PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
@@ -56,19 +56,19 @@ def insert_volume_rma(timeframe_v: pt.DataFrame[OHLCV]):
     Returns:
 
     '''
-    if len(timeframe_v) <= config.atr_timeperiod:
+    if len(timeframe_v) <= app_config.atr_timeperiod:
         timeframe_v['volume_rma'] = pd.NA
         return timeframe_v
-    timeframe_v['volume_rma'] = timeframe_v['volume'] / ta.rma(timeframe_v['volume'], length=config.atr_timeperiod)
+    timeframe_v['volume_rma'] = timeframe_v['volume'] / ta.rma(timeframe_v['volume'], length=app_config.atr_timeperiod)
     return timeframe_v['volume_rma']
 
 # @measure_time
 def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = 'pandas_ta') -> pd.DataFrame:
-    if len(timeframe_ohlcv) <= config.atr_timeperiod:
+    if len(timeframe_ohlcv) <= app_config.atr_timeperiod:
         timeframe_ohlcv['atr'] = pd.NA
     else:
         if mode == 'pandas_ta':
-            timeframe_ohlcv['atr'] = timeframe_ohlcv.ta.atr(timeperiod=config.atr_timeperiod,
+            timeframe_ohlcv['atr'] = timeframe_ohlcv.ta.atr(timeperiod=app_config.atr_timeperiod,
                                                             # high='high',
                                                             # low='low',
                                                             # close='close',
@@ -82,7 +82,7 @@ def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = 'pandas_ta') ->
 
 def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str = None) -> None:
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     if file_path is None:
         file_path = symbol_data_path()
     start, end = date_range(date_range_str)
@@ -108,7 +108,7 @@ def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str =
 
 def read_multi_timeframe_ohlcva(date_range_str: str = None) -> pt.DataFrame[MultiTimeframeOHLCVA]:
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcva', generate_multi_timeframe_ohlcva,
                        MultiTimeframeOHLCVA)
     cache_times(result)
@@ -118,17 +118,17 @@ def read_multi_timeframe_ohlcva(date_range_str: str = None) -> pt.DataFrame[Mult
 # @measure_time
 def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str = None) -> None:
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     if file_path is None:
         file_path = symbol_data_path()
     multi_timeframe_ohlcva = empty_df(MultiTimeframeOHLCVA)
-    for _, timeframe in enumerate(config.timeframes):
+    for _, timeframe in enumerate(app_config.timeframes):
         if timeframe == '4h':
             pass
         expanded_date_range = \
             expand_date_range(date_range_str,
-                              time_delta=((config.atr_timeperiod + 2) * pd.to_timedelta(timeframe) *
-                                          config.atr_safe_start_expand_multipliers),
+                              time_delta=((app_config.atr_timeperiod + 2) * pd.to_timedelta(timeframe) *
+                                          app_config.atr_safe_start_expand_multipliers),
                               mode='start')
         expanded_date_multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(expanded_date_range)
         timeframe_ohlcv = single_timeframe(expanded_date_multi_timeframe_ohlcv, timeframe)

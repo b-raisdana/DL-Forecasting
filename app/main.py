@@ -1,4 +1,4 @@
-from Config import config
+from Config import app_config
 from data_processing.atr import read_multi_timeframe_ohlcva
 from helper.helper import date_range_to_string
 
@@ -6,7 +6,7 @@ from helper.helper import date_range_to_string
 
 if __name__ == "__main__":
     # config.processing_date_range = date_range_to_string(days=5, end=datetime(year=2023, month=11, day=18))
-    config.processing_date_range = date_range_to_string(days=15) #, end=datetime(year=2023, month=3, day=8))
+    app_config.processing_date_range = date_range_to_string(days=15) #, end=datetime(year=2023, month=3, day=8))
     #
     #     file_path: str = data_path()
     #     today_morning = today_morning()
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     #
     #     exit(0)
 
-    ohlcva = read_multi_timeframe_ohlcva(config.processing_date_range)
+    ohlcva = read_multi_timeframe_ohlcva(app_config.processing_date_range)
     # plot_multi_timeframe_ohlcva(ohlcva)
     # peaks_and_valleys = read_multi_timeframe_peaks_n_valleys()
     # # plot_multi_timeframe_peaks_n_valleys(peaks_and_valleys, config.processing_date_range)

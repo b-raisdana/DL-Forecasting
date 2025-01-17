@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from pandera import typing as pt
 
-from app.Config import config
+from app.Config import app_config
 # from MetaTrader import MT
 from app.PanderaDFM.Pivot import MultiTimeframePivotDFM
 from PeakValley import read_multi_timeframe_peaks_n_valleys
@@ -31,7 +31,7 @@ def major_times_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotD
     _multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
     multi_timeframe_pivots = empty_df(MultiTimeframePivotDFM)
-    for timeframe in config.structure_timeframes[::-1][2:]:
+    for timeframe in app_config.structure_timeframes[::-1][2:]:
         # 1W tops are creating classic levels for 4H, 1D for 1H and 4H for 15min structure Timeframes.
         _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, anti_trigger_timeframe(timeframe))
         ohlcv_start = _multi_timeframe_ohlcva.index.get_level_values('date').min()
@@ -76,7 +76,7 @@ def read_multi_timeframe_major_times_top_pivots(date_range_str: str = None):
 def generate_multi_timeframe_major_times_top_pivots(date_range_str: str = None, file_path: str = None):
     # tops of anti-trigger timeframe
     if date_range_str is None:
-        date_range_str = config.processing_date_range
+        date_range_str = app_config.processing_date_range
     if file_path is None:
         file_path = symbol_data_path()
     _tops_pivots = major_times_tops_pivots(date_range_str)

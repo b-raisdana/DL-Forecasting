@@ -4,7 +4,7 @@ from pandera import typing as pt
 from plotly import graph_objects as plgo
 from plotly.subplots import make_subplots
 
-from app.Config import config, CandleSize
+from app.Config import app_config, CandleSize
 from app.FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_figure, update_figure_layout
 from app.PanderaDFM.OHLCV import OHLCV
 from app.PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
@@ -30,7 +30,7 @@ def trace_chart(i_fig, df, name_prefix, fig_row, fig_col):
 @profile_it
 def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bool = True, save: bool = True) -> None:
     figures = []
-    for _, timeframe in enumerate(config.timeframes):
+    for _, timeframe in enumerate(app_config.timeframes):
         figures.append(plot_ohlcva(single_timeframe(multi_timeframe_ohlcva, timeframe), show=False, save=False,
                                    name=f'{timeframe} ohlcva'))
     plot_multiple_figures(figures, name=f'multi_timeframe_ohlcva.{file_id(multi_timeframe_ohlcva, name)}',
@@ -40,7 +40,7 @@ def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bo
 @profile_it
 def plot_multi_timeframe_ohlcv(multi_timeframe_ohlcv, date_range_str, show: bool = True, save: bool = True):
     figures = []
-    for _, timeframe in enumerate(config.timeframes):
+    for _, timeframe in enumerate(app_config.timeframes):
         figures.append(plot_ohlcv(single_timeframe(multi_timeframe_ohlcv, timeframe), show=False, save=False,
                                   name=f'{timeframe} ohlcv'))
     plot_multiple_figures(figures, name=f'multi_timeframe_ohlcv.{date_range_str}', show=show, save=save)
@@ -82,7 +82,7 @@ def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']
             x=base_ohlcv.index.values,
             open=base_ohlcv['open'], high=base_ohlcv['high'], low=base_ohlcv['low'],
             close=base_ohlcv['close']
-            , name=config.timeframes[0]
+            , name=app_config.timeframes[0]
         )
     update_figure_layout(fig)
     if show: fig.show()
@@ -290,7 +290,7 @@ def plot_merged_timeframe_ohlcva(multi_timeframe_ohlcva: pt.DataFrame[MultiTimef
     fig = plgo.Figure()
     update_figure_layout(fig)
     multi_timeframe_ohlcva_timeframes = multi_timeframe_ohlcva.index.get_level_values('timeframe').unique()
-    timeframe_list = [timeframe for timeframe in config.timeframes if timeframe in multi_timeframe_ohlcva_timeframes]
+    timeframe_list = [timeframe for timeframe in app_config.timeframes if timeframe in multi_timeframe_ohlcva_timeframes]
     for timeframe in timeframe_list:
         ohlcva = single_timeframe(multi_timeframe_ohlcva, timeframe)
         fig.add_candlestick(x=ohlcva.index.values,
