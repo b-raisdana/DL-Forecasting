@@ -50,6 +50,8 @@ def plot_train_data_of_mt_n_profit(x_dfs: dict[str, List[pd.DataFrame]], y_dfs: 
         borderpad=10  # Add some padding for the border
     )
     show_and_save_plot(fig.update_yaxes(fixedrange=False))
+
+
 # def plot_mt_train_n_test(x, y, n, base_ohlcv, show=True):
 #     reconstructed_double = reverse_rolling_mean_std(x['double'][n])
 #     reconstructed_trigger = reverse_rolling_mean_std(x['trigger'][n])

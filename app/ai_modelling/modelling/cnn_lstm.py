@@ -242,13 +242,18 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
     return list_of_periods
 
 ''' todo:
-+ scale profits
-1. add OBV MACD
-2. add CCI
-3. add RSI
-4. add fibo BB + max hit
-5. add MFI
-6. Add Ichimoku
+- scale profits
++ make sure about scale of signal
+    + if no drawdown
+        + signal shall be number of ATRs
+    + in case of drawdown
+        + be number of ATRs 
++ add OBV MACD
++ add CCI
++ add RSI
++ add fibo BB + max hit
++ add MFI
++ Add Ichimoku
 '''
 
 if __name__ == "__main__":

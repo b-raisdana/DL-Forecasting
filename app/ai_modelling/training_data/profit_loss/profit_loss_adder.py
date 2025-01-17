@@ -775,6 +775,7 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     double_df['atr'] = ta.atr(high=double_df['high'], low=double_df['low'], close=double_df['close'])
     prediction_df = add_long_n_short_profit(ohlc=trigger_df,
                                             position_max_bars=forecast_trigger_bars, trigger_tf=trigger_tf)
+
     x_dfs, y_dfs, y_tester_dfs = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, [], []
     Xs, ys = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
 
