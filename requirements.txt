@@ -10,6 +10,7 @@ scipy
 scikit-learn
 # psutil
 pytz
+loguru
 pandas_ta
 tensorflow
 colorama

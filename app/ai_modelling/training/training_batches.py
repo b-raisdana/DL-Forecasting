@@ -2,15 +2,15 @@ from typing import List
 
 import pandas as pd
 import plotly.graph_objects as go
-
+import textwrap
 from app.FigurePlotter.plotter import show_and_save_plot
 from app.ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import reverse_rolling_mean_std
 
 
 def plot_train_data_of_mt_n_profit(x_dfs: dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame],
                                    y_tester_dfs: List[pd.DataFrame], n: int, ):
-    training_y_columns = ['long_signal', 'short_signal', 'min_low', 'max_high', 'long_profit', 'short_profit',
-                          'long_risk', 'short_risk']
+    # training_y_columns = ['long_signal', 'short_signal', 'min_low', 'max_high', 'long_profit', 'short_profit',
+    #                       'long_risk', 'short_risk']
     fig = go.Figure()
     ohlcv_slices = [
         ('structure', 'Structure'),
@@ -37,18 +37,27 @@ def plot_train_data_of_mt_n_profit(x_dfs: dict[str, List[pd.DataFrame]], y_dfs: 
         open=ohlcv['high'],
         name='Y'
     ))
-    predictions = y_dfs[n][training_y_columns].to_dict()
-    fig.add_annotation(
-        x=0, y=1, text=', '.join([f"{col}: {val:.2f}" for col, val in predictions.items()]),
-        showarrow=False,
-        font=dict(size=12, color="black"),
-        align="left",
-        bgcolor="white",
-        opacity=0.7,
-        xref="paper",  # Use the "paper" reference to place it relative to the figure
-        yref="paper",  # Use the "paper" reference to place it relative to the figure
-        borderpad=10  # Add some padding for the border
-    )
+    predictions = y_dfs[n].to_dict()
+    formatted_predictions = textwrap.fill(', '.join([
+        f"{col}: {val:.2f}" if isinstance(val, (int, float)) and not (val != val)
+        else f"{col}: NaN" if val != val
+        else f"{col}: {val}"
+        for col, val in predictions.items()
+    ]), width=80).replace('\n', '<br>')
+    try:
+        fig.add_annotation(
+            x=0, y=1, text=formatted_predictions,
+            showarrow=False,
+            font=dict(size=12, color="black"),
+            align="left",
+            bgcolor="white",
+            opacity=0.7,
+            xref="paper",  # Use the "paper" reference to place it relative to the figure
+            yref="paper",  # Use the "paper" reference to place it relative to the figure
+            borderpad=10  # Add some padding for the border
+        )
+    except Exception as e:
+        raise e
     show_and_save_plot(fig.update_yaxes(fixedrange=False))
 
 

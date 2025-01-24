@@ -1,17 +1,20 @@
+import cProfile
 import datetime
-import functools
 import os.path
-import time
+import pstats
 import traceback
 from datetime import datetime, timedelta
 from enum import Enum
+from functools import wraps
+from io import StringIO
 from typing import Tuple, TypeVar
 
 import numpy as np
 import pandas as pd
 import pandera
 import pytz
-from colorama import init, Fore, Style
+from colorama import init, Fore
+from loguru import logger
 
 from app.Config import app_config
 
@@ -52,59 +55,94 @@ def log_e(message: str, stack_trace: bool = True):
     log(message, LogSeverity.ERROR, stack_trace)
 
 
+# def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: bool = True):
+#     """
+#     Log a message with an optional severity level and stack trace.
+#
+#     Args:
+#         message (str): The message to be logged.
+#         severity (LogSeverity, optional): The severity level of the log message. Defaults to LogSeverity.WARNING.
+#         stack_trace (bool, optional): Whether to include a stack trace in the log message. Defaults to True.
+#
+#     Returns:
+#         None
+#     """
+#     severity_color = __severity_color_map[severity]  # .value
+#     time_color = Fore.BLUE  # bcolors.OKBLUE.value
+#     print(f'{severity_color}{severity.value}@{time_color}{datetime.now().strftime("%m-%d.%H:%M:%S")}:'
+#           f'{severity_color}{message}{Style.RESET_ALL}')
+#     log_file_handler.write(f'{severity.value}@{datetime.now().strftime("%m-%d.%H:%M:%S")}:{message}\n')
+#     if stack_trace:
+#         stack = traceback.extract_stack(limit=2 + 1)[:-1]  # Remove the last item
+#         traceback.print_list(stack)
 def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: bool = True):
     """
-    Log a message with an optional severity level and stack trace.
+    Log a message with optional severity and stack trace.
 
     Args:
-        message (str): The message to be logged.
-        severity (LogSeverity, optional): The severity level of the log message. Defaults to LogSeverity.WARNING.
-        stack_trace (bool, optional): Whether to include a stack trace in the log message. Defaults to True.
-
-    Returns:
-        None
+        message (str): Message to log.
+        severity (LogSeverity): Severity of the log.
+        stack_trace (bool): Whether to include stack trace.
     """
-    severity_color = __severity_color_map[severity]  # .value
-    time_color = Fore.BLUE  # bcolors.OKBLUE.value
-    print(f'{severity_color}{severity.value}@{time_color}{datetime.now().strftime("%m-%d.%H:%M:%S")}:'
-          f'{severity_color}{message}{Style.RESET_ALL}')
-    log_file_handler.write(f'{severity.value}@{datetime.now().strftime("%m-%d.%H:%M:%S")}:{message}\n')
+    color = __severity_color_map.get(severity, "<white>")
+    timestamp = datetime.now().strftime("%m-%d.%H:%M:%S")
+
+    # Log to the console with color and timestamp
+    logger.log(severity.value.lower(), f"{color}{severity.value}@{timestamp}: {message}</color>")
+
+    # Log the stack trace if requested
     if stack_trace:
-        stack = traceback.extract_stack(limit=2 + 1)[:-1]  # Remove the last item
-        traceback.print_list(stack)
+        stack = traceback.format_stack(limit=3)
+        logger.debug("".join(stack))
 
 
 log_d('...Starting')
 
 
+# def profile_it(func):
+#     @functools.wraps(func)
+#     def _measure_time(*args, **kwargs):
+#         start_time = time.time()
+#         function_parameters = get_function_parameters(args, kwargs)
+#         log_d(f"{func.__name__}({function_parameters}) started", stack_trace=False)
+#
+#         # try:
+#         result = func(*args, **kwargs)
+#         # except OSError as e:
+#         #     log_e(f"Current directory is {os.path.abspath(os.path.curdir)}", stack_trace=False)
+#         #     log_e(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
+#         #     raise e
+#         # except Exception as e:
+#         #     log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
+#         #     raise
+#
+#         end_time = time.time()
+#         execution_time = end_time - start_time
+#         execution_time_color = Fore.BLUE if execution_time < 0.01 \
+#             else Fore.GREEN if execution_time < 0.1 \
+#             else Fore.YELLOW if execution_time < 1 \
+#             else Fore.RED
+#         log(f"{func.__name__}({function_parameters}) "
+#             f"executed in {execution_time_color}{execution_time:.3f} seconds", stack_trace=False)
+#         return result
+#
+#     return _measure_time
+
 def profile_it(func):
-    @functools.wraps(func)
-    def _measure_time(*args, **kwargs):
-        start_time = time.time()
-        function_parameters = get_function_parameters(args, kwargs)
-        log_d(f"{func.__name__}({function_parameters}) started", stack_trace=False)
-
-        # try:
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        profiler = cProfile.Profile()
+        profiler.enable()
         result = func(*args, **kwargs)
-        # except OSError as e:
-        #     log_e(f"Current directory is {os.path.abspath(os.path.curdir)}", stack_trace=False)
-        #     log_e(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
-        #     raise e
-        # except Exception as e:
-        #     log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
-        #     raise
+        profiler.disable()
 
-        end_time = time.time()
-        execution_time = end_time - start_time
-        execution_time_color = Fore.BLUE if execution_time < 0.01 \
-            else Fore.GREEN if execution_time < 0.1 \
-            else Fore.YELLOW if execution_time < 1 \
-            else Fore.RED
-        log(f"{func.__name__}({function_parameters}) "
-            f"executed in {execution_time_color}{execution_time:.3f} seconds", stack_trace=False)
+        s = StringIO()
+        ps = pstats.Stats(profiler, stream=s).sort_stats('cumtime')
+        ps.print_stats()
+        print(s.getvalue())  # Or log the output
         return result
 
-    return _measure_time
+    return wrapper
 
 
 # def get_function_parameters(args, kwargs):
@@ -154,6 +192,7 @@ def get_function_parameters(args, kwargs):
     parameters += [f'{k}: {process_item(kwargs[k])}' for k in kwargs.keys()]
 
     return ", ".join(parameters)
+
 
 # Define a mapping from Pandera data types to pandas data types
 pandera_to_pandas_type_map = {

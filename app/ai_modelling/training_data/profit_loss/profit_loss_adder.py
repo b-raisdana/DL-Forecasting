@@ -216,14 +216,31 @@ def long_n_short_drawdown(ohlc, position_max_bars, quantiles, trigger_tf):
     # ohlc['long_drawdown'] = \
     #     (ohlc['worst_long_open'] - ohlc['quantile_long_min_low']) / ohlc['worst_long_open']
     ohlc['long_drawdown'] = \
-        (ohlc['worst_long_open'] - ohlc['quantile_long_min_low']) / ohlc['long_sl_distance']
+        (ohlc['worst_long_open'] - ohlc['quantile_long_min_low']) / ohlc['atr']
+    ohlc['absolute_long_drawdown'] = \
+        (ohlc['worst_long_open'] - ohlc['quantile_long_min_low'])
     max_high_np_a = ohlc.loc[not_na_indexes, [f'q{i}_max_high' for i in range(1, quantiles + 1)]].to_numpy()
     ohlc.loc[not_na_indexes, 'quantile_short_max_high'] = max_high_np_a[
         np.arange(len(ohlc.loc[not_na_indexes])), ohlc.loc[not_na_indexes, 'min_low_quantile'].astype(int)]
     # ohlc['short_drawdown'] = \
     #     (ohlc['quantile_short_max_high'] - ohlc['worst_short_open']) / ohlc['worst_short_open']
     ohlc['short_drawdown'] = \
-        (ohlc['quantile_short_max_high'] - ohlc['worst_short_open']) / ohlc['short_sl_distance']
+        (ohlc['quantile_short_max_high'] - ohlc['worst_short_open']) / ohlc['atr']
+    ohlc['absolute_short_drawdown'] = \
+        (ohlc['quantile_short_max_high'] - ohlc['worst_short_open'])
+
+    assert len(ohlc['long_drawdown'].dropna()) > 0
+    assert all(ohlc['long_drawdown'].dropna() > 0)
+
+    assert len(ohlc['short_drawdown'].dropna()) > 0
+    assert all(ohlc['short_drawdown'].dropna() > 0)
+
+    assert len(ohlc['absolute_long_drawdown'].dropna()) > 0
+    assert all(ohlc['absolute_long_drawdown'].dropna() > 0)
+
+    assert len(ohlc['absolute_short_drawdown'].dropna()) > 0
+    assert all(ohlc['absolute_short_drawdown'].dropna() > 0)
+
     return ohlc
 
 
@@ -300,11 +317,16 @@ def profit_n_loss(ohlc, bar_width_risk_free_rate, order_fee, max_risk):
     # ohlc['weighted_short_profit'] = (
     #         ohlc['short_profit'] / ohlc['close'] - ohlc['min_low_distance'] * risk_free_daily_rate - order_fee)
     ohlc['weighted_long_profit'] = (
-            ohlc['long_profit'] / ohlc['long_sl_distance'] -
-            ohlc['max_high_distance'] * bar_width_risk_free_rate - order_fee)
+            ohlc['long_profit'] / ohlc['atr'] - ohlc['max_high_distance'] * bar_width_risk_free_rate - order_fee)
     ohlc['weighted_short_profit'] = (
-            ohlc['short_profit'] / ohlc['short_sl_distance'] -
-            ohlc['min_low_distance'] * bar_width_risk_free_rate - order_fee)
+            ohlc['short_profit'] / ohlc['atr'] - ohlc['min_low_distance'] * bar_width_risk_free_rate - order_fee)
+
+    # ohlc['weighted_long_profit'] = (
+    #         ohlc['long_profit'] / ohlc['long_sl_distance'] -
+    #         ohlc['max_high_distance'] * bar_width_risk_free_rate - order_fee)
+    # ohlc['weighted_short_profit'] = (
+    #         ohlc['short_profit'] / ohlc['short_sl_distance'] -
+    #         ohlc['min_low_distance'] * bar_width_risk_free_rate - order_fee)
     ohlc['long_risk'] = (ohlc['long_drawdown'] / ohlc['weighted_long_profit'])
     ohlc['short_risk'] = (ohlc['short_drawdown'] / ohlc['weighted_short_profit'])
 
@@ -340,7 +362,7 @@ def singular_stop_loss(series: pd.Series, window: int, mode: Literal['long', 'sh
         raise KeyError(f"mod shall be in [{mode_map.keys()}], {mode} is not supported!")
 
 
-def stop_loss(ohlc, windows: int, tops_percent, sl_atr_distance=2):
+def zz_stop_loss(ohlc, windows: int, tops_percent, sl_atr_distance=2):
     ohlc['long_sl'] = singular_stop_loss(ohlc['low'], window=windows, tops_percent=tops_percent, mode='long')
     ohlc['long_sl'] = np.where(abs(ohlc['long_sl'] - ohlc['low']) < ohlc['atr'] * sl_atr_distance,
                                ohlc['low'] - ohlc['atr'] * sl_atr_distance, ohlc['long_sl'])
@@ -350,6 +372,12 @@ def stop_loss(ohlc, windows: int, tops_percent, sl_atr_distance=2):
                                 ohlc['high'] + ohlc['atr'] * sl_atr_distance, ohlc['short_sl'])
     ohlc['long_sl_distance'] = ohlc['worst_long_open'] - ohlc['long_sl']
     ohlc['short_sl_distance'] = ohlc['short_sl'] - ohlc['worst_short_open']
+    return ohlc
+
+
+def stop_loss(ohlc):
+    ohlc['long_sl_distance'] = ohlc[['absolute_long_drawdown', 'atr']].max()
+    ohlc['short_sl_distance'] = ohlc[['absolute_short_drawdown', 'atr']].max()
     return ohlc
 
 
@@ -428,12 +456,16 @@ def add_long_n_short_profit(ohlc,
     """
 
     rolling_window = position_max_bars - action_delay
-    ohlc['atr'] = ta.atr(high=ohlc['high'], low=ohlc['low'], close=ohlc['close'])
+    if 'atr' not in ohlc.columns:
+        log_d('Needs to have ATR 256!')
+        ohlc['atr'] = ta.atr(high=ohlc['high'], low=ohlc['low'], close=ohlc['close'], length=256)
     # ohlc['scaler'] = ta.wma(ohlc['close'], length=position_max_bars * 10)
     ohlc = max_profit_n_loss(ohlc, position_max_bars, action_delay, rolling_window)
-    ohlc = stop_loss(ohlc, int(position_max_bars / 4), tops_percent=0.01)
+    ohlc['long_distance_time'] = ohlc['max_high_distance'] * pd.to_timedelta(trigger_tf)
+    ohlc['short_distance_time'] = ohlc['min_low_distance'] * pd.to_timedelta(trigger_tf)
     ohlc = quantile_maxes(ohlc, rolling_window, quantiles)
     ohlc = long_n_short_drawdown(ohlc, position_max_bars, quantiles, trigger_tf)
+    ohlc = stop_loss(ohlc)  # , int(position_max_bars / 4), tops_percent=0.01)
     ohlc = profit_n_loss(ohlc, order_fee=order_fee, max_risk=max_risk,
                          bar_width_risk_free_rate=risk_free_daily_rate /
                                                   (timedelta(days=1) / pd.to_timedelta(trigger_tf)), )
@@ -671,6 +703,7 @@ def scale_prediction(prediction, price_scaler_shift, price_scaler_size):
     prediction['short_profit'] = (prediction['short_profit']) * price_scaler_size
     return prediction
 
+
 @profile_it
 @profile_it
 def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimeframe], x_lengths: dict,
@@ -746,7 +779,8 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     # training_x_columns = ['n_open', 'n_high', 'n_low', 'n_close', 'n_volume', ]
     training_x_columns = ['open', 'high', 'low', 'close', 'volume', ]
     training_y_columns = ['long_signal', 'short_signal', 'min_low', 'max_high', 'long_profit', 'short_profit',
-                          'long_risk', 'short_risk']
+                          'long_risk', 'short_risk', 'long_drawdown', 'short_drawdown', 'atr', 'long_distance_time',
+                          'short_distance_time']
     pattern_tf = pattern_timeframe(structure_tf)
     trigger_tf = trigger_timeframe(structure_tf)
     double_tf = pattern_timeframe(trigger_timeframe(structure_tf))
@@ -772,7 +806,7 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     pattern_df = single_timeframe(mt_ohlcv, pattern_tf)
     trigger_df = single_timeframe(mt_ohlcv, trigger_tf)
     double_df = single_timeframe(mt_ohlcv, double_tf)
-    double_df['atr'] = ta.atr(high=double_df['high'], low=double_df['low'], close=double_df['close'])
+    trigger_df['atr'] = ta.atr(high=trigger_df['high'], low=trigger_df['low'], close=trigger_df['close'], length=256)
     prediction_df = add_long_n_short_profit(ohlc=trigger_df,
                                             position_max_bars=forecast_trigger_bars, trigger_tf=trigger_tf)
 
@@ -793,14 +827,19 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
             if prediction['long_signal'] == 0 and prediction['short_signal'] == 0:
                 continue
 
-        double_slice = double_df.loc[pd.IndexSlice[: double_end], training_x_columns + ['atr']].iloc[-x_lengths['double'][0]:]
-        trigger_slice = trigger_df.loc[pd.IndexSlice[: trigger_end], training_x_columns].iloc[-x_lengths['trigger'][0]:]
+        double_slice = double_df.loc[pd.IndexSlice[: double_end], training_x_columns].iloc[
+                       -x_lengths['double'][0]:]
+        trigger_slice = trigger_df.loc[pd.IndexSlice[: trigger_end], training_x_columns + ['atr']].iloc[
+                        -x_lengths['trigger'][0]:]
         pattern_slice = pattern_df.loc[pd.IndexSlice[: pattern_end], training_x_columns].iloc[-x_lengths['pattern'][0]:]
         structure_slice = structure_df.loc[pd.IndexSlice[: structure_end], training_x_columns].iloc[
                           -x_lengths['structure'][0]:]
         scaler_price_scale, scaler_price_shift, volume_scale = scaler_trainer(
-            {'double': double_slice, 'pattern': pattern_slice, 'structure': structure_slice, 'trigger': trigger_slice})
-        double_slice = double_slice[training_x_columns]
+            {'double': double_slice, 'pattern': pattern_slice, 'structure': structure_slice, 'trigger': trigger_slice},
+            mean_atr=trigger_slice['atr'].mean(),
+            cloase=double_slice.iloc[-1]['close'],
+        )
+        trigger_slice = trigger_slice[training_x_columns]
         prediction_testing_slice = (
             trigger_df.loc[
                 pd.IndexSlice[double_end: double_end + forecast_trigger_bars * pd.to_timedelta(trigger_tf)],
@@ -834,7 +873,7 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
         prediction = scale_prediction(prediction, scaler_price_shift, scaler_price_scale, )
         y_dfs.append(prediction)
         sc_prediction_testing_slice = \
-            scale(prediction_testing_slice , scaler_price_shift, scaler_price_scale, volume_scale)
+            scale(prediction_testing_slice, scaler_price_shift, scaler_price_scale, volume_scale)
         y_tester_dfs.append(sc_prediction_testing_slice)
         ys.append(np.array(y_dfs[-1]))
         batch_remained -= 1
@@ -854,9 +893,9 @@ def scale(df, price_shift, price_scale, volume_scale):
     return df
 
 
-def scaler_trainer(slices: Dict[str, pd.DataFrame]):
-    price_scale = (1 / slices['double']['atr'].mean())
-    price_shift = - slices['double'].iloc[-1]['close']
+def scaler_trainer(slices: Dict[str, pd.DataFrame], mean_atr: float, cloase: float):
+    price_scale = (1 / mean_atr)
+    price_shift = - cloase
     t_slice = pd.concat(slices)
     volume_scale = 1 / t_slice['volume'].mean()
     return price_scale, price_shift, volume_scale

@@ -293,7 +293,7 @@ if __name__ == "__main__":
                 batch_size = 128
                 Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
                     train_data_of_mt_n_profit('4h', mt_ohlcv, cnn_lstd_model_x_lengths, batch_size))
-                for i in range(0,batch_size, int(batch_size/3)):
+                for i in range(0,batch_size, int(batch_size/1)):
                     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
                 nop = 1
                 t_model = train_model(Xs, ys, cnn_lstd_model_x_lengths, batch_size)

@@ -90,21 +90,21 @@ def add_profit_n_loss(ohlc, risk_free_daily_rate, order_fee, max_risk):
     return ohlc
 
 
-def add_long_n_short_profit(ohlc,
-                            position_max_days=3 * 4 * 4 * 4 * 4,  # 768 5mins = 64h = 2.66D
-                            action_delay=2,
-                            risk_free_daily_rate=0, #(0.1 / 365),
-                            order_fee=0.005,
-                            quantiles=10,
-                            max_risk=1,
-                            ):
-    rolling_window = position_max_days - action_delay
-
-    ohlc = max_profit_n_loss(ohlc, position_max_days, action_delay, rolling_window)
-    ohlc = quantile_maxes(ohlc, rolling_window, quantiles)
-    ohlc = long_n_short_drawdown(ohlc, position_max_days, quantiles)
-    ohlc = add_profit_n_loss(ohlc, risk_free_daily_rate, order_fee, max_risk)
-    return ohlc
+# def add_long_n_short_profit(ohlc,
+#                             position_max_days=3 * 4 * 4 * 4 * 4,  # 768 5mins = 64h = 2.66D
+#                             action_delay=2,
+#                             risk_free_daily_rate=0, #(0.1 / 365),
+#                             order_fee=0.005,
+#                             quantiles=10,
+#                             max_risk=1,
+#                             ):
+#     rolling_window = position_max_days - action_delay
+#
+#     ohlc = max_profit_n_loss(ohlc, position_max_days, action_delay, rolling_window)
+#     ohlc = quantile_maxes(ohlc, rolling_window, quantiles)
+#     ohlc = long_n_short_drawdown(ohlc, position_max_days, quantiles)
+#     ohlc = add_profit_n_loss(ohlc, risk_free_daily_rate, order_fee, max_risk)
+#     return ohlc
 
 
 def plot_short_profit(t):
