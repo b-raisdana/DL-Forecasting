@@ -1,7 +1,9 @@
 import cProfile
 import datetime
+import functools
 import os.path
 import pstats
+import time
 import traceback
 from datetime import datetime, timedelta
 from enum import Enum
@@ -88,7 +90,7 @@ def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: boo
     timestamp = datetime.now().strftime("%m-%d.%H:%M:%S")
 
     # Log to the console with color and timestamp
-    logger.log(severity.value.lower(), f"{color}{severity.value}@{timestamp}: {message}</color>")
+    logger.log(severity.value.upper(), f"{color}{severity.value}@{timestamp}: {message}</color>")
 
     # Log the stack trace if requested
     if stack_trace:
@@ -99,50 +101,50 @@ def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: boo
 log_d('...Starting')
 
 
-# def profile_it(func):
-#     @functools.wraps(func)
-#     def _measure_time(*args, **kwargs):
-#         start_time = time.time()
-#         function_parameters = get_function_parameters(args, kwargs)
-#         log_d(f"{func.__name__}({function_parameters}) started", stack_trace=False)
-#
-#         # try:
-#         result = func(*args, **kwargs)
-#         # except OSError as e:
-#         #     log_e(f"Current directory is {os.path.abspath(os.path.curdir)}", stack_trace=False)
-#         #     log_e(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
-#         #     raise e
-#         # except Exception as e:
-#         #     log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
-#         #     raise
-#
-#         end_time = time.time()
-#         execution_time = end_time - start_time
-#         execution_time_color = Fore.BLUE if execution_time < 0.01 \
-#             else Fore.GREEN if execution_time < 0.1 \
-#             else Fore.YELLOW if execution_time < 1 \
-#             else Fore.RED
-#         log(f"{func.__name__}({function_parameters}) "
-#             f"executed in {execution_time_color}{execution_time:.3f} seconds", stack_trace=False)
-#         return result
-#
-#     return _measure_time
-
 def profile_it(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        profiler = cProfile.Profile()
-        profiler.enable()
-        result = func(*args, **kwargs)
-        profiler.disable()
+    @functools.wraps(func)
+    def _measure_time(*args, **kwargs):
+        start_time = time.time()
+        function_parameters = get_function_parameters(args, kwargs)
+        log_d(f"{func.__name__}({function_parameters}) started", stack_trace=False)
 
-        s = StringIO()
-        ps = pstats.Stats(profiler, stream=s).sort_stats('cumtime')
-        ps.print_stats()
-        print(s.getvalue())  # Or log the output
+        # try:
+        result = func(*args, **kwargs)
+        # except OSError as e:
+        #     log_e(f"Current directory is {os.path.abspath(os.path.curdir)}", stack_trace=False)
+        #     log_e(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
+        #     raise e
+        # except Exception as e:
+        #     log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
+        #     raise
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+        execution_time_color = Fore.BLUE if execution_time < 0.01 \
+            else Fore.GREEN if execution_time < 0.1 \
+            else Fore.YELLOW if execution_time < 1 \
+            else Fore.RED
+        log(f"{func.__name__}({function_parameters}) "
+            f"executed in {execution_time_color}{execution_time:.3f} seconds", stack_trace=False)
         return result
 
-    return wrapper
+    return _measure_time
+
+# def profile_it(func):
+#     @wraps(func)
+#     def wrapper(*args, **kwargs):
+#         profiler = cProfile.Profile()
+#         profiler.enable()
+#         result = func(*args, **kwargs)
+#         profiler.disable()
+#
+#         s = StringIO()
+#         ps = pstats.Stats(profiler, stream=s).sort_stats('cumtime')
+#         ps.print_stats()
+#         print(s.getvalue())  # Or log the output
+#         return result
+#
+#     return wrapper
 
 
 # def get_function_parameters(args, kwargs):

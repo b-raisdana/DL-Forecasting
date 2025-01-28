@@ -224,7 +224,7 @@ def build_model(x_shapes, y_shape: tuple[int, int], filters=64, lstm_units_list:
     return model
 
 
-def ceil_to_slide(t_date: datetime, slide: timedelta):
+def ceil_start_of_slide(t_date: datetime, slide: timedelta):
     if (t_date - datetime(t_date.year, t_date.month, t_date.day, tzinfo=t_date.tzinfo)) > timedelta(0):
         t_date = datetime(t_date.year, t_date.month, t_date.day + 1, tzinfo=t_date.tzinfo)
     days = (t_date - datetime(t_date.year, 1, 1, tzinfo=t_date.tzinfo)).days
@@ -236,14 +236,14 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
     if i_date_range is None:
         i_date_range = app_config.processing_date_range
     start, end = date_range(i_date_range)
-    rounded_start = ceil_to_slide(start, slide)
+    rounded_start = ceil_start_of_slide(start, slide)
     list_of_periods = [(p_start, p_start + length) for p_start in
                        pd.date_range(rounded_start, end - length, freq=slide)]
     return list_of_periods
 
 ''' todo:
 - scale profits
-+ make sure about scale of signal
+- make sure about scale of signal
     + if no drawdown
         + signal shall be number of ATRs
     + in case of drawdown
@@ -276,7 +276,7 @@ if __name__ == "__main__":
             log_d(f'quarter start:{start} end:{end}##########################################')
             app_config.processing_date_range = date_range_to_string(start=start, end=end)
             for symbol in [
-                # 'BTCUSDT',
+                'BTCUSDT',
                 # # 'ETHUSDT',
                 'BNBUSDT',
                 'EOSUSDT',

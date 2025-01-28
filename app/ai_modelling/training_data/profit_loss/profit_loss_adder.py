@@ -376,8 +376,8 @@ def zz_stop_loss(ohlc, windows: int, tops_percent, sl_atr_distance=2):
 
 
 def stop_loss(ohlc):
-    ohlc['long_sl_distance'] = ohlc[['absolute_long_drawdown', 'atr']].max()
-    ohlc['short_sl_distance'] = ohlc[['absolute_short_drawdown', 'atr']].max()
+    ohlc['long_sl_distance'] = np.maximum(1, ohlc['long_drawdown']) # ohlc[['absolute_long_drawdown', 'atr']].max(axis='columns') / ohlc['atr']
+    ohlc['short_sl_distance'] = np.maximum(1, ohlc['short_drawdown']) # ohlc[['absolute_short_drawdown', 'atr']].max(axis='columns') / ohlc['atr']
     return ohlc
 
 
@@ -780,7 +780,9 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     training_x_columns = ['open', 'high', 'low', 'close', 'volume', ]
     training_y_columns = ['long_signal', 'short_signal', 'min_low', 'max_high', 'long_profit', 'short_profit',
                           'long_risk', 'short_risk', 'long_drawdown', 'short_drawdown', 'atr', 'long_distance_time',
-                          'short_distance_time']
+                          'short_distance_time', 'long_drawdown', 'short_drawdown',
+                          'absolute_long_drawdown', 'absolute_short_drawdown',
+                          ]
     pattern_tf = pattern_timeframe(structure_tf)
     trigger_tf = trigger_timeframe(structure_tf)
     double_tf = pattern_timeframe(trigger_timeframe(structure_tf))
