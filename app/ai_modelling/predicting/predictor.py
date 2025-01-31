@@ -6,7 +6,7 @@ from tensorflow.python.keras.models import load_model
 from app.Config import app_config
 from app.FigurePlotter.plotter import show_and_save_plot
 from app.ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
-from app.ai_modelling.modelling.cnn_lstm import cnn_lstd_model_x_lengths
+from app.ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.trining_datasets import model_dataset_lengths
 from app.data_processing.ohlcv import read_multi_timeframe_ohlcv
 from app.helper.data_preparation import single_timeframe
 from app.helper.helper import profile_it
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     base_ohlcv = single_timeframe(mt_ohlcv, '15min')
     batch_size = 1
     Xs, ys, x_dfs, y_dfs, y_timeframe, y_tester_dfs = \
-        zz_train_data_of_mt_n_profit(structure_tf, n_mt_ohlcv, cnn_lstd_model_x_lengths, batch_size)
+        zz_train_data_of_mt_n_profit(structure_tf, n_mt_ohlcv, model_dataset_lengths, batch_size)
     t_predictions = load_and_predict(Xs)
     print("Predictions:", t_predictions)
     plot_mt_predict(x_dfs, y_dfs, t_predictions, y_timeframe, 0, base_ohlcv)

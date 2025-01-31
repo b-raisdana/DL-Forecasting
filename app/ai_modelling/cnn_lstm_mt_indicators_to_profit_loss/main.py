@@ -1,6 +1,6 @@
 import argparse
 import sys
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from random import shuffle
 
 import pandas as pd
@@ -8,19 +8,11 @@ import tensorflow as tf
 
 from app.Config import app_config
 from app.ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.model import train_model
-from app.ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.trining_datasets import plot_train_data_of_mt_n_profit, \
-    train_data_of_mt_n_profit
+from app.ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.training_datasets import train_data_of_mt_n_profit, \
+    model_dataset_lengths, plot_train_data_of_mt_n_profit
 from app.data_processing.ohlcv import read_multi_timeframe_ohlcv
-from app.helper.helper import date_range, log_d, date_range_to_string
-
-print('tensorflow:' + tf.__version__)
-
-cnn_lstd_model_x_lengths = {
-    'structure': (128, 5),
-    'pattern': (256, 5),
-    'trigger': (256, 5),
-    'double': (256, 5),
-}
+from app.helper.helper import date_range
+from app.helper.helper import log_d, date_range_to_string
 
 
 def ceil_start_of_slide(t_date: datetime, slide: timedelta):
@@ -41,6 +33,8 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
     return list_of_periods
 
 
+print('tensorflow:' + tf.__version__)
+
 ''' todo:
 - scale profits
 - make sure about scale of signal
@@ -58,9 +52,18 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script for processing OHLCV data.")
+    args = parser.parse_args()
+    quarters = overlapped_quarters(app_config.processing_date_range)
+    mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
+    batch_size = 128
+    nop = 1
+    Xs, ys, x_dfs, y_dfs, trigger_tf, y_tester_dfs = train_data_of_mt_n_profit(
+        structure_tf='4h', mt_ohlcv=mt_ohlcv, x_lengths=model_dataset_lengths, batch_size=batch_size,
+        forecast_trigger_bars=3 * 4 * 4 * 4 * 1, only_actionable=True, )
+    t_model = train_model(Xs, ys, model_dataset_lengths, batch_size)
+
     # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
     #                     help="Flag to indicate if prices should not be fetched (default: False).")
-    args = parser.parse_args()
     print("Python:" + sys.version)
 
     # Apply config from arguments
@@ -70,7 +73,6 @@ if __name__ == "__main__":
     # np.random.seed(42)
 
     while True:
-        quarters = overlapped_quarters(app_config.processing_date_range)
         shuffle(quarters)
         for start, end in quarters:
             log_d(f'quarter start:{start} end:{end}##########################################')
@@ -88,15 +90,11 @@ if __name__ == "__main__":
                 log_d(f'Symbol:{symbol}##########################################')
                 app_config.under_process_symbol = symbol
                 # n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
-                mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
                 # base_ohlcv = single_timeframe(mt_ohlcv, '15min')
-                batch_size = 128
                 Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
-                    train_data_of_mt_n_profit('4h', mt_ohlcv, cnn_lstd_model_x_lengths, batch_size))
+                    train_data_of_mt_n_profit('4h', mt_ohlcv, model_dataset_lengths, batch_size))
                 for i in range(0, batch_size, int(batch_size / 1)):
                     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
-                nop = 1
-                t_model = train_model(Xs, ys, cnn_lstd_model_x_lengths, batch_size)
                 # except Exception as e:
                 #     log_e(e)
 """
