@@ -128,17 +128,6 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
             + x_lengths['trigger'][0] * pd.to_timedelta(trigger_tf)
             + x_lengths['double'][0] * pd.to_timedelta(double_tf)
     )
-    train_safe_start = mt_ohlcv.index.get_level_values(
-        level='date').min() + length_of_training * 2  # * 2 for simple safe side.
-    train_safe_end = \
-        mt_ohlcv.index.get_level_values(level='date').max() - forecast_trigger_bars * pd.to_timedelta(trigger_tf)
-    duration_seconds = (train_safe_end - train_safe_start) / timedelta(seconds=1)
-    if duration_seconds <= 0:
-        start, end = date_range(app_config.processing_date_range)
-        raise RuntimeError(
-            f"Extend date boundary +{-duration_seconds}s({duration_seconds / (60 * 60 * 24)}days, "
-            f"start:{start}<{start + duration_seconds * timedelta(seconds=1)} or "
-            f"end:{end}>{end - duration_seconds * timedelta(seconds=1)}) to make possible range of end dates positive!")
     structure_df, pattern_df, trigger_df, double_df = (pd.DataFrame(),) * 4  # create a tuple of 4 pd.Dataframes
     for df_name, timeframe in [("structure_df", structure_tf), ("pattern_df", pattern_tf),
                                ("trigger_df", trigger_tf), ("double_df", double_tf)]:
@@ -146,7 +135,26 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     trigger_df['atr'] = ta.atr(high=trigger_df['high'], low=trigger_df['low'], close=trigger_df['close'], length=256)
     prediction_df = add_long_n_short_profit(ohlc=trigger_df,
                                             position_max_bars=forecast_trigger_bars, trigger_tf=trigger_tf)
-
+    # train_safe_start = mt_ohlcv.index.get_level_values(
+    #     level='date').min() + length_of_training * 2  # * 2 for simple safe side.
+    # train_safe_end = \
+    #     mt_ohlcv.index.get_level_values(level='date').max() - forecast_trigger_bars * pd.to_timedelta(trigger_tf)
+    train_safe_start, train_safe_end = (None, None)
+    for df in [structure_tf, pattern_tf, trigger_tf, double_tf, prediction_df]:
+        not_na_df = df.dropna(how='any')
+        not_na_start = df.index.get_level_values(level='date').min()
+        not_na_end = df.index.get_level_values(level='date').max()
+        if train_safe_start is None or train_safe_start < not_na_start:
+            train_safe_start = not_na_start
+        if train_safe_end is None or train_safe_end > not_na_end:
+            train_safe_end = not_na_end
+    duration_seconds = (train_safe_end - train_safe_start) / timedelta(seconds=1)
+    if duration_seconds <= 0:
+        start, end = date_range(app_config.processing_date_range)
+        raise RuntimeError(
+            f"Extend date boundary +{-duration_seconds}s({duration_seconds / (60 * 60 * 24)}days, "
+            f"start:{start}<{start + duration_seconds * timedelta(seconds=1)} or "
+            f"end:{end}>{end - duration_seconds * timedelta(seconds=1)}) to make possible range of end dates positive!")
     x_dfs, y_dfs, y_tester_dfs = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, [], []
     Xs, ys = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
     for timeframe in timeframe_list:

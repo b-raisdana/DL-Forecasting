@@ -5,25 +5,26 @@ from app.helper.importer import ta
 
 
 def add_ichimoku(ohlc):
-    ichimoku = ta.ichimoku(
-        ohlc['high'],
-        ohlc['low'],
-        ohlc['close'],
+    org_ichimoku = ta.ichimoku(
+        high=ohlc['high'],
+        low=ohlc['low'],
+        close=ohlc['close'],
     )
-    ichimoku = pd.concat([ichimoku[0], ichimoku[1]], axis=1)
+    # ichimoku = pd.concat([org_ichimoku[0], org_ichimoku[1]], axis=1)
+    ichimoku = org_ichimoku[0]
     # Unpack the components and rename to lowercase
     ohlc['ichimoku_conversion'] = ichimoku['ITS_9']  # Tenkan-sen
     ohlc['ichimoku_base'] = ichimoku['IKS_26']  # Kijun-sen
+    ohlc['ichimoku_lagging'] = ichimoku['ICS_26']  # Chikou Span
     ohlc['ichimoku_lead_a'] = ichimoku['ISA_9']  # Senkou Span A
     ohlc['ichimoku_lead_b'] = ichimoku['ISB_26']  # Senkou Span B
-    ohlc['ichimoku_lagging'] = ichimoku['ICS_26']  # Chikou Span
 
-    # Shift the leading spans forward by 26 periods
-    ohlc['leading_span_a'] = ohlc['leading_span_a'].shift(26)
-    ohlc['leading_span_b'] = ohlc['leading_span_b'].shift(26)
-
-    # Shift the Lagging Span backward by 26 periods
-    ohlc['lagging_span'] = ohlc['lagging_span'].shift(-26)
+    # # Shift the leading spans forward by 26 periods
+    # ohlc['leading_span_a'] = ohlc['leading_span_a'].shift(26)
+    # ohlc['leading_span_b'] = ohlc['leading_span_b'].shift(26)
+    #
+    # # Shift the Lagging Span backward by 26 periods
+    # ohlc['lagging_span'] = ohlc['lagging_span'].shift(-26)
     return ohlc
 
 

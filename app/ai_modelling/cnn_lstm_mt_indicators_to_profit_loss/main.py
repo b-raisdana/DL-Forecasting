@@ -33,7 +33,7 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
     return list_of_periods
 
 
-print('tensorflow:' + tf.__version__)
+log_d('tensorflow:' + tf.__version__)
 
 ''' todo:
 - scale profits
@@ -53,6 +53,8 @@ print('tensorflow:' + tf.__version__)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script for processing OHLCV data.")
     args = parser.parse_args()
+    app_config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
+                                                            end=pd.to_datetime('09-01-24'))
     quarters = overlapped_quarters(app_config.processing_date_range)
     mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
     batch_size = 128
