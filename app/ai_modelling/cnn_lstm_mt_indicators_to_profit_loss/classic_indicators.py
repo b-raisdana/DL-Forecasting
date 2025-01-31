@@ -31,8 +31,8 @@ def add_ichimoku(ohlc):
 def add_bbands(ohlc):
     bbands = ta.bbands(ohlc['close'])
     ohlc['bbands_middle'] = bbands['BBM_5_2.0']  # Middle Band (Moving Average)
-    ohlc['bbands_upper_band'] = bbands['BBU_5_2.0']  # Upper Band
-    ohlc['bbands_lower_band'] = bbands['BBL_5_2.0']  # Lower Band
+    ohlc['bbands_upper'] = bbands['BBU_5_2.0']  # Upper Band
+    ohlc['bbands_lower'] = bbands['BBL_5_2.0']  # Lower Band
     return ohlc
 
 

@@ -128,12 +128,15 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
             + x_lengths['trigger'][0] * pd.to_timedelta(trigger_tf)
             + x_lengths['double'][0] * pd.to_timedelta(double_tf)
     )
-    structure_df, pattern_df, trigger_df, double_df = (pd.DataFrame(),) * 4  # create a tuple of 4 pd.Dataframes
-    for df_name, timeframe in [("structure_df", structure_tf), ("pattern_df", pattern_tf),
-                               ("trigger_df", trigger_tf), ("double_df", double_tf)]:
-        locals()[df_name] = single_timeframe_n_indicators(mt_ohlcv, timeframe)
-    trigger_df['atr'] = ta.atr(high=trigger_df['high'], low=trigger_df['low'], close=trigger_df['close'], length=256)
-    prediction_df = add_long_n_short_profit(ohlc=trigger_df,
+    # time_frame_dfs['structure_df'], time_frame_dfs['pattern_df'], time_frame_dfs['trigger_df'], time_frame_dfs['double_df'] = (pd.DataFrame(),) * 4  # create a tuple of 4 pd.Dataframes
+    time_frame_dfs = {}
+    for df_name, timeframe in [("time_frame_dfs['structure_df']", structure_tf), ("time_frame_dfs['pattern_df']", pattern_tf),
+                               ("time_frame_dfs['trigger_df']", trigger_tf), ("time_frame_dfs['double_df']", double_tf)]:
+        time_frame_dfs[df_name] = single_timeframe_n_indicators(mt_ohlcv, timeframe)
+    time_frame_dfs['trigger_df']['atr'] = ta.atr(high=time_frame_dfs['trigger_df']['high'],
+                                                 low=time_frame_dfs['trigger_df']['low'],
+                                                 close=time_frame_dfs['trigger_df']['close'], length=256)
+    prediction_df = add_long_n_short_profit(ohlc=time_frame_dfs['trigger_df'],
                                             position_max_bars=forecast_trigger_bars, trigger_tf=trigger_tf)
     # train_safe_start = mt_ohlcv.index.get_level_values(
     #     level='date').min() + length_of_training * 2  # * 2 for simple safe side.
@@ -174,17 +177,18 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
             if prediction['long_signal'] == 0 and prediction['short_signal'] == 0:
                 continue
 
-        double_slice = double_df.loc[pd.IndexSlice[: double_end], training_x_columns].iloc[
+        double_slice = time_frame_dfs['double_df'].loc[pd.IndexSlice[: double_end], training_x_columns].iloc[
                        -x_lengths['double'][0]:]
-        trigger_slice = trigger_df.loc[pd.IndexSlice[: trigger_end], training_x_columns + ['atr']].iloc[
+        trigger_slice = time_frame_dfs['trigger_df'].loc[
+                            pd.IndexSlice[: trigger_end], training_x_columns + ['atr']].iloc[
                         -x_lengths['trigger'][0]:]
-        pattern_slice = pattern_df.loc[pd.IndexSlice[: pattern_end], training_x_columns].iloc[-x_lengths['pattern'][0]:]
-        structure_slice = structure_df.loc[pd.IndexSlice[: structure_end], training_x_columns].iloc[
+        pattern_slice = time_frame_dfs['pattern_df'].loc[pd.IndexSlice[: pattern_end], training_x_columns].iloc[-x_lengths['pattern'][0]:]
+        structure_slice = time_frame_dfs['structure_df'].loc[pd.IndexSlice[: structure_end], training_x_columns].iloc[
                           -x_lengths['structure'][0]:]
         indicators_slice = slice_indicators(timeframes_df_dict={
-            structure_tf: structure_df,
-            pattern_tf: pattern_df,
-            trigger_tf: trigger_df,
+            structure_tf: time_frame_dfs['structure_df'],
+            pattern_tf: time_frame_dfs['pattern_df'],
+            trigger_tf: time_frame_dfs['trigger_df'],
             double_tf: double_tf,
         }, end_time=double_end)
         scaler_price_scale, scaler_price_shift, volume_scale = scaler_trainer(
@@ -194,7 +198,7 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
         )
         trigger_slice = trigger_slice[training_x_columns]
         prediction_testing_slice = (
-            trigger_df.loc[
+            time_frame_dfs['trigger_df'].loc[
                 pd.IndexSlice[double_end: double_end + forecast_trigger_bars * pd.to_timedelta(trigger_tf)],
                 training_x_columns])
         try:
