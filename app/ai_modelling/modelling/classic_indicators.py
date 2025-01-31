@@ -1,0 +1,51 @@
+import pandas as pd
+
+from app.helper.importer import ta
+
+
+def add_ichimoku(ohlc):
+    ichimoku = ta.ichimoku(
+        ohlc['high'],
+        ohlc['low'],
+        ohlc['close'],
+    )
+    ichimoku = pd.concat([ichimoku[0], ichimoku[1]], axis=1)
+    # Unpack the components and rename to lowercase
+    ohlc['ichimoku_conversion'] = ichimoku['ITS_9']  # Tenkan-sen
+    ohlc['ichimoku_base'] = ichimoku['IKS_26']  # Kijun-sen
+    ohlc['ichimoku_lead_a'] = ichimoku['ISA_9']  # Senkou Span A
+    ohlc['ichimoku_lead_b'] = ichimoku['ISB_26']  # Senkou Span B
+    ohlc['ichimoku_lagging'] = ichimoku['ICS_26']  # Chikou Span
+
+    # Shift the leading spans forward by 26 periods
+    ohlc['leading_span_a'] = ohlc['leading_span_a'].shift(26)
+    ohlc['leading_span_b'] = ohlc['leading_span_b'].shift(26)
+
+    # Shift the Lagging Span backward by 26 periods
+    ohlc['lagging_span'] = ohlc['lagging_span'].shift(-26)
+    return ohlc
+
+def add_bbands(ohlc):
+    bbands = ta.bbands(ohlc['close'])
+    ohlc['bbands_middle'] = bbands['BBM_5_2.0']  # Middle Band (Moving Average)
+    ohlc['bbands_upper_band'] = bbands['BBU_5_2.0']  # Upper Band
+    ohlc['bbands_lower_band'] = bbands['BBL_5_2.0']  # Lower Band
+    return ohlc
+
+def add_classic_indicators(ohlcv):
+    """
+    'obv', 'cci', 'rsi', 'mfi', 'bbands_upper', 'bbands_middle', 'bbands_lower',
+    'ichimoku_conversion', 'ichimoku_base', 'ichimoku_lead_a', 'ichimoku_lead_b', 'ichimoku_lagging'
+    Args:
+        ohlcv:
+
+    Returns:
+
+    """
+    ohlcv['obv'] = ta.obv(ohlcv['close'], ohlcv['volume'])
+    ohlcv['cci'] = ta.cci(ohlcv['high'], ohlcv['low'], ohlcv['close'])
+    ohlcv['rsi'] = ta.rsi(ohlcv['close'])
+    ohlcv['mfi'] = ta.mfi(ohlcv['high'], ohlcv['low'], ohlcv['close'], ohlcv['volume'])
+    ohlcv = add_bbands(ohlcv)
+    ohlcv = add_ichimoku(ohlcv)
+    return ohlcv

@@ -9,6 +9,7 @@ from plotly.subplots import make_subplots
 from app.Config import app_config
 from app.FigurePlotter.plotter import show_and_save_plot
 from app.PanderaDFM import MultiTimeframe
+from app.ai_modelling.modelling.classic_indicators import add_classic_indicators
 from app.ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import reverse_rolling_mean_std
 from app.helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
 from app.helper.helper import profile_it, date_range, log_d
@@ -779,9 +780,8 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     # training_x_columns = ['n_open', 'n_high', 'n_low', 'n_close', 'n_volume', ]
     training_x_columns = ['open', 'high', 'low', 'close', 'volume', ]
     training_y_columns = ['long_signal', 'short_signal', 'min_low', 'max_high', 'long_profit', 'short_profit',
-                          'long_risk', 'short_risk', 'long_drawdown', 'short_drawdown', 'atr', 'long_distance_time',
-                          'short_distance_time', 'long_drawdown', 'short_drawdown',
-                          'absolute_long_drawdown', 'absolute_short_drawdown',
+                          'long_risk', 'short_risk', 'long_drawdown', 'short_drawdown',
+                          'long_drawdown', 'short_drawdown',
                           ]
     pattern_tf = pattern_timeframe(structure_tf)
     trigger_tf = trigger_timeframe(structure_tf)
@@ -808,6 +808,8 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     pattern_df = single_timeframe(mt_ohlcv, pattern_tf)
     trigger_df = single_timeframe(mt_ohlcv, trigger_tf)
     double_df = single_timeframe(mt_ohlcv, double_tf)
+    for df in [structure_df, pattern_df, trigger_df, double_df]:
+        df = add_classic_indicators(df)
     trigger_df['atr'] = ta.atr(high=trigger_df['high'], low=trigger_df['low'], close=trigger_df['close'], length=256)
     prediction_df = add_long_n_short_profit(ohlc=trigger_df,
                                             position_max_bars=forecast_trigger_bars, trigger_tf=trigger_tf)
