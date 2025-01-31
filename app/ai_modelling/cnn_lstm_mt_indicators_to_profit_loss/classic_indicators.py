@@ -29,7 +29,7 @@ def add_ichimoku(ohlc):
 
 
 def add_bbands(ohlc):
-    bbands = ta.bbands(ohlc['close'])
+    bbands = ta.bbands(close=ohlc['close'])
     ohlc['bbands_middle'] = bbands['BBM_5_2.0']  # Middle Band (Moving Average)
     ohlc['bbands_upper'] = bbands['BBU_5_2.0']  # Upper Band
     ohlc['bbands_lower'] = bbands['BBL_5_2.0']  # Lower Band
@@ -52,10 +52,10 @@ def add_classic_indicators(ohlcv):
 
     """
     previous_columns = set(ohlcv.columns)
-    ohlcv['obv'] = ta.obv(ohlcv['close'], ohlcv['volume'])
-    ohlcv['cci'] = ta.cci(ohlcv['high'], ohlcv['low'], ohlcv['close'])
-    ohlcv['rsi'] = ta.rsi(ohlcv['close'])
-    ohlcv['mfi'] = ta.mfi(ohlcv['high'], ohlcv['low'], ohlcv['close'], ohlcv['volume'])
+    ohlcv['obv'] = ta.obv(close=ohlcv['close'], volume=ohlcv['volume'])
+    ohlcv['cci'] = ta.cci(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'])
+    ohlcv['rsi'] = ta.rsi(close=ohlcv['close'])
+    ohlcv['mfi'] = ta.mfi(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'], volume=ohlcv['volume'])
     ohlcv = add_bbands(ohlcv)
     ohlcv = add_ichimoku(ohlcv)
     final_columns = set(ohlcv.columns)

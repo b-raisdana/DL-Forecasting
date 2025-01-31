@@ -122,12 +122,12 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     trigger_tf = trigger_timeframe(structure_tf)
     double_tf = pattern_timeframe(trigger_timeframe(structure_tf))
     timeframe_list = [structure_tf, trigger_tf, pattern_tf, double_tf]
-    length_of_training = (
-            x_lengths['structure'][0] * pd.to_timedelta(structure_tf)
-            + x_lengths['pattern'][0] * pd.to_timedelta(pattern_tf)
-            + x_lengths['trigger'][0] * pd.to_timedelta(trigger_tf)
-            + x_lengths['double'][0] * pd.to_timedelta(double_tf)
-    )
+    # length_of_training = (
+    #         x_lengths['structure'][0] * pd.to_timedelta(structure_tf)
+    #         + x_lengths['pattern'][0] * pd.to_timedelta(pattern_tf)
+    #         + x_lengths['trigger'][0] * pd.to_timedelta(trigger_tf)
+    #         + x_lengths['double'][0] * pd.to_timedelta(double_tf)
+    # )
     # time_frame_dfs['structure_df'], time_frame_dfs['pattern_df'], time_frame_dfs['trigger_df'], time_frame_dfs['double_df'] = (pd.DataFrame(),) * 4  # create a tuple of 4 pd.Dataframes
     time_frame_dfs = {}
     for df_name, timeframe in [("time_frame_dfs['structure_df']", structure_tf), ("time_frame_dfs['pattern_df']", pattern_tf),
