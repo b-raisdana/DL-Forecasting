@@ -55,7 +55,8 @@ def add_classic_indicators(ohlcv):
     ohlcv['obv'] = ta.obv(close=ohlcv['close'], volume=ohlcv['volume'])
     ohlcv['cci'] = ta.cci(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'])
     ohlcv['rsi'] = ta.rsi(close=ohlcv['close'])
-    ohlcv['mfi'] = ta.mfi(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'], volume=ohlcv['volume'])
+    ohlcv['mfi'] = \
+        ta.mfi(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'], volume=ohlcv['volume']).astype(float)
     ohlcv = add_bbands(ohlcv)
     ohlcv = add_ichimoku(ohlcv)
     final_columns = set(ohlcv.columns)
