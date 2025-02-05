@@ -37,10 +37,10 @@ def add_bbands(ohlc):
 
 
 classic_indicator_columns = [
-    'obv', 'cci', 'rsi', 'mfi', 'bbands_upper', 'bbands_middle', 'bbands_lower',
+    'bbands_upper', 'bbands_middle', 'bbands_lower',
     'ichimoku_conversion', 'ichimoku_base', 'ichimoku_lead_a', 'ichimoku_lead_b', 'ichimoku_lagging'
 ]
-
+scaleless_indicators = ['obv', 'cci', 'rsi', 'mfi', ]
 
 def add_classic_indicators(ohlcv):
     """

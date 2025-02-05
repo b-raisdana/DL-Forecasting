@@ -14,7 +14,7 @@ from app.PanderaDFM import MultiTimeframe
 from app.ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.profit_loss.profit_loss_adder import \
     add_long_n_short_profit
 from app.ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.classic_indicators import add_classic_indicators, \
-    classic_indicator_columns
+    classic_indicator_columns, scaleless_indicators
 from app.helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
 from app.helper.helper import profile_it, date_range, log_d
 from app.helper.importer import pt
@@ -252,13 +252,12 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     return Xs, ys, x_dfs, y_dfs, trigger_tf, y_tester_dfs
 
 
-def add_classic_indicators_to_plot(fig: go.Figure, x_dfs) -> go.Figure:
-    scaleless_indicators = []
+def plot_classic_indicators(fig: go.Figure, x_dfs) -> go.Figure:
     scalable_indicators = list(set(classic_indicator_columns) - set(scaleless_indicators))
-    for indicator_column in classic_indicator_columns:
+    for indicator_column in scaleless_indicators:
         fig.add_scatter(x_dfs[f'{indicator_column}'], row=2, line=dict(color='blue'))
     for indicator_column in scalable_indicators:
-        fig.add_scatter(x_dfs[f'{indicator_column}'], row=2, line=dict(color='blue'))
+        fig.add_scatter(x_dfs[f'{indicator_column}'], row=1, line=dict(color='blue'))
     return fig
 
 
@@ -285,7 +284,13 @@ def plot_train_data_of_mt_n_profit(x_dfs: dict[str, List[pd.DataFrame]], y_dfs: 
             close=ohlcv['high'],
             name=name
         ))
-    fig = add_classic_indicators_to_plot(fig, x_dfs)
+    fig = plot_classic_indicators(fig, x_dfs)
+    plot_prediction_verifiyer(fig, n, y_tester_dfs)
+    plot_prediction(fig, n, y_dfs)
+    show_and_save_plot(fig.update_yaxes(fixedrange=False))
+
+
+def plot_prediction_verifiyer(fig, n, y_tester_dfs):
     ohlcv = y_tester_dfs[n]
     fig.add_trace(go.Candlestick(
         x=ohlcv.index.get_level_values('date'),
@@ -295,6 +300,9 @@ def plot_train_data_of_mt_n_profit(x_dfs: dict[str, List[pd.DataFrame]], y_dfs: 
         open=ohlcv['high'],
         name='Y'
     ))
+
+
+def plot_prediction(fig, n, y_dfs):
     predictions = y_dfs[n].to_dict()
     formatted_predictions = textwrap.fill(', '.join([
         f"{col}: {val:.2f}" if isinstance(val, (int, float)) and not (val != val)
@@ -316,7 +324,6 @@ def plot_train_data_of_mt_n_profit(x_dfs: dict[str, List[pd.DataFrame]], y_dfs: 
         )
     except Exception as e:
         raise e
-    show_and_save_plot(fig.update_yaxes(fixedrange=False))
 
 
 def scale_prediction(prediction, price_scaler_shift, price_scaler_size):
