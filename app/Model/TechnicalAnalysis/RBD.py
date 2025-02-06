@@ -1,6 +1,6 @@
 import pandas as pd
 
-from app.Config import TopTYPE
+from Config import TopTYPE
 from PeakValley import merge_tops
 
 

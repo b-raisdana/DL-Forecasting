@@ -6,10 +6,10 @@ import pandas as pd
 import pandas_ta as ta
 from plotly.subplots import make_subplots
 
-from app.FigurePlotter.plotter import show_and_save_plot
-from app.ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import reverse_rolling_mean_std
-from app.helper.helper import log_d
-from app.helper.importer import go
+from FigurePlotter.plotter import show_and_save_plot
+from ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import reverse_rolling_mean_std
+from helper.helper import log_d
+from helper.importer import go
 
 
 def max_profit_n_loss(ohlc, position_max_bars, action_delay, rolling_window):

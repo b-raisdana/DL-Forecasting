@@ -8,16 +8,16 @@ import pandas_ta as ta
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
-from app.Config import app_config
-from app.FigurePlotter.plotter import show_and_save_plot
-from app.PanderaDFM import MultiTimeframe
-from app.ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.profit_loss.profit_loss_adder import \
+from Config import app_config
+from FigurePlotter.plotter import show_and_save_plot
+from PanderaDFM import MultiTimeframe
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.profit_loss.profit_loss_adder import \
     add_long_n_short_profit
-from app.ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.classic_indicators import add_classic_indicators, \
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.classic_indicators import add_classic_indicators, \
     classic_indicator_columns, scaleless_indicators
-from app.helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
-from app.helper.helper import profile_it, date_range, log_d
-from app.helper.importer import pt
+from helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
+from helper.helper import profile_it, date_range, log_d
+from helper.importer import pt
 
 
 def slice_indicators(timeframes_df_dict: dict, end_time):
@@ -28,7 +28,7 @@ def slice_indicators(timeframes_df_dict: dict, end_time):
     t_slice = {
         timeframe: {
             indicator_column: timeframe_df[pd.IndexSlice[indicator_column, :end_time]]
-            for indicator_column in classic_indicator_columns
+            for indicator_column in classic_indicator_columns()
         }
         for timeframe, timeframe_df in timeframes_df_dict
     }
@@ -36,6 +36,7 @@ def slice_indicators(timeframes_df_dict: dict, end_time):
 
 
 def single_timeframe_n_indicators(mt_ohlcv, timeframe):
+    nop = 1
     ohlcv = single_timeframe(mt_ohlcv, timeframe)
     ohlcv = add_classic_indicators(ohlcv)
     return ohlcv
@@ -130,8 +131,8 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     # )
     # time_frame_dfs['structure_df'], time_frame_dfs['pattern_df'], time_frame_dfs['trigger_df'], time_frame_dfs['double_df'] = (pd.DataFrame(),) * 4  # create a tuple of 4 pd.Dataframes
     time_frame_dfs = {}
-    for df_name, timeframe in [("time_frame_dfs['structure_df']", structure_tf), ("time_frame_dfs['pattern_df']", pattern_tf),
-                               ("time_frame_dfs['trigger_df']", trigger_tf), ("time_frame_dfs['double_df']", double_tf)]:
+    for df_name, timeframe in [('structure_df', structure_tf), ('pattern_df', pattern_tf),
+                               ('trigger_df', trigger_tf), ('double_df', double_tf)]:
         time_frame_dfs[df_name] = single_timeframe_n_indicators(mt_ohlcv, timeframe)
     time_frame_dfs['trigger_df']['atr'] = ta.atr(high=time_frame_dfs['trigger_df']['high'],
                                                  low=time_frame_dfs['trigger_df']['low'],
@@ -161,8 +162,8 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     x_dfs, y_dfs, y_tester_dfs = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, [], []
     Xs, ys = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
     for timeframe in timeframe_list:
-        for indicator_column in classic_indicator_columns:
-            Xs[f'{timeframe}-{indicator_column}'] = []
+        for indicator_column in classic_indicator_columns():
+            Xs[f'{timeframe}-{indicator_column}'] = []  # np.ndarray([])
     batch_remained = batch_size
     while batch_remained > 0:
         # for relative_double_end in np.random.randint(0, duration_seconds, size=batch_size):
@@ -182,7 +183,8 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
         trigger_slice = time_frame_dfs['trigger_df'].loc[
                             pd.IndexSlice[: trigger_end], training_x_columns + ['atr']].iloc[
                         -x_lengths['trigger'][0]:]
-        pattern_slice = time_frame_dfs['pattern_df'].loc[pd.IndexSlice[: pattern_end], training_x_columns].iloc[-x_lengths['pattern'][0]:]
+        pattern_slice = time_frame_dfs['pattern_df'].loc[pd.IndexSlice[: pattern_end], training_x_columns].iloc[
+                        -x_lengths['pattern'][0]:]
         structure_slice = time_frame_dfs['structure_df'].loc[pd.IndexSlice[: structure_end], training_x_columns].iloc[
                           -x_lengths['structure'][0]:]
         indicators_slice = slice_indicators(timeframes_df_dict={
@@ -231,7 +233,7 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
         Xs['pattern'].append(np.array(sc_pattern_slice[training_x_columns]))
         Xs['structure'].append(np.array(sc_structure_slice[training_x_columns]))
         for timeframe in sc_indicators_slice:
-            for indicator_column in classic_indicator_columns:
+            for indicator_column in classic_indicator_columns():
                 Xs[f'{timeframe}-{indicator_column}'].append(
                     np.array(sc_indicators_slice[timeframe][indicator_column])
                 )
@@ -241,20 +243,20 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
         y_tester_dfs.append(sc_prediction_testing_slice)
         ys.append(np.array(y_dfs[-1]))
         batch_remained -= 1
-    Xs['double'] = np.array(Xs['double'])
-    Xs['trigger'] = np.array(Xs['trigger'])
-    Xs['pattern'] = np.array(Xs['pattern'])
-    Xs['structure'] = np.array(Xs['structure'])
-    for timeframe in sc_indicators_slice:
-        for indicator_column in classic_indicator_columns:
-            Xs[f'{timeframe}-{indicator_column}'] = np.array(Xs[f'{timeframe}-{indicator_column}'])
+    # Xs['double'] = np.array(Xs['double'])
+    # Xs['trigger'] = np.array(Xs['trigger'])
+    # Xs['pattern'] = np.array(Xs['pattern'])
+    # Xs['structure'] = np.array(Xs['structure'])
+    # for timeframe in sc_indicators_slice:
+    #     for indicator_column in classic_indicator_columns:
+    #         Xs[f'{timeframe}-{indicator_column}'] = np.array(Xs[f'{timeframe}-{indicator_column}'])
     ys = np.array(ys)
     return Xs, ys, x_dfs, y_dfs, trigger_tf, y_tester_dfs
 
 
 def plot_classic_indicators(fig: go.Figure, x_dfs) -> go.Figure:
-    scalable_indicators = list(set(classic_indicator_columns) - set(scaleless_indicators))
-    for indicator_column in scaleless_indicators:
+    scalable_indicators = list(set(classic_indicator_columns()) - set(scaleless_indicators()))
+    for indicator_column in scaleless_indicators():
         fig.add_scatter(x_dfs[f'{indicator_column}'], row=2, line=dict(color='blue'))
     for indicator_column in scalable_indicators:
         fig.add_scatter(x_dfs[f'{indicator_column}'], row=1, line=dict(color='blue'))
@@ -268,6 +270,14 @@ def plot_train_data_of_mt_n_profit(x_dfs: dict[str, List[pd.DataFrame]], y_dfs: 
     # fig = go.Figure()
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02,
                         row_heights=[0.7, 0.3])
+    plot_mt_charts(fig, n, x_dfs)
+    fig = plot_classic_indicators(fig, x_dfs)
+    plot_prediction_verifiyer(fig, n, y_tester_dfs)
+    plot_prediction(fig, n, y_dfs)
+    show_and_save_plot(fig.update_yaxes(fixedrange=False))
+
+
+def plot_mt_charts(fig, n, x_dfs):
     ohlcv_slices = [
         ('structure', 'Structure'),
         ('pattern', 'Pattern'),
@@ -284,10 +294,6 @@ def plot_train_data_of_mt_n_profit(x_dfs: dict[str, List[pd.DataFrame]], y_dfs: 
             close=ohlcv['high'],
             name=name
         ))
-    fig = plot_classic_indicators(fig, x_dfs)
-    plot_prediction_verifiyer(fig, n, y_tester_dfs)
-    plot_prediction(fig, n, y_dfs)
-    show_and_save_plot(fig.update_yaxes(fixedrange=False))
 
 
 def plot_prediction_verifiyer(fig, n, y_tester_dfs):

@@ -8,9 +8,9 @@ import pytz
 from pandas import Timestamp
 from pandera import typing as pt
 
-from app.Model.Order import OrderSide
-from app.PanderaDFM.ExtendedDf import ExtendedDf, BaseDFM
-from app.helper.helper import log_w
+from Model.Order import OrderSide
+from PanderaDFM.ExtendedDf import ExtendedDf, BaseDFM
+from helper.helper import log_w
 
 
 class SignalDFM(BaseDFM):

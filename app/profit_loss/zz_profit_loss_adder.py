@@ -1,6 +1,6 @@
 import numpy as np
 from plotly.subplots import make_subplots
-from app.helper.importer import go
+from helper.importer import go
 
 
 def max_profit_n_loss(ohlc, position_max_days, action_delay, rolling_window):

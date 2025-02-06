@@ -2,13 +2,13 @@ import os.path
 
 import pandas as pd
 
-from app.Config import app_config, TREND
-from app.data_processing.fragmented_data import symbol_data_path
-from app.helper.data_preparation import single_timeframe
-from app.FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures
-from app.Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
-from app.FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
-from app.helper.helper import profile_it
+from Config import app_config, TREND
+from data_processing.fragmented_data import symbol_data_path
+from helper.data_preparation import single_timeframe
+from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures
+from Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
+from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
+from helper.helper import profile_it
 
 
 @profile_it

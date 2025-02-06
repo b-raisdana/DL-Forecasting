@@ -3,15 +3,15 @@ import numpy as np
 import pandas as pd
 from tensorflow.python.keras.models import load_model
 
-from app.Config import app_config
-from app.FigurePlotter.plotter import show_and_save_plot
-from app.ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
-from app.ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.trining_datasets import model_dataset_lengths
-from app.data_processing.ohlcv import read_multi_timeframe_ohlcv
-from app.helper.data_preparation import single_timeframe
-from app.helper.helper import profile_it
-from app.helper.importer import go
-from app.ai_modelling.training.training_batches import train_data_of_mt_n_profit
+from Config import app_config
+from FigurePlotter.plotter import show_and_save_plot
+from ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.trining_datasets import model_dataset_lengths
+from data_processing.ohlcv import read_multi_timeframe_ohlcv
+from helper.data_preparation import single_timeframe
+from helper.helper import profile_it
+from helper.importer import go
+from ai_modelling.training.training_batches import train_data_of_mt_n_profit
 
 
 @profile_it

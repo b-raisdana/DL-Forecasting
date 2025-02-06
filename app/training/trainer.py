@@ -4,13 +4,13 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-from app.Config import app_config
-from app.FigurePlotter.plotter import show_and_save_plot
-from app.PanderaDFM.MultiTimeframe import MultiTimeframe
-from app.PreProcessing.encoding.rolling_mean_std import reverse_rolling_mean_std
-from app.helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
-from app.helper.helper import profile_it, log_d, date_range
-from app.helper.importer import pt
+from Config import app_config
+from FigurePlotter.plotter import show_and_save_plot
+from PanderaDFM.MultiTimeframe import MultiTimeframe
+from PreProcessing.encoding.rolling_mean_std import reverse_rolling_mean_std
+from helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
+from helper.helper import profile_it, log_d, date_range
+from helper.importer import pt
 
 
 def plot_mt_train_n_test(x, y, n, base_ohlcv, show=True):

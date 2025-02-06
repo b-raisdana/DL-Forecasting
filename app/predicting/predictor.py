@@ -3,16 +3,16 @@ import numpy as np
 import pandas as pd
 from tensorflow.keras.models import load_model
 
-from app.Config import app_config
-from app.FigurePlotter.plotter import show_and_save_plot
-from app.PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
-from app.ai_modelling.cnn_lstm import cnn_lstd_model_x_lengths
-from app.data_processing.fragmented_data import symbol_data_path
-from app.data_processing.ohlcv import read_multi_timeframe_ohlcv
-from app.helper.data_preparation import single_timeframe, trigger_timeframe
-from app.helper.helper import profile_it
-from app.helper.importer import go
-from app.training.trainer import mt_train_n_test, plot_mt_train_n_test
+from Config import app_config
+from FigurePlotter.plotter import show_and_save_plot
+from PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
+from ai_modelling.cnn_lstm import cnn_lstd_model_x_lengths
+from data_processing.fragmented_data import symbol_data_path
+from data_processing.ohlcv import read_multi_timeframe_ohlcv
+from helper.data_preparation import single_timeframe, trigger_timeframe
+from helper.helper import profile_it
+from helper.importer import go
+from training.trainer import mt_train_n_test, plot_mt_train_n_test
 
 
 @profile_it

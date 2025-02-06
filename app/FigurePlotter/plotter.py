@@ -7,10 +7,10 @@ from typing import List
 import pandas as pd
 from plotly import graph_objects as plgo
 
-from app.Config import app_config
-from app.data_processing.fragmented_data import symbol_data_path
-from app.helper.data_preparation import date_range_of_data
-from app.helper.helper import profile_it
+from Config import app_config
+from data_processing.fragmented_data import symbol_data_path
+from helper.data_preparation import date_range_of_data
+from helper.helper import profile_it
 
 DEBUG = False
 
