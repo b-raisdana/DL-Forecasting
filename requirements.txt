@@ -38,3 +38,6 @@ ccxt
 # conda install pip
 # pip install -r requirements.txt
 
+fastapi
+contextvars
+starlette

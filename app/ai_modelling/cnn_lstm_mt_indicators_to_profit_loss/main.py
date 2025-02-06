@@ -1,20 +1,16 @@
-import argparse
-import asyncio
+from helper.br_py.logging import log_d, LogSeverity
 import sys
 from datetime import datetime, timedelta
 from random import shuffle
-
 import pandas as pd
 import tensorflow as tf
-
 from Config import app_config
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.model import train_model
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.training_datasets import train_data_of_mt_n_profit, \
     model_dataset_lengths, plot_train_data_of_mt_n_profit
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
-from helper.helper import date_range
-from helper.helper import log_d, date_range_to_string
-
+from helper.br_py.base import sync_br_lib_init
+from helper.helper import date_range, date_range_to_string
 
 def ceil_start_of_slide(t_date: datetime, slide: timedelta):
     if (t_date - datetime(t_date.year, t_date.month, t_date.day, tzinfo=t_date.tzinfo)) > timedelta(0):
@@ -34,8 +30,6 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
     return list_of_periods
 
 
-log_d('tensorflow:' + tf.__version__)
-
 ''' todo:
 - scale profits
 - make sure about scale of signal
@@ -53,16 +47,17 @@ log_d('tensorflow:' + tf.__version__)
 
 
 def main():
-    from helper.br_py.base import br_lib_init
-    asyncio.run(br_lib_init(path_of_logs='logs', root_path=app_config.root_path, ))
-    parser = argparse.ArgumentParser(description="Script for processing OHLCV data.")
-    args = parser.parse_args()
+    sync_br_lib_init(path_of_logs='logs', root_path=app_config.root_path, log_to_file_level=LogSeverity.DEBUG,
+                     log_to_std_out_level=LogSeverity.DEBUG)
+    log_d('tensorflow:' + tf.__version__)
+    # parser = argparse.ArgumentParser(description="Script for processing OHLCV data.")
+    # args = parser.parse_args()
     app_config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
                                                             end=pd.to_datetime('09-01-24'))
     quarters = overlapped_quarters(app_config.processing_date_range)
     mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
     batch_size = 128
-    nop = 1
+
     Xs, ys, x_dfs, y_dfs, trigger_tf, y_tester_dfs = train_data_of_mt_n_profit(
         structure_tf='4h', mt_ohlcv=mt_ohlcv, x_lengths=model_dataset_lengths, batch_size=batch_size,
         forecast_trigger_bars=3 * 4 * 4 * 4 * 1, only_actionable=True, )

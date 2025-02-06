@@ -7,7 +7,7 @@ from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
 from tensorflow.python.keras.callbacks import Callback
 
 from Config import app_config
-from helper.helper import profile_it, log_d
+from helper.br_py.profiling import profile_it
 
 
 @profile_it

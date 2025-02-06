@@ -8,8 +8,10 @@ import pytz
 from ccxt import RequestTimeout, NetworkError
 
 from Config import app_config
+from helper.br_py.logging import log_e, log_i
+from helper.br_py.profiling import profile_it
 from helper.data_preparation import map_symbol
-from helper.helper import log, date_range, profile_it, log_e
+from helper.helper import date_range
 
 ccxt_symbol_map = {
     'BTCUSDT': 'BTC/USDT',
@@ -96,7 +98,7 @@ def fetch_ohlcv(symbol, timeframe: str = None, start: datetime = None, number_of
                 except NetworkError as e:
                     log_e("ccxt.NetworkError:"+str(e))
                     pass
-            log(f'fetch_ohlcv@{datetime.from timestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}',
+            log_i(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}',
                 stack_trace=False)
             output_list = output_list + response
 
@@ -105,7 +107,7 @@ def fetch_ohlcv(symbol, timeframe: str = None, start: datetime = None, number_of
 
 # Dictionary mapping pandas timeframes to CCXT abbreviations
 pandas_to_ccxt_timeframes = {
-    '1min': '1s',
+    '1sec': '1s',
     '1min': '1m',
     '5min': '5m',
     '15min': '15m',

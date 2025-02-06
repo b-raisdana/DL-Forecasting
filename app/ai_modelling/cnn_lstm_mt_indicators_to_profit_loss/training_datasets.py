@@ -36,8 +36,9 @@ def slice_indicators(timeframes_df_dict: dict, end_time):
 
 
 def single_timeframe_n_indicators(mt_ohlcv, timeframe):
-    nop = 1
+    log_d("Traced")
     ohlcv = single_timeframe(mt_ohlcv, timeframe)
+    log_d("Traced")
     ohlcv = add_classic_indicators(ohlcv)
     return ohlcv
 
@@ -131,8 +132,10 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     # )
     # time_frame_dfs['structure_df'], time_frame_dfs['pattern_df'], time_frame_dfs['trigger_df'], time_frame_dfs['double_df'] = (pd.DataFrame(),) * 4  # create a tuple of 4 pd.Dataframes
     time_frame_dfs = {}
+    log_d("Traced")
     for df_name, timeframe in [('structure_df', structure_tf), ('pattern_df', pattern_tf),
                                ('trigger_df', trigger_tf), ('double_df', double_tf)]:
+        log_d("Traced")
         time_frame_dfs[df_name] = single_timeframe_n_indicators(mt_ohlcv, timeframe)
     time_frame_dfs['trigger_df']['atr'] = ta.atr(high=time_frame_dfs['trigger_df']['high'],
                                                  low=time_frame_dfs['trigger_df']['low'],
@@ -144,7 +147,8 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     # train_safe_end = \
     #     mt_ohlcv.index.get_level_values(level='date').max() - forecast_trigger_bars * pd.to_timedelta(trigger_tf)
     train_safe_start, train_safe_end = (None, None)
-    for df in [structure_tf, pattern_tf, trigger_tf, double_tf, prediction_df]:
+    for timeframe in [structure_tf, pattern_tf, trigger_tf, double_tf, prediction_df]:
+        df = time_frame_dfs[timeframe]
         not_na_df = df.dropna(how='any')
         not_na_start = df.index.get_level_values(level='date').min()
         not_na_end = df.index.get_level_values(level='date').max()

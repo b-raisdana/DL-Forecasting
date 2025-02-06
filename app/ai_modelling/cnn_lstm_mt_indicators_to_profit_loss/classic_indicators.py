@@ -1,7 +1,11 @@
 import pandas as pd
 import pandas_ta as ta
 
+from helper.br_py.logging import log_d
 from helper.importer import ta
+
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 def add_ichimoku(ohlc):
@@ -67,7 +71,6 @@ def add_classic_indicators(ohlcv):
     ohlcv['cci'] = ta.cci(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'])
     ohlcv['rsi'] = ta.rsi(close=ohlcv['close'])
     ohlcv['mfi'] = pd.Series().astype(float)
-    t = ta.mfi(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'], volume=ohlcv['volume']).astype(float)
     ohlcv['mfi'] = \
         ta.mfi(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'], volume=ohlcv['volume']).astype(float)
     ohlcv = add_bbands(ohlcv)

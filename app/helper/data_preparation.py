@@ -16,7 +16,8 @@ from pandera import typing as pt, DataType
 from Config import app_config
 from PanderaDFM.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
 from data_processing.fragmented_data import symbol_data_path
-from helper.helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity, log_d, log_w
+from helper.br_py.logging import log_w, log_d, LogSeverity
+from helper.helper import date_range, date_range_to_string, morning, Pandera_DFM_Type
 
 
 def date_range_of_data(data: pd.DataFrame) -> str:
@@ -401,7 +402,7 @@ def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str
         else:
             rounded_timestamp = (dt.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
             if isinstance(dt, datetime):
-                rounded_dt = datetime.from timestamp(rounded_timestamp, tz=dt.tzinfo)
+                rounded_dt = datetime.fromtimestamp(rounded_timestamp, tz=dt.tzinfo)
             else:  # isinstance(dt, Timestamp)
                 rounded_dt = pd.Timestamp(rounded_timestamp * 10 ** 9, tz=dt.tzinfo)
         return rounded_dt
@@ -471,7 +472,7 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
         message = (f"Some times in {date_range_str}@{timeframe} are missing in the DataFrame's index:" +
                    ', '.join([str(time) for time in missing_times]))
         if True or return_bool:
-            log(message)
+            log_d(message)
             return True # False
         else:
             raise ValueError(message)
@@ -484,7 +485,7 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
                 message = (f"Some times in {date_range_str}@{timeframe} are excessive in the DataFrame's index:" +
                            ', '.join([str(time) for time in excess_times]))
                 if return_bool:
-                    log(message)
+                    log_d(message)
                     return False
                 else:
                     raise ValueError(message)
@@ -562,7 +563,7 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
         try:
             model_class.validate(data, lazy=True)
         except pandera.errors.SchemaErrors as exc:
-            log(str(exc.schema_errors), LogSeverity.WARNING, stack_trace=False)
+            log_d(str(exc.schema_errors), LogSeverity.WARNING, stack_trace=False)
             return False
     else:
         model_class.validate(data, lazy=True, )
