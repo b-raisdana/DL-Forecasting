@@ -2,7 +2,7 @@ import datetime
 
 import pandas as pd
 
-from app.Config import TopTYPE, app_config
+from Config import TopTYPE, app_config
 from PeakValley import peaks_only, valleys_only
 
 

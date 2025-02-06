@@ -4,12 +4,12 @@ from pandera import typing as pt
 from plotly import graph_objects as plgo
 from plotly.subplots import make_subplots
 
-from app.Config import app_config, CandleSize
-from app.FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_figure, update_figure_layout
-from app.PanderaDFM.OHLCV import OHLCV
-from app.PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
-from app.helper.data_preparation import single_timeframe
-from app.helper.helper import log, profile_it
+from Config import app_config, CandleSize
+from FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_figure, update_figure_layout
+from PanderaDFM.OHLCV import OHLCV
+from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
+from helper.data_preparation import single_timeframe
+from helper.helper import log, profile_it
 price_columns = {
     'open': 'gray',
     'high': 'green',

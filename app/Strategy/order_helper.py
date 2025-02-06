@@ -3,8 +3,8 @@ import pandas as pd
 import pytz
 from pandera import typing as pt
 
-from app.Model.Order import BracketOrderType
-from app.PanderaDFM.SignalDf import SignalDf, SignalDFM
+from Model.Order import BracketOrderType
+from PanderaDFM.SignalDf import SignalDf, SignalDFM
 
 
 def order_name(order: bt.Order):

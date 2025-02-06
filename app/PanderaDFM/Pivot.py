@@ -7,8 +7,8 @@ import pytz
 from pandas import Timestamp
 from pandera import typing as pt
 
-from app.PanderaDFM.ExtendedDf import ExtendedDf, BaseDFM
-from app.PanderaDFM.MultiTimeframe import MultiTimeframe
+from PanderaDFM.ExtendedDf import ExtendedDf, BaseDFM
+from PanderaDFM.MultiTimeframe import MultiTimeframe
 
 
 class PivotDFM(BaseDFM):

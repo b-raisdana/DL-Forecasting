@@ -3,16 +3,16 @@ import os
 import pandas as pd
 from pandera import typing as pt
 
-from app.Config import app_config
+from Config import app_config
 # from MetaTrader import MT
-from app.PanderaDFM.Pivot import MultiTimeframePivotDFM
+from PanderaDFM.Pivot import MultiTimeframePivotDFM
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from PivotsHelper import pivots_level_n_margins, level_ttl
-from app.data_processing.atr import read_multi_timeframe_ohlcva
-from app.data_processing.fragmented_data import symbol_data_path
-from app.helper.data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
+from data_processing.atr import read_multi_timeframe_ohlcva
+from data_processing.fragmented_data import symbol_data_path
+from helper.data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
     read_file, after_under_process_date, empty_df, concat
-from app.helper.helper import profile_it
+from helper.helper import profile_it
 
 
 def major_times_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotDFM]:

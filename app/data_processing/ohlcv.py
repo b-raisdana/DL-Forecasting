@@ -5,13 +5,13 @@ import pandas as pd
 import pytz
 from pandera import typing as pt
 
-from app.Config import app_config
-from app.PanderaDFM.OHLCV import MultiTimeframeOHLCV, OHLCV
-from app.data_processing.fetch_ohlcv import fetch_ohlcv_by_range
-from app.data_processing.fragmented_data import symbol_data_path
-from app.helper.data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
+from Config import app_config
+from PanderaDFM.OHLCV import MultiTimeframeOHLCV, OHLCV
+from data_processing.fetch_ohlcv import fetch_ohlcv_by_range
+from data_processing.fragmented_data import symbol_data_path
+from helper.data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
     after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df, concat
-from app.helper.helper import profile_it, date_range, date_range_to_string
+from helper.helper import profile_it, date_range, date_range_to_string
 
 
 def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = None):

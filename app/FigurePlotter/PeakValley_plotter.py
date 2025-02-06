@@ -2,14 +2,14 @@ import pandas as pd
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 
-from app.Config import app_config
-from app.helper.data_preparation import single_timeframe, df_timedelta_to_str
-from app.FigurePlotter.OHLVC_plotter import plot_ohlcva
-from app.FigurePlotter.plotter import plot_multiple_figures, file_id, timeframe_color, save_figure, update_figure_layout
-from app.PanderaDFM.PeakValley import MultiTimeframePeakValley
-from app.Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
-from app.data_processing.atr import read_multi_timeframe_ohlcva
-from app.helper.helper import profile_it
+from Config import app_config
+from helper.data_preparation import single_timeframe, df_timedelta_to_str
+from FigurePlotter.OHLVC_plotter import plot_ohlcva
+from FigurePlotter.plotter import plot_multiple_figures, file_id, timeframe_color, save_figure, update_figure_layout
+from PanderaDFM.PeakValley import MultiTimeframePeakValley
+from Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
+from data_processing.atr import read_multi_timeframe_ohlcva
+from helper.helper import profile_it
 
 
 @profile_it

@@ -4,16 +4,16 @@ from typing import Literal
 import pandas as pd
 import pandera.typing as pt
 
-from app.Config import app_config, TopTYPE
-from app.FigurePlotter.plotter import INFINITY_TIME_DELTA
+from Config import app_config, TopTYPE
+from FigurePlotter.plotter import INFINITY_TIME_DELTA
 # from MetaTrader import MT
-from app.PanderaDFM.OHLCV import OHLCV
-from app.PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
-from app.data_processing.fragmented_data import symbol_data_path
-from app.helper.data_preparation import read_file, cast_and_validate, trim_to_date_range, \
+from PanderaDFM.OHLCV import OHLCV
+from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
+from data_processing.fragmented_data import symbol_data_path
+from helper.data_preparation import read_file, cast_and_validate, trim_to_date_range, \
     expand_date_range, after_under_process_date, empty_df, nearest_match, concat, index_names
-from app.helper.helper import profile_it, date_range
-from app.data_processing.ohlcv import read_base_timeframe_ohlcv
+from helper.helper import profile_it, date_range
+from data_processing.ohlcv import read_base_timeframe_ohlcv
 
 
 def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValley], top_type: TopTYPE,

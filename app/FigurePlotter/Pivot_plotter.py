@@ -4,15 +4,15 @@ import pandas as pd
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 
-from app.Config import app_config
-from app.FigurePlotter.BasePattern_plotter import draw_base
-from app.FigurePlotter.OHLVC_plotter import plot_ohlcv, add_atr_scatter
-from app.FigurePlotter.plotter import show_and_save_plot, update_figure_layout
-from app.PanderaDFM.BasePattern import MultiTimeframeBasePattern
-from app.PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
-from app.PanderaDFM.Pivot2 import Pivot2DFM, MultiTimeframePivot2DFM
-from app.data_processing.atr import read_multi_timeframe_ohlcva
-from app.helper.data_preparation import single_timeframe
+from Config import app_config
+from FigurePlotter.BasePattern_plotter import draw_base
+from FigurePlotter.OHLVC_plotter import plot_ohlcv, add_atr_scatter
+from FigurePlotter.plotter import show_and_save_plot, update_figure_layout
+from PanderaDFM.BasePattern import MultiTimeframeBasePattern
+from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
+from PanderaDFM.Pivot2 import Pivot2DFM, MultiTimeframePivot2DFM
+from data_processing.atr import read_multi_timeframe_ohlcva
+from helper.data_preparation import single_timeframe
 
 
 # @measure_time
