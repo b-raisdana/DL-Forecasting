@@ -8,6 +8,7 @@ from plotly.subplots import make_subplots
 
 from FigurePlotter.plotter import show_and_save_plot
 from ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import reverse_rolling_mean_std
+from helper.br_py.profiling import profile_it
 from helper.helper import log_d
 from helper.importer import go
 
@@ -367,11 +368,14 @@ def zz_stop_loss(ohlc, windows: int, tops_percent, sl_atr_distance=2):
 
 
 def stop_loss(ohlc):
-    ohlc['long_sl_distance'] = np.maximum(1, ohlc['long_drawdown']) # ohlc[['absolute_long_drawdown', 'atr']].max(axis='columns') / ohlc['atr']
-    ohlc['short_sl_distance'] = np.maximum(1, ohlc['short_drawdown']) # ohlc[['absolute_short_drawdown', 'atr']].max(axis='columns') / ohlc['atr']
+    ohlc['long_sl_distance'] = np.maximum(1, ohlc[
+        'long_drawdown'])  # ohlc[['absolute_long_drawdown', 'atr']].max(axis='columns') / ohlc['atr']
+    ohlc['short_sl_distance'] = np.maximum(1, ohlc[
+        'short_drawdown'])  # ohlc[['absolute_short_drawdown', 'atr']].max(axis='columns') / ohlc['atr']
     return ohlc
 
 
+@profile_it
 def add_long_n_short_profit(ohlc,
                             position_max_bars=3 * 4 * 4 * 4 * 1,  # 768 5-minute intervals = 16 hours
                             action_delay=2,
@@ -685,5 +689,3 @@ def tops_mean(series: pd.Series, window, mode: Literal['smallest', 'largest'], p
     }
     return series.rolling(window).apply(lambda x: np.mean(sorted(x, reverse=sort_to_reverse_map[mode])[:top_k]),
                                         raw=True)
-
-
