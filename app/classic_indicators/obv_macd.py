@@ -1,8 +1,8 @@
 import numpy as np
 
-from app.PanderaDFM.OHLCV import OHLCV
-from app.data_processing import ohlcv
-from app.helper.importer import ta, pt
+from PanderaDFM.OHLCV import OHLCV
+from data_processing import ohlcv
+from helper.importer import ta, pt
 
 
 def obv_macd_with_pivots(ohlcv: pt.DataFrame[OHLCV], sma_lenght = 14, std_lenght = 28, ema_lneght = 1):

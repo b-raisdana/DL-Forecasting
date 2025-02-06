@@ -3,17 +3,17 @@ from typing import List
 import pandas as pd
 from pandera import typing as pt
 
-from app.Config import app_config
-from app.FigurePlotter.BasePattern_plotter import draw_band_activators, draw_base, draw_band_orders_df
-from app.FigurePlotter.BullBearSide_plotter import plot_single_timeframe_bull_bear_side_trends
-from app.FigurePlotter.plotter import plot_multiple_figures
-from app.Model.TechnicalAnalysis.PeakValley import major_timeframe
-from app.PanderaDFM.BasePattern import MultiTimeframeBasePattern
-from app.PanderaDFM.BullBearSide import MultiTimeframeBullBearSide
-from app.PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
-from app.PanderaDFM.PeakValley import MultiTimeframePeakValley
-from app.helper.data_preparation import single_timeframe
-from app.helper.helper import profile_it
+from Config import app_config
+from FigurePlotter.BasePattern_plotter import draw_band_activators, draw_base, draw_band_orders_df
+from FigurePlotter.BullBearSide_plotter import plot_single_timeframe_bull_bear_side_trends
+from FigurePlotter.plotter import plot_multiple_figures
+from Model.TechnicalAnalysis.PeakValley import major_timeframe
+from PanderaDFM.BasePattern import MultiTimeframeBasePattern
+from PanderaDFM.BullBearSide import MultiTimeframeBullBearSide
+from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
+from PanderaDFM.PeakValley import MultiTimeframePeakValley
+from helper.data_preparation import single_timeframe
+from helper.helper import profile_it
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 

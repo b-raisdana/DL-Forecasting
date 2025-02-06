@@ -6,7 +6,7 @@ import pandas as pd
 import pandera
 from pandera import typing as pt
 
-from app.PanderaDFM.MultiTimeframe import MultiTimeframe
+from PanderaDFM.MultiTimeframe import MultiTimeframe
 
 
 class BasePattern(pandera.DataFrameModel):

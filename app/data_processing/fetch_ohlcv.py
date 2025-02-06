@@ -7,9 +7,9 @@ import pandas as pd
 import pytz
 from ccxt import RequestTimeout, NetworkError
 
-from app.Config import app_config
-from app.helper.data_preparation import map_symbol
-from app.helper.helper import log, date_range, profile_it, log_e
+from Config import app_config
+from helper.data_preparation import map_symbol
+from helper.helper import log, date_range, profile_it, log_e
 
 ccxt_symbol_map = {
     'BTCUSDT': 'BTC/USDT',
@@ -96,7 +96,7 @@ def fetch_ohlcv(symbol, timeframe: str = None, start: datetime = None, number_of
                 except NetworkError as e:
                     log_e("ccxt.NetworkError:"+str(e))
                     pass
-            log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}',
+            log(f'fetch_ohlcv@{datetime.from timestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}',
                 stack_trace=False)
             output_list = output_list + response
 

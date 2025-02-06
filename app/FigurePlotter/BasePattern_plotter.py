@@ -5,13 +5,13 @@ import plotly.graph_objs
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 
-from app.Config import app_config
-from app.FigurePlotter.OHLVC_plotter import plot_merged_timeframe_ohlcva
-from app.FigurePlotter.plotter import file_id, show_and_save_plot
-from app.Model.Order import OrderSide, BracketOrderType
-from app.PanderaDFM.BasePattern import MultiTimeframeBasePattern
-from app.PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
-from app.helper.helper import profile_it
+from Config import app_config
+from FigurePlotter.OHLVC_plotter import plot_merged_timeframe_ohlcva
+from FigurePlotter.plotter import file_id, show_and_save_plot
+from Model.Order import OrderSide, BracketOrderType
+from PanderaDFM.BasePattern import MultiTimeframeBasePattern
+from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
+from helper.helper import profile_it
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 

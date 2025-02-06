@@ -3,8 +3,8 @@ from typing import Annotated
 import pandas as pd
 from pandera import typing as pt
 
-from app.PanderaDFM.MultiTimeframe import MultiTimeframe
-from app.helper.importer import pa
+from PanderaDFM.MultiTimeframe import MultiTimeframe
+from helper.importer import pa
 
 
 class RollingMeanStdOHLCV(pa.DataFrameModel):

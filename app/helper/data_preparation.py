@@ -13,10 +13,10 @@ from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandas._typing import Axes
 from pandera import typing as pt, DataType
 
-from app.Config import app_config
-from app.PanderaDFM.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
-from app.data_processing.fragmented_data import symbol_data_path
-from app.helper.helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity, log_d, log_w
+from Config import app_config
+from PanderaDFM.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
+from data_processing.fragmented_data import symbol_data_path
+from helper.helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity, log_d, log_w
 
 
 def date_range_of_data(data: pd.DataFrame) -> str:
@@ -401,7 +401,7 @@ def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str
         else:
             rounded_timestamp = (dt.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
             if isinstance(dt, datetime):
-                rounded_dt = datetime.fromtimestamp(rounded_timestamp, tz=dt.tzinfo)
+                rounded_dt = datetime.from timestamp(rounded_timestamp, tz=dt.tzinfo)
             else:  # isinstance(dt, Timestamp)
                 rounded_dt = pd.Timestamp(rounded_timestamp * 10 ** 9, tz=dt.tzinfo)
         return rounded_dt

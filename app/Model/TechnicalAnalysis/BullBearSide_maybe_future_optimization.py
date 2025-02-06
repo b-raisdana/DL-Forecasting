@@ -4,9 +4,9 @@ import pandas as pd
 from pandera import typing as pt
 
 from BullBearSide import bull_bear_side_repr
-from app.Config import TREND
-from app.PanderaDFM.BullBearSide import BullBearSide
-from app.helper.helper import log
+from Config import TREND
+from PanderaDFM.BullBearSide import BullBearSide
+from helper.helper import log
 
 
 def test_bull_bear_side_trends(trends: pt.DataFrame[BullBearSide]):

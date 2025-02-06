@@ -5,18 +5,18 @@ import pandas as pd
 from pandera import typing as pt
 
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
-from app.Config import app_config
+from Config import app_config
 # from MetaTrader import MT
-from app.PanderaDFM.BullBearSide import BullBearSide
-from app.PanderaDFM.BullBearSidePivot import BullBearSidePivot
-from app.PanderaDFM.Pivot import MultiTimeframePivotDFM
+from PanderaDFM.BullBearSide import BullBearSide
+from PanderaDFM.BullBearSidePivot import BullBearSidePivot
+from PanderaDFM.Pivot import MultiTimeframePivotDFM
 from PeakValley import read_multi_timeframe_peaks_n_valleys, major_timeframe
 from PivotsHelper import pivots_level_n_margins, level_ttl
-from app.data_processing.atr import read_multi_timeframe_ohlcva
-from app.data_processing.fragmented_data import symbol_data_path
-from app.helper.data_preparation import single_timeframe, trigger_timeframe, read_file, \
+from data_processing.atr import read_multi_timeframe_ohlcva
+from data_processing.fragmented_data import symbol_data_path
+from helper.data_preparation import single_timeframe, trigger_timeframe, read_file, \
     cast_and_validate, anti_pattern_timeframe, after_under_process_date, empty_df, concat
-from app.helper.helper import profile_it
+from helper.helper import profile_it
 
 
 def remove_overlapping_trends(timeframe_trends: pt.DataFrame[BullBearSide]) -> pt.DataFrame[BullBearSide]:

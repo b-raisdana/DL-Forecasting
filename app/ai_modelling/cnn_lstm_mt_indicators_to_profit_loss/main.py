@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import sys
 from datetime import datetime, timedelta
 from random import shuffle
@@ -6,13 +7,13 @@ from random import shuffle
 import pandas as pd
 import tensorflow as tf
 
-from app.Config import app_config
-from app.ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.model import train_model
-from app.ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.training_datasets import train_data_of_mt_n_profit, \
+from Config import app_config
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.model import train_model
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.training_datasets import train_data_of_mt_n_profit, \
     model_dataset_lengths, plot_train_data_of_mt_n_profit
-from app.data_processing.ohlcv import read_multi_timeframe_ohlcv
-from app.helper.helper import date_range
-from app.helper.helper import log_d, date_range_to_string
+from data_processing.ohlcv import read_multi_timeframe_ohlcv
+from helper.helper import date_range
+from helper.helper import log_d, date_range_to_string
 
 
 def ceil_start_of_slide(t_date: datetime, slide: timedelta):
@@ -50,7 +51,10 @@ log_d('tensorflow:' + tf.__version__)
 + Add Ichimoku
 '''
 
-if __name__ == "__main__":
+
+def main():
+    from helper.br_py.base import br_lib_init
+    asyncio.run(br_lib_init(path_of_logs='logs', root_path=app_config.root_path, ))
     parser = argparse.ArgumentParser(description="Script for processing OHLCV data.")
     args = parser.parse_args()
     app_config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
@@ -99,6 +103,10 @@ if __name__ == "__main__":
                     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
                 # except Exception as e:
                 #     log_e(e)
+
+
+if __name__ == "__main__":
+    main()
 """
 Potential Areas of Improvement for Professional Price Forecasting:
 

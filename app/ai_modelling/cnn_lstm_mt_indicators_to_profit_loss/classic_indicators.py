@@ -1,7 +1,7 @@
 import pandas as pd
 import pandas_ta as ta
 
-from app.helper.importer import ta
+from helper.importer import ta
 
 
 def add_ichimoku(ohlc):
@@ -36,11 +36,22 @@ def add_bbands(ohlc):
     return ohlc
 
 
-classic_indicator_columns = [
-    'bbands_upper', 'bbands_middle', 'bbands_lower',
+__classic_indicator_columns = [
+    'bbands_upper', 'bbands_middle', 'bbands_lower', 'obv', 'cci', 'rsi', 'mfi',
     'ichimoku_conversion', 'ichimoku_base', 'ichimoku_lead_a', 'ichimoku_lead_b', 'ichimoku_lagging'
 ]
-scaleless_indicators = ['obv', 'cci', 'rsi', 'mfi', ]
+
+
+def classic_indicator_columns():
+    return __classic_indicator_columns
+
+
+__scaleless_indicators = ['obv', 'cci', 'rsi', 'mfi', ]
+
+
+def scaleless_indicators():
+    return __scaleless_indicators
+
 
 def add_classic_indicators(ohlcv):
     """
@@ -55,13 +66,15 @@ def add_classic_indicators(ohlcv):
     ohlcv['obv'] = ta.obv(close=ohlcv['close'], volume=ohlcv['volume'])
     ohlcv['cci'] = ta.cci(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'])
     ohlcv['rsi'] = ta.rsi(close=ohlcv['close'])
+    ohlcv['mfi'] = pd.Series().astype(float)
+    t = ta.mfi(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'], volume=ohlcv['volume']).astype(float)
     ohlcv['mfi'] = \
         ta.mfi(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'], volume=ohlcv['volume']).astype(float)
     ohlcv = add_bbands(ohlcv)
     ohlcv = add_ichimoku(ohlcv)
     final_columns = set(ohlcv.columns)
     added_columns = final_columns - previous_columns
-    assert added_columns.difference(classic_indicator_columns) == set()
+    assert added_columns.difference(classic_indicator_columns()) == set()
     return ohlcv
 
 

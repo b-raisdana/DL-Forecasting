@@ -3,14 +3,14 @@ from typing import List
 import pandas as pd
 from pandera import typing as pt
 
-from app.Config import app_config, TopTYPE
-from app.PanderaDFM.BasePattern import MultiTimeframeBasePattern
-from app.PanderaDFM.BullBearSide import BullBearSide
-from app.PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
-from app.PanderaDFM.Pivot import PivotDFM
-from app.PanderaDFM.Pivot2 import MultiTimeframePivot2DFM, Pivot2DFM
-from app.Model.TechnicalAnalysis.PeakValley import insert_crossing2, peaks_only, valleys_only, major_timeframe
-from app.helper.data_preparation import single_timeframe
+from Config import app_config, TopTYPE
+from PanderaDFM.BasePattern import MultiTimeframeBasePattern
+from PanderaDFM.BullBearSide import BullBearSide
+from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
+from PanderaDFM.Pivot import PivotDFM
+from PanderaDFM.Pivot2 import MultiTimeframePivot2DFM, Pivot2DFM
+from Model.TechnicalAnalysis.PeakValley import insert_crossing2, peaks_only, valleys_only, major_timeframe
+from helper.data_preparation import single_timeframe
 
 
 def merge_bbs_overlap(time_frame_bbs: pt.DataFrame[BullBearSide]):

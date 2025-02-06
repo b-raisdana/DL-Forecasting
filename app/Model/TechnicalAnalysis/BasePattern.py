@@ -5,15 +5,15 @@ from typing import List, Literal, Union
 import pandas as pd
 from pandera import typing as pt, Timestamp
 
-from app.Config import app_config, CandleSize
-from app.PanderaDFM.BasePattern import BasePattern, MultiTimeframeBasePattern
-from app.PanderaDFM.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
-from app.data_processing.atr import read_multi_timeframe_ohlcva
-from app.data_processing.fragmented_data import symbol_data_path
-from app.helper.data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, \
+from Config import app_config, CandleSize
+from PanderaDFM.BasePattern import BasePattern, MultiTimeframeBasePattern
+from PanderaDFM.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
+from data_processing.atr import read_multi_timeframe_ohlcva
+from data_processing.fragmented_data import symbol_data_path
+from helper.data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, \
     anti_pattern_timeframe, \
     anti_trigger_timeframe, to_timeframe, trim_to_date_range
-from app.helper.helper import date_range, date_range_to_string, profile_it
+from helper.helper import date_range, date_range_to_string, profile_it
 
 
 def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:

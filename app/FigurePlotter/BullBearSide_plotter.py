@@ -4,16 +4,16 @@ import pandas as pd
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 
-from app.Model.TechnicalAnalysis import PeakValley
-from app.Model.TechnicalAnalysis.BullBearSide import most_two_significant_tops
-from app.Config import TREND, app_config, TopTYPE
-from app.FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
-from app.FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures, update_figure_layout
-from app.PanderaDFM.BullBearSide import BullBearSide, bull_bear_side_repr
-from app.PanderaDFM.OHLCV import OHLCV
-from app.Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
-from app.helper.data_preparation import single_timeframe
-from app.helper.helper import profile_it, log, log_w
+from Model.TechnicalAnalysis import PeakValley
+from Model.TechnicalAnalysis.BullBearSide import most_two_significant_tops
+from Config import TREND, app_config, TopTYPE
+from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
+from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures, update_figure_layout
+from PanderaDFM.BullBearSide import BullBearSide, bull_bear_side_repr
+from PanderaDFM.OHLCV import OHLCV
+from Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
+from helper.data_preparation import single_timeframe
+from helper.helper import profile_it, log, log_w
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 

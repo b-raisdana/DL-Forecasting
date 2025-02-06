@@ -5,16 +5,16 @@ import backtrader as bt
 import pandas as pd
 from pandera import typing as pt
 
-from app.Model.TechnicalAnalysis.BasePattern import read_multi_timeframe_base_patterns
-from app.Config import app_config
-from app.FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
-from app.Model.Order import OrderSide, BracketOrderType
-from app.PanderaDFM.BasePattern import MultiTimeframeBasePattern, BasePattern
-from app.PanderaDFM.SignalDf import SignalDf
-from app.Strategy.ExtendedStrategy import ExtendedStrategy
-from app.data_processing.atr import read_multi_timeframe_ohlcva
-from app.helper.helper import log_d, profile_it
-from app.data_processing.ohlcv import read_base_timeframe_ohlcv
+from Model.TechnicalAnalysis.BasePattern import read_multi_timeframe_base_patterns
+from Config import app_config
+from FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
+from Model.Order import OrderSide, BracketOrderType
+from PanderaDFM.BasePattern import MultiTimeframeBasePattern, BasePattern
+from PanderaDFM.SignalDf import SignalDf
+from Strategy.ExtendedStrategy import ExtendedStrategy
+from data_processing.atr import read_multi_timeframe_ohlcva
+from helper.helper import log_d, profile_it
+from data_processing.ohlcv import read_base_timeframe_ohlcv
 
 
 class BasePatternStrategy(ExtendedStrategy):

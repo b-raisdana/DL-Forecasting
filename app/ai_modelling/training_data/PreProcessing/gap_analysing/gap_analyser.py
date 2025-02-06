@@ -2,8 +2,8 @@ from typing import Literal
 
 import pandas as pd
 
-from app.PanderaDFM.OHLCV import OHLCV
-from app.helper.importer import pt
+from PanderaDFM.OHLCV import OHLCV
+from helper.importer import pt
 
 
 def single_timeframe_find_gap(ohlcv: pt.DataFrame[OHLCV], timeframe,

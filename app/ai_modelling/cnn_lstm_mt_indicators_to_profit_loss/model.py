@@ -6,8 +6,8 @@ import pandas as pd
 from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
 from tensorflow.python.keras.callbacks import Callback
 
-from app.Config import app_config
-from app.helper.helper import profile_it, log_d
+from Config import app_config
+from helper.helper import profile_it, log_d
 
 
 @profile_it

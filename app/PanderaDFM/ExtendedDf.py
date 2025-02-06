@@ -7,11 +7,11 @@ import pandas as pd
 import pandera
 from pandera import typing as pt, DataType
 
-from app.Config import app_config
-from app.data_processing.fragmented_data import symbol_data_path
-from app.helper.data_preparation import concat, after_under_process_date, datarange_is_not_cachable, \
+from Config import app_config
+from data_processing.fragmented_data import symbol_data_path
+from helper.data_preparation import concat, after_under_process_date, datarange_is_not_cachable, \
     all_annotations, read_without_index
-from app.helper.helper import log_d, log_w
+from helper.helper import log_d, log_w
 
 
 class BasePanderaDFM(pandera.DataFrameModel):

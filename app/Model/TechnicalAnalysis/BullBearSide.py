@@ -5,21 +5,21 @@ from typing import Tuple, List, Optional, Literal
 import pandas as pd
 import pandera.typing as pt
 
-from app.Config import TopTYPE, app_config, TREND
-from app.Model.TechnicalAnalysis.PeakValley import valleys_only, peaks_only, major_timeframe, \
+from Config import TopTYPE, app_config, TREND
+from Model.TechnicalAnalysis.PeakValley import valleys_only, peaks_only, major_timeframe, \
     read_multi_timeframe_peaks_n_valleys, insert_previous_n_next_top
-from app.PanderaDFM.BullBearSide import MultiTimeframeBullBearSide, BullBearSide, bull_bear_side_repr
-from app.PanderaDFM.CandleTrend import MultiTimeframeCandleTrend, CandleTrend
-from app.PanderaDFM.OHLCV import OHLCV
-from app.PanderaDFM.OHLCVA import OHLCVA
-from app.PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
+from PanderaDFM.BullBearSide import MultiTimeframeBullBearSide, BullBearSide, bull_bear_side_repr
+from PanderaDFM.CandleTrend import MultiTimeframeCandleTrend, CandleTrend
+from PanderaDFM.OHLCV import OHLCV
+from PanderaDFM.OHLCVA import OHLCVA
+from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
 
-from app.data_processing.atr import read_multi_timeframe_ohlcva
-from app.data_processing.fragmented_data import symbol_data_path
-from app.helper.data_preparation import read_file, single_timeframe, to_timeframe, cast_and_validate, empty_df, concat, \
+from data_processing.atr import read_multi_timeframe_ohlcva
+from data_processing.fragmented_data import symbol_data_path
+from helper.data_preparation import read_file, single_timeframe, to_timeframe, cast_and_validate, empty_df, concat, \
     date_range_of_data
-from app.helper.helper import log, profile_it, LogSeverity
-from app.data_processing.ohlcv import read_multi_timeframe_ohlcv
+from helper.helper import log, profile_it, LogSeverity
+from data_processing.ohlcv import read_multi_timeframe_ohlcv
 
 
 def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys: pt.DataFrame[PeakValley], ohlcv: pt.DataFrame[OHLCV]) \

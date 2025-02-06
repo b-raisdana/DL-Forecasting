@@ -6,16 +6,16 @@ import pandas as pd
 import pytz
 from pandera import typing as pt
 
-from app.Config import app_config
-from app.Model.Order import OrderSide, BracketOrderType
-from app.PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
-from app.PanderaDFM.SignalDf import SignalDFM, SignalDf
-from app.Strategy.BaseTickStructure import BaseTickStructure
-from app.Strategy.order_helper import order_name, add_order_info, order_is_open, \
+from Config import app_config
+from Model.Order import OrderSide, BracketOrderType
+from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
+from PanderaDFM.SignalDf import SignalDFM, SignalDf
+from Strategy.BaseTickStructure import BaseTickStructure
+from Strategy.order_helper import order_name, add_order_info, order_is_open, \
     order_is_closed, dict_of_order
-from app.data_processing.fragmented_data import symbol_data_path
-from app.helper.data_preparation import concat, dict_of_list
-from app.helper.helper import log_d, profile_it, log_w
+from data_processing.fragmented_data import symbol_data_path
+from helper.data_preparation import concat, dict_of_list
+from helper.helper import log_d, profile_it, log_w
 
 
 class ExtendedStrategy(bt.Strategy):

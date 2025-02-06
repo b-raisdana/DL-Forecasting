@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 
-from app.Config import app_config, Config
+from Config import app_config, Config
 
 
 def load_ohlcv_list():

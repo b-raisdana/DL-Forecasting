@@ -5,19 +5,19 @@ import pandas as pd
 from pandera import typing as pt
 
 from ClassicPivot import insert_pivot_info, update_pivot_deactivation, insert_pivot_type_n_level
-from app.Config import app_config, TopTYPE
-from app.PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDFM, MultiTimeframeAtrMovementPivotDf, \
+from Config import app_config, TopTYPE
+from PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDFM, MultiTimeframeAtrMovementPivotDf, \
     AtrMovementPivotDf
-from app.PanderaDFM.OHLCV import OHLCV
-from app.PanderaDFM.OHLCVA import OHLCVA
-from app.PanderaDFM.PeakValley import MultiTimeframePeakValley, PeakValley
+from PanderaDFM.OHLCV import OHLCV
+from PanderaDFM.OHLCVA import OHLCVA
+from PanderaDFM.PeakValley import MultiTimeframePeakValley, PeakValley
 from PeakValley import read_multi_timeframe_peaks_n_valleys, peaks_only, valleys_only, insert_crossing2, \
     major_timeframe
-from app.data_processing.atr import read_multi_timeframe_ohlcva
-from app.Model.TechnicalAnalysis.ftc import insert_multi_timeframe_pivots_real_start
-from app.data_processing.fragmented_data import symbol_data_path
-from app.helper.data_preparation import to_timeframe, single_timeframe, pattern_timeframe, trigger_timeframe
-from app.helper.helper import profile_it, date_range, date_range_to_string
+from data_processing.atr import read_multi_timeframe_ohlcva
+from Model.TechnicalAnalysis.ftc import insert_multi_timeframe_pivots_real_start
+from data_processing.fragmented_data import symbol_data_path
+from helper.data_preparation import to_timeframe, single_timeframe, pattern_timeframe, trigger_timeframe
+from helper.helper import profile_it, date_range, date_range_to_string
 
 
 @profile_it
