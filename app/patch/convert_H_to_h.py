@@ -5,7 +5,7 @@ import zipfile
 
 from Config import app_config  # Make sure to import your config module
 from data_processing.fragmented_data import symbol_data_path
-from helper.helper import log_d
+from helper.functions import log_d
 
 
 def convert_hour_timeframes_case():

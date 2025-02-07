@@ -9,7 +9,7 @@ from plotly.subplots import make_subplots
 from FigurePlotter.plotter import show_and_save_plot
 from ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import reverse_rolling_mean_std
 from helper.br_py.profiling import profile_it
-from helper.helper import log_d
+from helper.functions import log_d
 from helper.importer import go
 
 

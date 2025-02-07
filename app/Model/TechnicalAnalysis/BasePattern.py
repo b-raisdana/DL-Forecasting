@@ -13,7 +13,7 @@ from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, \
     anti_pattern_timeframe, \
     anti_trigger_timeframe, to_timeframe, trim_to_date_range
-from helper.helper import date_range, date_range_to_string, profile_it
+from helper.functions import date_range, date_range_to_string, profile_it
 
 
 def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:

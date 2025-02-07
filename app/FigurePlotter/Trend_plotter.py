@@ -8,7 +8,7 @@ from helper.data_preparation import single_timeframe
 from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures
 from Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
 from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
-from helper.helper import profile_it
+from helper.functions import profile_it
 
 
 @profile_it

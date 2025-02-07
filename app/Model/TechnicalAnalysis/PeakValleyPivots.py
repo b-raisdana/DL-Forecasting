@@ -12,7 +12,7 @@ from data_processing.atr import read_multi_timeframe_ohlcva
 from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
     read_file, after_under_process_date, empty_df, concat
-from helper.helper import profile_it
+from helper.functions import profile_it
 
 
 def major_times_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotDFM]:

@@ -11,7 +11,7 @@ from FigurePlotter.plotter import file_id, show_and_save_plot
 from Model.Order import OrderSide, BracketOrderType
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
-from helper.helper import profile_it
+from helper.functions import profile_it
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 

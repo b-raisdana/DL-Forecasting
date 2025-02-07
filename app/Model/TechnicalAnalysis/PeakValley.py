@@ -12,7 +12,7 @@ from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
 from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import read_file, cast_and_validate, trim_to_date_range, \
     expand_date_range, after_under_process_date, empty_df, nearest_match, concat, index_names
-from helper.helper import profile_it, date_range
+from helper.functions import profile_it, date_range
 from data_processing.ohlcv import read_base_timeframe_ohlcv
 
 

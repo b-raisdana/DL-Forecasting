@@ -13,7 +13,7 @@ from PanderaDFM.BullBearSide import BullBearSide, bull_bear_side_repr
 from PanderaDFM.OHLCV import OHLCV
 from Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
 from helper.data_preparation import single_timeframe
-from helper.helper import profile_it, log, log_w
+from helper.functions import profile_it, log, log_w
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 

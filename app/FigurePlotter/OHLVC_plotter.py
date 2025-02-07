@@ -9,7 +9,7 @@ from FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_fi
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
 from helper.data_preparation import single_timeframe
-from helper.helper import log, profile_it
+from helper.functions import log, profile_it
 price_columns = {
     'open': 'gray',
     'high': 'green',

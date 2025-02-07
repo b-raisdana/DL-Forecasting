@@ -15,7 +15,7 @@ from Strategy.order_helper import order_name, add_order_info, order_is_open, \
     order_is_closed, dict_of_order
 from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import concat, dict_of_list
-from helper.helper import log_d, profile_it, log_w
+from helper.functions import log_d, profile_it, log_w
 
 
 class ExtendedStrategy(bt.Strategy):

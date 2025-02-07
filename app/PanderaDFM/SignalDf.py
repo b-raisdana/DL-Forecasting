@@ -10,7 +10,7 @@ from pandera import typing as pt
 
 from Model.Order import OrderSide
 from PanderaDFM.ExtendedDf import ExtendedDf, BaseDFM
-from helper.helper import log_w
+from helper.functions import log_w
 
 
 class SignalDFM(BaseDFM):

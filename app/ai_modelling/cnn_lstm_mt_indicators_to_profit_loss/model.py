@@ -3,10 +3,9 @@ from typing import Dict
 
 import numpy as np
 import pandas as pd
-from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
-from tensorflow.python.keras.callbacks import Callback
 
 from Config import app_config
+from helper.br_py.logging import log_d
 from helper.br_py.profiling import profile_it
 
 
@@ -14,6 +13,12 @@ from helper.br_py.profiling import profile_it
 def build_model(x_shapes, y_shape: tuple[int, int], filters=64, lstm_units_list: list = None, dense_units=64,
                 cnn_count=2,
                 cnn_kernel_growing_steps=2, dropout_rate=0.3):
+    from tensorflow.keras.layers import Dense
+
+    import importlib
+
+    tf_version = importlib.metadata.version("tensorflow")
+    log_d('tensorflow:' + tf_version)
     structure_model = create_cnn_lstm(x_shapes['structure'], 'structure_model', filters,
                                       lstm_units_list, dense_units, cnn_count,
                                       cnn_kernel_growing_steps, dropout_rate)
@@ -85,6 +90,26 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
         RuntimeError: If the lengths of the inputs in `X` or `y` are not the same, a RuntimeError will be raised.
     """
 
+    from tensorflow.python.keras.callbacks import Callback
+    class CustomEpochLogger(Callback):
+        # def __init__(self, model=None):
+        #     super().__init__()
+        #     self.model = model  # Save the model instance
+
+        def on_epoch_end(self, epoch, logs=None):
+            # training_loss = logs.get('loss')
+            # validation_loss = logs.get('val_loss')
+            log_d(
+                f" {app_config.under_process_symbol}:{app_config.processing_date_range}"
+                # f"Epoch {epoch + 1}/{self.params['epochs']} - "
+                # f"Training Loss: {training_loss:.4f} - "
+                # f"Validation Loss: {validation_loss:.4f}"
+            )
+
+        def set_model(self, model):
+            super().set_model(model)  # Call the parent class method
+            # self.model = model  # Update the model instance if needed
+
     # Verify structure of input_x
     for key in ['structure', 'pattern', 'trigger', 'double']:
         if key not in input_x:
@@ -141,6 +166,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
 @profile_it
 def create_cnn_lstm(x_shape, model_prefix, filters=64, lstm_units_list: list = None, dense_units=64, cnn_count=2,
                     cnn_kernel_growing_steps=2, dropout_rate=0.05):  # dropout_rate=0.1
+    from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
     if lstm_units_list is None:
         lstm_units_list = [64, 64]  # 256, 128
     input_layer = Input(shape=x_shape, name=f'{model_prefix}_input')
@@ -184,21 +210,3 @@ def create_cnn_lstm(x_shape, model_prefix, filters=64, lstm_units_list: list = N
     return model
 
 
-class CustomEpochLogger(Callback):
-    # def __init__(self, model=None):
-    #     super().__init__()
-    #     self.model = model  # Save the model instance
-
-    def on_epoch_end(self, epoch, logs=None):
-        # training_loss = logs.get('loss')
-        # validation_loss = logs.get('val_loss')
-        log_d(
-            f" {app_config.under_process_symbol}:{app_config.processing_date_range}"
-            # f"Epoch {epoch + 1}/{self.params['epochs']} - "
-            # f"Training Loss: {training_loss:.4f} - "
-            # f"Validation Loss: {validation_loss:.4f}"
-        )
-
-    def set_model(self, model):
-        super().set_model(model)  # Call the parent class method
-        # self.model = model  # Update the model instance if needed

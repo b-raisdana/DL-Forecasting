@@ -1,6 +1,6 @@
 from Config import app_config
 from data_processing.atr import read_multi_timeframe_ohlcva
-from helper.helper import date_range_to_string
+from helper.functions import date_range_to_string
 
 # from data_preparation import d_types
 

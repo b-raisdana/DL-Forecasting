@@ -18,7 +18,7 @@ from data_processing.atr import read_multi_timeframe_ohlcva
 from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import read_file, single_timeframe, to_timeframe, cast_and_validate, empty_df, concat, \
     date_range_of_data
-from helper.helper import log, profile_it, LogSeverity
+from helper.functions import log, profile_it, LogSeverity
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 
 

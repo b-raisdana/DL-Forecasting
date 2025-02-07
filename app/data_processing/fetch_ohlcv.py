@@ -11,7 +11,7 @@ from Config import app_config
 from helper.br_py.logging import log_e, log_i
 from helper.br_py.profiling import profile_it
 from helper.data_preparation import map_symbol
-from helper.helper import date_range
+from helper.functions import date_range
 
 ccxt_symbol_map = {
     'BTCUSDT': 'BTC/USDT',

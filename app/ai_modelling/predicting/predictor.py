@@ -9,7 +9,7 @@ from ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import r
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.trining_datasets import model_dataset_lengths
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import single_timeframe
-from helper.helper import profile_it
+from helper.functions import profile_it
 from helper.importer import go
 from ai_modelling.training.training_batches import train_data_of_mt_n_profit
 

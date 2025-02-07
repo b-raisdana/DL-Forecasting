@@ -6,7 +6,7 @@ from pandera import typing as pt
 from BullBearSide import bull_bear_side_repr
 from Config import TREND
 from PanderaDFM.BullBearSide import BullBearSide
-from helper.helper import log
+from helper.functions import log
 
 
 def test_bull_bear_side_trends(trends: pt.DataFrame[BullBearSide]):

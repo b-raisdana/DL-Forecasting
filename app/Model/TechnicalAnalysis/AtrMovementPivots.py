@@ -17,7 +17,7 @@ from data_processing.atr import read_multi_timeframe_ohlcva
 from Model.TechnicalAnalysis.ftc import insert_multi_timeframe_pivots_real_start
 from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import to_timeframe, single_timeframe, pattern_timeframe, trigger_timeframe
-from helper.helper import profile_it, date_range, date_range_to_string
+from helper.functions import profile_it, date_range, date_range_to_string
 
 
 @profile_it

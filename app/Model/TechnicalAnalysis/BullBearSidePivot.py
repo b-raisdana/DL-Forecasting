@@ -16,7 +16,7 @@ from data_processing.atr import read_multi_timeframe_ohlcva
 from data_processing.fragmented_data import symbol_data_path
 from helper.data_preparation import single_timeframe, trigger_timeframe, read_file, \
     cast_and_validate, anti_pattern_timeframe, after_under_process_date, empty_df, concat
-from helper.helper import profile_it
+from helper.functions import profile_it
 
 
 def remove_overlapping_trends(timeframe_trends: pt.DataFrame[BullBearSide]) -> pt.DataFrame[BullBearSide]:

@@ -10,7 +10,7 @@ from ai_modelling.cnn_lstm import cnn_lstd_model_x_lengths
 from data_processing.fragmented_data import symbol_data_path
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import single_timeframe, trigger_timeframe
-from helper.helper import profile_it
+from helper.functions import profile_it
 from helper.importer import go
 from training.trainer import mt_train_n_test, plot_mt_train_n_test
 

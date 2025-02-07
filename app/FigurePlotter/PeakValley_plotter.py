@@ -9,7 +9,7 @@ from FigurePlotter.plotter import plot_multiple_figures, file_id, timeframe_colo
 from PanderaDFM.PeakValley import MultiTimeframePeakValley
 from Model.TechnicalAnalysis.PeakValley import peaks_only, valleys_only, major_timeframe
 from data_processing.atr import read_multi_timeframe_ohlcva
-from helper.helper import profile_it
+from helper.functions import profile_it
 
 
 @profile_it

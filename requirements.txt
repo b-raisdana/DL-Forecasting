@@ -41,3 +41,4 @@ ccxt
 fastapi
 contextvars
 starlette
+deepdiff

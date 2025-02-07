@@ -1,4 +1,4 @@
-from helper.helper import profile_it
+from helper.functions import profile_it
 
 
 def read_multi_timeframe_color_trend_pivots(date_range_str: str = None):
