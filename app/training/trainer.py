@@ -89,7 +89,7 @@ def plot_mt_train_n_test(x, y, n, base_ohlcv, show=True):
 
 
 @profile_it
-def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_lengths: dict,
+def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_shape: dict,
                     batch_size: int, forecast_horizon: int = 20, ):
     raise NotImplementedError
 #     """
@@ -118,10 +118,10 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
 #     double_df = single_timeframe(mt_any, double_tf)
 #
 #     length_of_training = (
-#             x_lengths['structure'][0] * pd.to_timedelta(structure_tf)
-#             + x_lengths['pattern'][0] * pd.to_timedelta(pattern_tf)
-#             + x_lengths['trigger'][0] * pd.to_timedelta(trigger_tf)
-#             + x_lengths['double'][0] * pd.to_timedelta(double_tf)
+#             x_shape['structure'][0] * pd.to_timedelta(structure_tf)
+#             + x_shape['pattern'][0] * pd.to_timedelta(pattern_tf)
+#             + x_shape['trigger'][0] * pd.to_timedelta(trigger_tf)
+#             + x_shape['double'][0] * pd.to_timedelta(double_tf)
 #     )
 #
 #     train_end_safe_start = mt_any.index.get_level_values(
@@ -143,14 +143,14 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
 #         # for relative_double_end in np.random.randint(0, duration_seconds, size=batch_size):
 #         relative_double_end = np.random.randint(0, duration_seconds)
 #         double_end: datetime = train_end_safe_end - relative_double_end * timedelta(seconds=1)
-#         trigger_end = double_end - x_lengths['double'][0] * pd.to_timedelta(double_tf)
-#         pattern_end = trigger_end - x_lengths['trigger'][0] * pd.to_timedelta(trigger_tf)
-#         structure_end = pattern_end - x_lengths['pattern'][0] * pd.to_timedelta(pattern_tf)
+#         trigger_end = double_end - x_shape['double'][0] * pd.to_timedelta(double_tf)
+#         pattern_end = trigger_end - x_shape['trigger'][0] * pd.to_timedelta(trigger_tf)
+#         structure_end = pattern_end - x_shape['pattern'][0] * pd.to_timedelta(pattern_tf)
 #
-#         double_slice = double_df.loc[pd.IndexSlice[: double_end], :].iloc[-x_lengths['double'][0]:]
-#         trigger_slice = trigger_df.loc[pd.IndexSlice[: trigger_end], :].iloc[-x_lengths['trigger'][0]:]
-#         pattern_slice = pattern_df.loc[pd.IndexSlice[: pattern_end], :].iloc[-x_lengths['pattern'][0]:]
-#         structure_slice = structure_df.loc[pd.IndexSlice[: structure_end], :].iloc[-x_lengths['structure'][0]:]
+#         double_slice = double_df.loc[pd.IndexSlice[: double_end], :].iloc[-x_shape['double'][0]:]
+#         trigger_slice = trigger_df.loc[pd.IndexSlice[: trigger_end], :].iloc[-x_shape['trigger'][0]:]
+#         pattern_slice = pattern_df.loc[pd.IndexSlice[: pattern_end], :].iloc[-x_shape['pattern'][0]:]
+#         structure_slice = structure_df.loc[pd.IndexSlice[: structure_end], :].iloc[-x_shape['structure'][0]:]
 #
 #         try:
 #             for timeframe, slice_df, relative_tf_name in [(structure_tf, structure_slice, 'structure'),
@@ -158,7 +158,7 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
 #                                                           (trigger_tf, trigger_slice, 'trigger'),
 #                                                           (double_tf, double_slice, 'double')]:
 #                 if abs((slice_df.index.max() - slice_df.index.min()) / pd.to_timedelta(timeframe)
-#                        - (x_lengths[relative_tf_name][0] - 1)) > app_config.max_x_gap:
+#                        - (x_shape[relative_tf_name][0] - 1)) > app_config.max_x_gap:
 #                     raise AssertionError(f"Gap of > {app_config.max_x_gap} bars found in {app_config.under_process_exchange}"
 #                           f"/{app_config.under_process_symbol}/{timeframe}:"
 #                           f"{slice_df.index.min()}-{slice_df.index.max()}")
@@ -183,10 +183,10 @@ def mt_train_n_test(structure_tf, mt_any: pt.DataFrame[MultiTimeframe], x_length
 #     x['pattern'] = np.array(x['pattern'])
 #     x['structure'] = np.array(x['structure'])
 #     y = np.array(y)
-#     # assert x['double'].shape == (batch_size,) + x_lengths['double']
-#     # assert x['trigger'].shape == (batch_size,) + x_lengths['trigger']
-#     # assert x['pattern'].shape == (batch_size,) + x_lengths['pattern']
-#     # assert x['structure'].shape == (batch_size,) + x_lengths['structure']
+#     # assert x['double'].shape == (batch_size,) + x_shape['double']
+#     # assert x['trigger'].shape == (batch_size,) + x_shape['trigger']
+#     # assert x['pattern'].shape == (batch_size,) + x_shape['pattern']
+#     # assert x['structure'].shape == (batch_size,) + x_shape['structure']
 #     # assert y.shape == (batch_size, forecast_horizon, 2)
 #
 #

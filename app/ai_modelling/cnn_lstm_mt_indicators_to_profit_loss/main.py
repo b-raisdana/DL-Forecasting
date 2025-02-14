@@ -1,14 +1,15 @@
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.model import train_model
 from helper.br_py.logging import log_d, LogSeverity
 import sys
 from datetime import datetime, timedelta
 from random import shuffle
 import pandas as pd
 from Config import app_config
-from model import train_model
-from training_datasets import train_data_of_mt_n_profit, model_dataset_lengths, plot_train_data_of_mt_n_profit
+from training_datasets import train_data_of_mt_n_profit, x_shape, plot_train_data_of_mt_n_profit
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.br_py.base import sync_br_lib_init
 from helper.functions import date_range, date_range_to_string
+
 
 def ceil_start_of_slide(t_date: datetime, slide: timedelta):
     if (t_date - datetime(t_date.year, t_date.month, t_date.day, tzinfo=t_date.tzinfo)) > timedelta(0):
@@ -54,12 +55,7 @@ def main():
                                                             end=pd.to_datetime('09-01-24'))
     quarters = overlapped_quarters(app_config.processing_date_range)
     mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
-    batch_size = 120
-
-    Xs, ys, x_dfs, y_dfs, trigger_tf, y_tester_dfs = train_data_of_mt_n_profit(
-        structure_tf='4h', mt_ohlcv=mt_ohlcv, x_lengths=model_dataset_lengths, batch_size=batch_size,
-        forecast_trigger_bars=3 * 4 * 4 * 4 * 1, only_actionable=True, )
-    t_model = train_model(Xs, ys, model_dataset_lengths, batch_size)
+    batch_size = 10
 
     # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
     #                     help="Flag to indicate if prices should not be fetched (default: False).")
@@ -78,12 +74,12 @@ def main():
             app_config.processing_date_range = date_range_to_string(start=start, end=end)
             for symbol in [
                 'BTCUSDT',
-                # # 'ETHUSDT',
-                'BNBUSDT',
-                'EOSUSDT',
-                # 'TRXUSDT',
-                'TONUSDT',
-                # 'SOLUSDT',
+                # # # 'ETHUSDT',
+                # 'BNBUSDT',
+                # 'EOSUSDT',
+                # # 'TRXUSDT',
+                # 'TONUSDT',
+                # # 'SOLUSDT',
             ]:
                 # try:
                 log_d(f'Symbol:{symbol}##########################################')
@@ -91,9 +87,14 @@ def main():
                 # n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
                 # base_ohlcv = single_timeframe(mt_ohlcv, '15min')
                 Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
-                    train_data_of_mt_n_profit('4h', mt_ohlcv, model_dataset_lengths, batch_size))
-                for i in range(0, batch_size, int(batch_size / 1)):
-                    plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
+                    train_data_of_mt_n_profit(
+                        structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=batch_size,
+                        forecast_trigger_bars=3 * 4 * 4 * 4 * 1, only_actionable=True, ))
+                # for i in range(0, batch_size, int(batch_size / 1)):
+                #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
+                train_model(input_x=Xs, input_y=ys, x_shape=x_shape, batch_size=batch_size, filters=64,
+                            lstm_units_list=None, dense_units=64, cnn_count=3, cnn_kernel_growing_steps=2,
+                            dropout_rate=0.3, rebuild_model=False, epochs=500)
                 # except Exception as e:
                 #     log_e(e)
 

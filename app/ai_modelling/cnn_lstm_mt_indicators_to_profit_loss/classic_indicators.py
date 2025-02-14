@@ -50,7 +50,7 @@ def classic_indicator_columns():
     return __classic_indicator_columns
 
 
-__scaleless_indicators = ['obv', 'cci', 'rsi', 'mfi', ]
+__scaleless_indicators = ['cci', 'rsi', 'mfi', 'obv', ]
 
 
 def scaleless_indicators():
