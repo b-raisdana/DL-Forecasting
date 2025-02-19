@@ -30,18 +30,8 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
 
 
 ''' todo:
-- scale profits
-- make sure about scale of signal
-    + if no drawdown
-        + signal shall be number of ATRs
-    + in case of drawdown
-        + be number of ATRs 
-+ add OBV MACD
-+ add CCI
-+ add RSI
-+ add fibo BB + max hit
-+ add MFI
-+ Add Ichimoku
++ check scales of train dataset
++ اگر از ReLU در مدل استفاده می‌کنید، Min-Max Scaling (مثلاً در محدوده [0,1]) مناسب‌تر است.
 '''
 
 
@@ -93,7 +83,7 @@ def main():
                 # for i in range(0, batch_size, int(batch_size / 1)):
                 #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
                 train_model(input_x=Xs, input_y=ys, x_shape=x_shape, batch_size=batch_size, filters=64,
-                            lstm_units_list=None, dense_units=64, cnn_count=3, cnn_kernel_growing_steps=2,
+                            lstm_units_list=None, dense_units=64, cnn_count=1, cnn_kernel_growing_steps=2,
                             dropout_rate=0.3, rebuild_model=False, epochs=500)
                 # except Exception as e:
                 #     log_e(e)
