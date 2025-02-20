@@ -44,75 +44,8 @@ def single_timeframe_n_indicators(mt_ohlcv, timeframe):
 
 # @profile_it
 def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimeframe], x_shape: dict,
-                              batch_size: int, forecast_trigger_bars: int = 3 * 4 * 4 * 4 * 1,
+                              batch_size: int, dataset_batches=100, forecast_trigger_bars: int = 3 * 4 * 4 * 4 * 1,
                               only_actionable: bool = True, ):
-    """
-    Generates training data for a multi-timeframe trading model. It slices the multi-timeframe OHLCV data into
-    batches of input features and forecast targets based on specified timeframes and lengths.
-
-    Parameters:
-    -----------
-    structure_tf : str
-        The timeframe string for the structure-level data (e.g., '1H', '15min').
-
-    mt_ohlcv : pt.DataFrame[MultiTimeframe]
-        A multi-timeframe Pandas DataFrame containing OHLCV data indexed by datetime.
-
-    x_shape : dict
-        A dictionary specifying the number of bars (time steps) for each timeframe's input slice. Keys must include:
-        - 'double': Length for the double timeframe.
-        - 'trigger': Length for the trigger timeframe.
-        - 'pattern': Length for the pattern timeframe.
-        - 'structure': Length for the structure timeframe.
-
-    batch_size : int
-        The number of training samples to generate in one batch.
-
-    forecast_trigger_bars : int, optional
-        The number of bars ahead to forecast, based on the trigger timeframe. Default is 768 (16 hours for 5-minute bars).
-
-    Returns:
-    --------
-    tuple
-        - Xs (dict): A dictionary of input features for each timeframe ('double', 'trigger', 'pattern', 'structure').
-                     Each value is a NumPy array of shape (batch_size, length, num_features).
-        - ys (np.ndarray): A NumPy array of shape (batch_size, num_targets) representing the forecast targets.
-        - x_dfs (dict): A dictionary of DataFrame slices for each timeframe, useful for debugging or visualization.
-        - y_dfs (list): A list of DataFrames containing the forecast target values for each batch.
-        - trigger_tf (str): The trigger timeframe string used for forecasting.
-        - y_tester_dfs (list): A list of DataFrames containing the future slices for verification.
-
-    Raises:
-    -------
-    RuntimeError
-        If the time range for generating training data is insufficient.
-
-    Workflow:
-    ---------
-    1. Derives the necessary timeframes (pattern, trigger, double) from the structure timeframe.
-    2. Calculates the safe start and end dates for slicing the training data.
-    3. Creates time slices for each timeframe, ensuring no gaps larger than a configured threshold.
-    4. Builds the input features (Xs) and forecast targets (ys) for each batch.
-    5. Returns the generated data along with slices for analysis.
-
-    Example:
-    --------
-    >>> mt_ohlcv = load_mt_ohlcv_data()
-    >>> x_shape = {
-    ...     'structure': [50],
-    ...     'pattern': [20],
-    ...     'trigger': [10],
-    ...     'double': [5],
-    ... }
-    >>> Xs, ys, x_dfs, y_dfs, trigger_tf, y_tester_dfs = train_data_of_mt_n_profit(
-    ...     structure_tf='1H', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=32)
-    >>> print(Xs['trigger'].shape, ys.shape)
-
-    Notes:
-    ------
-    - Ensure `mt_ohlcv` has a multi-index with 'date' as one of the levels.
-    - Configure `config.max_x_gap` to set the acceptable gap tolerance in bars for each timeframe.
-    """
     training_x_columns = ['open', 'high', 'low', 'close', 'volume', ]
     training_y_columns = ['long_signal', 'short_signal', 'min_low', 'max_high', 'long_profit', 'short_profit',
                           'long_risk', 'short_risk', 'long_drawdown', 'short_drawdown',
@@ -142,8 +75,8 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     for timeframe in ['structure', 'pattern', 'trigger', 'double']:
         x_dfs[f'{timeframe}-indicators'] = []
         Xs[f'{timeframe}-indicators'] = []  # np.ndarray([])
-    batch_remained = batch_size
-    while batch_remained > 0:
+    remained_samples = batch_size * dataset_batches
+    while remained_samples > 0:
         # for relative_double_end in np.random.randint(0, duration_seconds, size=batch_size):
         double_end, trigger_end, pattern_end, structure_end = \
             batch_ends(duration_seconds, double_tf, trigger_tf, pattern_tf, x_shape, train_safe_end)
@@ -205,9 +138,9 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
         y_dfs.append(sc_prediction)
         y_tester_dfs.append(sc_prediction_testing_slice)
         ys.append(np.array(y_dfs[-1]))
-        batch_remained -= 1
-        if (batch_remained % 10) == 0 and batch_remained > 0:
-            log_d(f'Remained Batching{batch_remained}/{batch_size}')
+        remained_samples -= 1
+        if (remained_samples % 10) == 0 and remained_samples > 0:
+            log_d(f'Remained Samples {remained_samples}/{batch_size}')
     # converting list of batches to a combined ndarray
     try:
         Xs['double'] = np.array(Xs['double'])

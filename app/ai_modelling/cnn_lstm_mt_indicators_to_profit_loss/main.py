@@ -78,7 +78,7 @@ def main():
                 # base_ohlcv = single_timeframe(mt_ohlcv, '15min')
                 Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
                     train_data_of_mt_n_profit(
-                        structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=batch_size,
+                        structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=batch_size, dataset_batches=100,
                         forecast_trigger_bars=3 * 4 * 4 * 4 * 1, only_actionable=True, ))
                 # for i in range(0, batch_size, int(batch_size / 1)):
                 #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
