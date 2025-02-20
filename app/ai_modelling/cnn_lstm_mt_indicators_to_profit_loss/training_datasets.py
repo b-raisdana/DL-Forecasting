@@ -249,7 +249,7 @@ def shape_assertion(Xs, x_dfs, y_dfs, y_tester_dfs, ys, x_shape: dict, batch_siz
     if get_shape(y_dfs) != [b_l, (12,)]:
         raise AssertionError("get_shape(y_dfs) != [b_l, (12,)]")
     if get_shape(y_tester_dfs) != [b_l, (forecast_trigger_bars, 5)]:
-        raise AssertionError("get_shape(y_tester_dfs) != [b_l, (forecast_trigger_bars, 5)]")
+        raise AssertionError("get_shape(y_tester_dfs) != [b_l, (forecast_trigger_bars, 5)]")  # todo: this happens!
 
 
 def x_shape_assertion(Xs, batch_size, x_shape):

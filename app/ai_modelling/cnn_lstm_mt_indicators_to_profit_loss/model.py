@@ -5,7 +5,6 @@ import pandas as pd
 
 from Config import app_config
 from helper.br_py.logging import log_d
-from helper.br_py.profiling import profile_it
 
 
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape, batch_size, model=None, filters=64,
@@ -39,7 +38,6 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     from tensorflow.keras.callbacks import Callback
     from tensorflow.python.keras.saving.save import load_model
     from tensorflow.python.keras.callbacks import EarlyStopping
-    from tensorflow.keras.optimizers import Adam
 
     from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMModel
     from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.training_datasets import x_shape_assertion
@@ -77,11 +75,12 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
             model = load_model(model_path_h5)
         else:
             log_d("Building new model...")
-            model = CNNLSTMModel(x_shape=x_shape, y_shape=input_y.shape, filters=filters,
-                                 lstm_units_list=lstm_units_list, dense_units=dense_units, cnn_count=cnn_count,
+            model = CNNLSTMModel(y_shape=input_y.shape[1:], filters=filters, lstm_units_list=lstm_units_list,
+                                 dense_units=dense_units, cnn_count=cnn_count,
                                  cnn_kernel_growing_steps=cnn_kernel_growing_steps, dropout_rate=dropout_rate)
             model.compile(loss='mse')
-            model.build(input_shape=x_shape, batch_size=batch_size)
+            batch_shape = {k: (batch_size,) + v for k, v in x_shape.items()}
+            model.build(input_shape=batch_shape)
             model.summary()
 
     # Train the model
