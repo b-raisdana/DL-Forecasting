@@ -180,7 +180,15 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
                 or len(np.array(sc_trigger_slice[training_x_columns])) != x_shape['trigger'][0]
                 or len(np.array(sc_pattern_slice[training_x_columns])) != x_shape['pattern'][0]
                 or len(np.array(sc_structure_slice[training_x_columns])) != x_shape['structure'][0]
+                or get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 5)
         ):
+            log_d(f'Skipped by:'
+                  + "len(np.array(sc_double_slice[training_x_columns])) != x_shape['double'][0]" if len(np.array(sc_double_slice[training_x_columns])) != x_shape['double'][0] else ""
+                  + "len(np.array(sc_trigger_slice[training_x_columns])) != x_shape['trigger'][0]" if len(np.array(sc_trigger_slice[training_x_columns])) != x_shape['trigger'][0] else ""
+                  + "len(np.array(sc_pattern_slice[training_x_columns])) != x_shape['pattern'][0]" if len(np.array(sc_pattern_slice[training_x_columns])) != x_shape['pattern'][0] else ""
+                  + "len(np.array(sc_structure_slice[training_x_columns])) != x_shape['structure'][0]" if len(np.array(sc_structure_slice[training_x_columns])) != x_shape['structure'][0] else ""
+                  + "get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 5)" if get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 5) else ""
+            )
             continue
         x_dfs['double'].append(sc_double_slice[training_x_columns])
         x_dfs['trigger'].append(sc_trigger_slice[training_x_columns])
@@ -198,6 +206,8 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
         y_tester_dfs.append(sc_prediction_testing_slice)
         ys.append(np.array(y_dfs[-1]))
         batch_remained -= 1
+        if (batch_remained % 10) == 0 and batch_remained > 0:
+            log_d(f'Remained Batching{batch_remained}/{batch_size}')
     # converting list of batches to a combined ndarray
     try:
         Xs['double'] = np.array(Xs['double'])

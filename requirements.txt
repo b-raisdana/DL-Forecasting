@@ -12,10 +12,10 @@ scikit-learn
 pytz
 loguru
 pandas_ta
-tensorflow
+#tensorflow
 colorama
 #==2.18.0
-# tensorflow[and-cuda]<=2.14.0
+tensorflow[and-cuda]==2.18.0
 
 # tensorflow-gpu>=2.3.0
 # tf-keras

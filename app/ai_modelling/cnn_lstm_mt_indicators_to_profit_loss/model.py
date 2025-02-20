@@ -7,7 +7,8 @@ from Config import app_config
 from helper.br_py.logging import log_d
 
 
-def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape, batch_size, model=None, filters=64,
+def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape, batch_size, model=None,
+                cnn_filters=64,
                 lstm_units_list: list = None, dense_units=64, cnn_count=3, cnn_kernel_growing_steps=2,
                 dropout_rate=0.3, rebuild_model: bool = False, epochs=500):
     """
@@ -35,14 +36,12 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     Raises:
         RuntimeError: If the lengths of the inputs in `X` or `y` are not the same, a RuntimeError will be raised.
     """
-    from tensorflow.keras.callbacks import Callback
-    from tensorflow.python.keras.saving.save import load_model
-    from tensorflow.python.keras.callbacks import EarlyStopping
+    from tensorflow import keras as tf_keras
 
     from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMModel
     from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.training_datasets import x_shape_assertion
 
-    class CustomEpochLogger(Callback):
+    class CustomEpochLogger(tf_keras.callbacks.Callback):
         # def __init__(self, model=None):
         #     super().__init__()
         #     self.model = model  # Save the model instance
@@ -62,20 +61,26 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
             # self.model = model  # Update the model instance if needed
 
     x_shape_assertion(input_x, batch_size, x_shape)
-
-    model_path_h5 = os.path.join(app_config.path_of_data, 'cnn_lstm_model.mt_profit_n_loss_n_indicators.h5')
-    model_path_keras = os.path.join(app_config.path_of_data, 'cnn_lstm_model.mt_profit_n_loss_n_indicators.keras')
+    # input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape, batch_size, model = None,
+    # cnn_filters = 64,
+    # lstm_units_list: list = None, dense_units = 64, cnn_count = 3, cnn_kernel_growing_steps = 2,
+    # dropout_rate = 0.3, rebuild_model: bool = False, epochs = 500
+    model_name = (f"cnn_lstm.mt_pnl_n_ind"
+                  f".cnn_f{cnn_filters}c{cnn_count}k{cnn_kernel_growing_steps}."
+                  f"lstm_u{"-".join([str(i) for i in lstm_units_list])}.dense_u{dense_units}.drop_r{dropout_rate}")
+    model_path_h5 = os.path.join(app_config.path_of_data, f'{model_name}.h5')
+    model_path_keras = os.path.join(app_config.path_of_data, f'{model_name}.keras')
     # Check if the model already exists, load if it does
     if model is None:
         if not rebuild_model and os.path.exists(model_path_keras):
             log_d("Loading existing keras model from disk...")
-            model = load_model(model_path_keras)
+            model = tf_keras.models.load_model(model_path_keras)
         elif not rebuild_model and os.path.exists(model_path_h5):
             log_d("Loading existing h5 model from disk...")
-            model = load_model(model_path_h5)
+            model = tf_keras.models.load_model(model_path_h5)
         else:
             log_d("Building new model...")
-            model = CNNLSTMModel(y_shape=input_y.shape[1:], filters=filters, lstm_units_list=lstm_units_list,
+            model = CNNLSTMModel(y_shape=input_y.shape[1:], cnn_filters=cnn_filters, lstm_units_list=lstm_units_list,
                                  dense_units=dense_units, cnn_count=cnn_count,
                                  cnn_kernel_growing_steps=cnn_kernel_growing_steps, dropout_rate=dropout_rate)
             model.compile(loss='mse')
@@ -84,18 +89,19 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
             model.summary()
 
     # Train the model
-    early_stopping = EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
-    epoch_logger = CustomEpochLogger()
-    history = model.fit(
-        x={'structure_model_input': input_x['structure'],
-           'pattern_model_input': input_x['pattern'],
-           'trigger_model_input': input_x['trigger'],
-           'double_model_input': input_x['double'],
-           'structure_indicators_model_input': input_x['structure-indicators'],
-           'pattern_indicators_model_input': input_x['pattern-indicators'],
-           'trigger_indicators_model_input': input_x['trigger-indicators'],
-           'double_indicators_model_input': input_x['double-indicators'],
-           },
+    early_stopping: callable = tf_keras.callbacks.EarlyStopping(monitor='val_loss', patience=50,
+                                                                restore_best_weights=True)
+    epoch_logger: callable = CustomEpochLogger()
+    history = model.fit(x={
+        'structure': input_x['structure'],
+        'pattern': input_x['pattern'],
+        'trigger': input_x['trigger'],
+        'double': input_x['double'],
+        'structure_indicators': input_x['structure-indicators'],
+        'pattern_indicators': input_x['pattern-indicators'],
+        'trigger_indicators': input_x['trigger-indicators'],
+        'double_indicators': input_x['double-indicators'],
+    },
         y=input_y, epochs=epochs, batch_size=batch_size, validation_split=0.2,
         # Use a portion of your data for validation
         callbacks=[early_stopping, epoch_logger])
