@@ -1,16 +1,42 @@
 import datetime
+import sys
 from datetime import datetime, timedelta
 from typing import Tuple, TypeVar
 
+import numpy as np
 import pandera
 import pytz
-from colorama import init
 
-from .br_py.profiling import profile_it
-from .br_py.logging import log_i, log_e, log_w, log_d, log_it
+from .br_py.profiling.base import profile_it
+from .br_py.logging.log_it import log_d, log_i, log_e, log_w
 
-# Initialize colorama
-init(autoreset=True)
+def get_size(obj, seen=None):
+    if seen is None:
+        seen = set()
+    obj_id = id(obj)
+    if obj_id in seen:
+        return 0  # جلوگیری از شمارش دوباره
+    seen.add(obj_id)
+    try:
+        size = sys.getsizeof(obj)
+    except TypeError:
+        return 0  # اگر `sys.getsizeof` پشتیبانی نکند
+    if isinstance(obj, np.ndarray):
+        return obj.nbytes
+    if isinstance(obj, dict):
+        size += sum(get_size(k, seen) + get_size(v, seen) for k, v in obj.items())
+
+    elif isinstance(obj, (list, tuple, set)):
+        size += sum(get_size(i, seen) for i in obj)
+    elif hasattr(obj, '__dict__'):
+        size += get_size(obj.__dict__, seen)
+    if obj in [None, Ellipsis, NotImplemented]:
+        return sys.getsizeof(obj)
+    return size
+
+
+# # Initialize colorama
+# init(autoreset=True)
 
 Pandera_DFM_Type = TypeVar('Pandera_DFM_Type', bound=pandera.DataFrameModel)
 

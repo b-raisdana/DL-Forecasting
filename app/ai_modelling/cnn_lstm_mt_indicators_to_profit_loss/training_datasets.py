@@ -116,12 +116,17 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
                 or get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 5)
         ):
             log_d(f'Skipped by:'
-                  + "len(np.array(sc_double_slice[training_x_columns])) != x_shape['double'][0]" if len(np.array(sc_double_slice[training_x_columns])) != x_shape['double'][0] else ""
-                  + "len(np.array(sc_trigger_slice[training_x_columns])) != x_shape['trigger'][0]" if len(np.array(sc_trigger_slice[training_x_columns])) != x_shape['trigger'][0] else ""
-                  + "len(np.array(sc_pattern_slice[training_x_columns])) != x_shape['pattern'][0]" if len(np.array(sc_pattern_slice[training_x_columns])) != x_shape['pattern'][0] else ""
-                  + "len(np.array(sc_structure_slice[training_x_columns])) != x_shape['structure'][0]" if len(np.array(sc_structure_slice[training_x_columns])) != x_shape['structure'][0] else ""
-                  + "get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 5)" if get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 5) else ""
-            )
+                  + ("len(np.array(sc_double_slice[training_x_columns])) != x_shape['double'][0]"
+                     if len(np.array(sc_double_slice[training_x_columns])) != x_shape['double'][0] else "")
+                  + ("len(np.array(sc_trigger_slice[training_x_columns])) != x_shape['trigger'][0]"
+                     if len(np.array(sc_trigger_slice[training_x_columns])) != x_shape['trigger'][0] else "")
+                  + ("len(np.array(sc_pattern_slice[training_x_columns])) != x_shape['pattern'][0]"
+                     if len(np.array(sc_pattern_slice[training_x_columns])) != x_shape['pattern'][0] else "")
+                  + ("len(np.array(sc_structure_slice[training_x_columns])) != x_shape['structure'][0]"
+                     if len(np.array(sc_structure_slice[training_x_columns])) != x_shape['structure'][0] else "")
+                  + ("get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 5)"
+                     if get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 5) else "")
+                  )
             continue
         x_dfs['double'].append(sc_double_slice[training_x_columns])
         x_dfs['trigger'].append(sc_trigger_slice[training_x_columns])
@@ -152,12 +157,13 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
         ys = np.array(ys)
     except Exception as e:
         raise e
-    shape_assertion(Xs, x_dfs, y_dfs, y_tester_dfs, ys, x_shape, batch_size, forecast_trigger_bars)
+    shape_assertion(Xs=Xs, x_dfs=x_dfs, y_dfs=y_dfs, y_tester_dfs=y_tester_dfs, ys=ys, x_shape=x_shape,
+                    batch_size=batch_size, dataset_batched=dataset_batches, forecast_trigger_bars=forecast_trigger_bars)
     return Xs, ys, x_dfs, y_dfs, trigger_tf, y_tester_dfs
 
 
 def shape_assertion(Xs, x_dfs, y_dfs, y_tester_dfs, ys, x_shape: dict, batch_size: int = 120,
-                    forecast_trigger_bars: int = 192):
+                    dataset_batched: int = 100, forecast_trigger_bars: int = 192):
     """
     x_shape = {'double': (255, 5), 'indicators': (129,), 'pattern': (253, 5), 'structure': (127, 5), 'trigger': (254, 5)}
 
@@ -174,7 +180,7 @@ def shape_assertion(Xs, x_dfs, y_dfs, y_tester_dfs, ys, x_shape: dict, batch_siz
     Returns:
 
     """
-    b_l = batch_size
+    b_l = batch_size * dataset_batched
     # i_l = x_shape['indicators']
     x_shape_assertion(Xs, b_l, x_shape)
     if get_shape(ys) != (b_l, 12):

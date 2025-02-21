@@ -59,25 +59,19 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
         def set_model(self, model):
             super().set_model(model)  # Call the parent class method
             # self.model = model  # Update the model instance if needed
-
-    x_shape_assertion(input_x, batch_size, x_shape)
-    # input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape, batch_size, model = None,
-    # cnn_filters = 64,
-    # lstm_units_list: list = None, dense_units = 64, cnn_count = 3, cnn_kernel_growing_steps = 2,
-    # dropout_rate = 0.3, rebuild_model: bool = False, epochs = 500
     model_name = (f"cnn_lstm.mt_pnl_n_ind"
                   f".cnn_f{cnn_filters}c{cnn_count}k{cnn_kernel_growing_steps}."
                   f"lstm_u{"-".join([str(i) for i in lstm_units_list])}.dense_u{dense_units}.drop_r{dropout_rate}")
-    model_path_h5 = os.path.join(app_config.path_of_data, f'{model_name}.h5')
+    # model_path_h5 = os.path.join(app_config.path_of_data, f'{model_name}.h5')
     model_path_keras = os.path.join(app_config.path_of_data, f'{model_name}.keras')
     # Check if the model already exists, load if it does
     if model is None:
         if not rebuild_model and os.path.exists(model_path_keras):
             log_d("Loading existing keras model from disk...")
             model = tf_keras.models.load_model(model_path_keras)
-        elif not rebuild_model and os.path.exists(model_path_h5):
-            log_d("Loading existing h5 model from disk...")
-            model = tf_keras.models.load_model(model_path_h5)
+        # elif not rebuild_model and os.path.exists(model_path_h5):
+        #     log_d("Loading existing h5 model from disk...")
+        #     model = tf_keras.models.load_model(model_path_h5)
         else:
             log_d("Building new model...")
             model = CNNLSTMModel(y_shape=input_y.shape[1:], cnn_filters=cnn_filters, lstm_units_list=lstm_units_list,
