@@ -6,8 +6,9 @@ from helper.br_py.logging import log_d, log_e
 
 class CNNLSTMModel(tf_keras.models.Model):
     def __init__(self, y_shape: tuple, cnn_filters=64, lstm_units_list=None, dense_units=64, cnn_count=2,
-                 cnn_kernel_growing_steps=2, dropout_rate=0.3):
-        super(CNNLSTMModel, self).__init__(name="CNNLSTM_Model")
+                 cnn_kernel_growing_steps=2, dropout_rate=0.3, **kwargs):
+        super(CNNLSTMModel, self).__init__(name="CNNLSTM_Model", **kwargs)
+        self.y_shape = y_shape
         self.shape_of_input = None
         self.submodels = {
             key: CNNLSTMLayer(model_prefix=f"{key}_cnn_lstm_layer", dropout_rate=dropout_rate,
@@ -83,6 +84,35 @@ class CNNLSTMModel(tf_keras.models.Model):
 
         # return total_params, trainable_params, non_trainable_params, total_memory_MB
 
+    def get_config(self):
+        config = super(CNNLSTMModel, self).get_config()
+        config.update({
+            module.name: module.get_config() for module in self.submodels.items()
+        })
+        # config.update({
+        #     "conv_layers": self.submodels['structure'].conv_layers,
+        #     "lstm_units_list": self.submodels['structure'].lstm_units_list,
+        #     "dense_units": self.combined_dense.units,
+        #     "cnn_count": len(self.submodels['structure'].conv_layers),
+        #     "cnn_kernel_growing_steps": 2,
+        #     "dropout_rate": 0.3,
+        #     "y_shape": self.y_shape,
+        #     "shape_of_input": self.shape_of_input,
+        # })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(
+            y_shape=config["y_shape"],
+            cnn_filters=config["cnn_filters"],
+            lstm_units_list=config["lstm_units_list"],
+            dense_units=config["dense_units"],
+            cnn_count=config["cnn_count"],
+            cnn_kernel_growing_steps=config["cnn_kernel_growing_steps"],
+            dropout_rate=config["dropout_rate"]
+        )
+
 
 class CNNLSTMLayer(tf_keras.layers.Layer):
 
@@ -126,8 +156,8 @@ class CNNLSTMLayer(tf_keras.layers.Layer):
         x = inputs
         for conv, bn, dropout in zip(self.conv_layers, self.bn_layers, self.dropout_layers):
             x = conv(x)
-            x = dropout(x)
             x = bn(x)
+            x = dropout(x)
         # x =  tf_keras.layers.core.Reshape((-1, self.conv_layers[-1].filters))(x)
         for lstm in self.lstm_layers:
             x = lstm(x)
@@ -145,11 +175,11 @@ class CNNLSTMLayer(tf_keras.layers.Layer):
 
     def summary(self, print_fn: callable = log_d):
         for layer in self.conv_layers:
-            if ~layer.trainable:
+            if not layer.trainable:
                 # print_fn(f"CONV layer {layer.name} is not trainable!")
                 layer.trainable = True
         for layer in self.lstm_layers:
-            if ~layer.trainable:
+            if not layer.trainable:
                 # print_fn(f"LSTM layer {layer.name} is not trainable: {layer.trainable}")
                 layer.trainable = True
         trainable_params = np.sum([np.prod(p.shape) for p in self.trainable_weights])
@@ -162,3 +192,30 @@ class CNNLSTMLayer(tf_keras.layers.Layer):
         print_fn("-" * 50)
 
         return total_params, trainable_params, non_trainable_params
+
+    def get_config(self):
+        config = super(CNNLSTMLayer, self).get_config()
+        config.update({
+            "model_prefix": self.name,
+            "output_shape": self.target_shape,
+            "cnn_filters": self.conv_layers[0].filters,  # تعداد فیلترهای اولیه
+            "lstm_units_list": [l.units for l in self.lstm_layers],  # لیست واحدهای LSTM
+            "dense_units": self.dense1.units,
+            "cnn_count": len(self.conv_layers),
+            "cnn_kernel_growing_steps": 2,  # مقدار ثابت یا پارامتر ذخیره‌شده
+            "dropout_rate": self.dropout_layers[0].rate,  # مقدار dropout از اولین لایه
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(
+            model_prefix=config["model_prefix"],
+            output_shape=config["output_shape"],
+            cnn_filters=config["cnn_filters"],
+            lstm_units_list=config["lstm_units_list"],
+            dense_units=config["dense_units"],
+            cnn_count=config["cnn_count"],
+            cnn_kernel_growing_steps=config["cnn_kernel_growing_steps"],
+            dropout_rate=config["dropout_rate"]
+        )
