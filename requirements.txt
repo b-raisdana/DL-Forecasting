@@ -1,3 +1,7 @@
+--index-url  https://nuget.behinrahkar.com/repository/pypi-proxy/simple
+--extra-index-url  https://nuget.behinrahkar.com/repository/pypi-hosted/simple
+
+br_py==1.0.3
 # conda install -c conda-forge python-kaleido
 # kaleido
 pandas
@@ -15,7 +19,7 @@ pandas_ta
 #tensorflow
 colorama
 #==2.18.0
-tensorflow[and-cuda]==2.18.0
+# tensorflow==2.18.0
 
 # tensorflow-gpu>=2.3.0
 # tf-keras

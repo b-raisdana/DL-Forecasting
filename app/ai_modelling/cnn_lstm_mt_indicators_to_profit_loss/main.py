@@ -1,5 +1,5 @@
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.model import train_model
-from helper.br_py.logging import log_d, LogSeverity
+from br_py.do_log import log_d, LogSeverity
 import sys
 from datetime import datetime, timedelta
 from random import shuffle
@@ -7,7 +7,7 @@ import pandas as pd
 from Config import app_config
 from training_datasets import train_data_of_mt_n_profit, x_shape, plot_train_data_of_mt_n_profit
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
-from helper.br_py.base import sync_br_lib_init
+from br_py.base import sync_br_lib_init
 from helper.functions import date_range, date_range_to_string, get_size
 
 

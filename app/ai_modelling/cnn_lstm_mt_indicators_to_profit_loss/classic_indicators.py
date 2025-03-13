@@ -1,10 +1,10 @@
+import warnings
+
 import pandas as pd
 import pandas_ta as ta
 
-from helper.br_py.logging import log_d
 from helper.importer import ta
 
-import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 

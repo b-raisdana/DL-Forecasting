@@ -4,7 +4,7 @@ from typing import Dict
 import pandas as pd
 
 from Config import app_config
-from helper.br_py.logging import log_d
+from br_py.do_log import log_d
 
 
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape, batch_size, model=None,

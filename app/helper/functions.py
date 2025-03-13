@@ -7,8 +7,6 @@ import numpy as np
 import pandera
 import pytz
 
-from .br_py.profiling.base import profile_it
-from .br_py.logging.log_it import log_d, log_i, log_e, log_w
 
 def get_size(obj, seen=None):
     if seen is None:

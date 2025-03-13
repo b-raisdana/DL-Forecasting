@@ -9,7 +9,7 @@ from Config import app_config
 from PanderaDFM.OHLCV import MultiTimeframeOHLCV, OHLCV
 from data_processing.fetch_ohlcv import fetch_ohlcv_by_range
 from data_processing.fragmented_data import symbol_data_path
-from helper.br_py.profiling import profile_it
+from br_py.profiling import profile_it
 from helper.data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, \
     after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df, concat
 from helper.functions import date_range

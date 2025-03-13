@@ -9,7 +9,7 @@ from plotly import graph_objects as plgo
 
 from Config import app_config
 from data_processing.fragmented_data import symbol_data_path
-from helper.br_py.profiling import profile_it
+from br_py.profiling import profile_it
 from helper.data_preparation import date_range_of_data
 
 DEBUG = False
