@@ -4,12 +4,12 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
+from br_py.do_log import log_d
 from plotly.subplots import make_subplots
 
 from FigurePlotter.plotter import show_and_save_plot
 from ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import reverse_rolling_mean_std
 from br_py.profiling import profile_it
-from helper.functions import log_d
 from helper.importer import go
 
 

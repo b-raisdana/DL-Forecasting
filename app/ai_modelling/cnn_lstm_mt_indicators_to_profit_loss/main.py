@@ -1,5 +1,7 @@
+import logging
+
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.model import train_model
-from br_py.do_log import log_d, LogSeverity
+from br_py.do_log import log_d
 import sys
 from datetime import datetime, timedelta
 from random import shuffle
@@ -37,8 +39,8 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
 
 def main():
     log_d("Starting")
-    sync_br_lib_init(path_of_logs='logs', root_path=app_config.root_path, log_to_file_level=LogSeverity.DEBUG,
-                     log_to_std_out_level=LogSeverity.DEBUG)
+    sync_br_lib_init(path_of_logs='logs', root_path=app_config.root_path, log_to_file_level=logging.DEBUG,
+                     log_to_std_out_level=logging.DEBUG)
     # parser = argparse.ArgumentParser(description="Script for processing OHLCV data.")
     # args = parser.parse_args()
     app_config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),

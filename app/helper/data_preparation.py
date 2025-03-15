@@ -1,3 +1,4 @@
+import logging
 import re
 import string
 from dataclasses import dataclass
@@ -16,7 +17,7 @@ from pandera import typing as pt, DataType
 from Config import app_config
 from PanderaDFM.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
 from data_processing.fragmented_data import symbol_data_path
-from br_py.do_log import log_w, log_d, LogSeverity
+from br_py.do_log import log_w, log_d
 from helper.functions import date_range, date_range_to_string, morning, Pandera_DFM_Type
 
 
@@ -549,7 +550,7 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
                 return empty_df(model_class)
     if unique_index:
         if not data.index.is_unique:
-            log("Not tested", severity=LogSeverity.ERROR)
+            log("Not tested", severity=logging.ERROR)
             raise Exception(f"Expected to be unique but found duplicates:{data.index[data.index.duplicated()]}")
     try:
         data = apply_as_type(data, model_class)
@@ -563,7 +564,7 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
         try:
             model_class.validate(data, lazy=True)
         except pandera.errors.SchemaErrors as exc:
-            log_d(str(exc.schema_errors), LogSeverity.WARNING, stack_trace=False)
+            log_d(str(exc.schema_errors), logging.WARNING, stack_trace=False)
             return False
     else:
         model_class.validate(data, lazy=True, )
@@ -616,7 +617,7 @@ def cast_and_validate2(data, model_class: Type[Pandera_DFM_Type], return_bool: b
                 return empty_df(model_class)
     if unique_index:
         if not data.index.is_unique:
-            log("Not tested", severity=LogSeverity.ERROR)
+            log("Not tested", severity=logging.ERROR)
             raise Exception(f"Expected to be unique but found duplicates:{data.index[data.index.duplicated()]}")
     try:
         column_annotations = column_dtypes(data, model_class)
@@ -631,7 +632,7 @@ def cast_and_validate2(data, model_class: Type[Pandera_DFM_Type], return_bool: b
         try:
             model_class.validate(data, lazy=True)
         except pandera.errors.SchemaErrors as exc:
-            log(str(exc.schema_errors), LogSeverity.WARNING, stack_trace=False)
+            log_w(str(exc.schema_errors), stack_trace=False)
             return False
     else:
         model_class.validate(data, lazy=True, )

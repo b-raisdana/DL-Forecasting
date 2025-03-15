@@ -2,13 +2,13 @@ import os
 from datetime import timedelta
 
 import pandas as pd
+from br_py.profiling import profile_it
 
 from Config import app_config
 from PanderaDFM.MtRollingMeanStdOHLCV import MtRollingMeanStdOHLCV
 from data_processing.fragmented_data import symbol_data_path
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import expand_date_range, read_file, trim_to_date_range
-from helper.functions import profile_it
 from helper.importer import pt, ta
 
 columns_list = ['open', 'close', 'high', 'low', 'volume']

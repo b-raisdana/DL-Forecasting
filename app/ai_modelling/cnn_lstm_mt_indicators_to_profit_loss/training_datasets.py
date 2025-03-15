@@ -5,6 +5,7 @@ from typing import List, Dict
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
+from br_py.do_log import log_d
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -16,7 +17,7 @@ from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.profit_loss.profit_loss_
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.classic_indicators import add_classic_indicators, \
     classic_indicator_columns, scaleless_indicators
 from helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
-from helper.functions import profile_it, date_range, log_d
+from helper.functions import date_range
 from helper.importer import pt
 
 

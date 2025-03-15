@@ -61,7 +61,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
             # self.model = model  # Update the model instance if needed
     model_name = (f"cnn_lstm.mt_pnl_n_ind"
                   f".cnn_f{cnn_filters}c{cnn_count}k{cnn_kernel_growing_steps}."
-                  f"lstm_u{"-".join([str(i) for i in lstm_units_list])}.dense_u{dense_units}.drop_r{dropout_rate}")
+                  f"lstm_u{'-'.join([str(i) for i in lstm_units_list])}.dense_u{dense_units}.drop_r{dropout_rate}")
     # model_path_h5 = os.path.join(app_config.path_of_data, f'{model_name}.h5')
     model_path_keras = os.path.join(app_config.path_of_data, f'{model_name}.keras')
     # Check if the model already exists, load if it does
