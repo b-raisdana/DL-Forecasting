@@ -88,7 +88,7 @@ class ExtendedStrategy(bt.Strategy):
         true_risked_money = size * sl_size
 
         if not true_risked_money <= app_config.initial_cash * app_config.risk_per_order_percent:
-            log_w("True risked money exceeds configured risk percentage", stack_trace=False)
+            log_w("True risked money exceeds configured risk percentage", )
 
         return size, true_risked_money
 

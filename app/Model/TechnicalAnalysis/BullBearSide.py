@@ -5,6 +5,7 @@ from typing import Tuple, List, Optional, Literal
 
 import pandas as pd
 import pandera.typing as pt
+from br_py.do_log import log_w, log_d
 
 from Config import TopTYPE, app_config, TREND
 from Model.TechnicalAnalysis.PeakValley import valleys_only, peaks_only, major_timeframe, \
@@ -45,9 +46,9 @@ def single_timeframe_candles_trend(ohlcv: pt.DataFrame[OHLCV], timeframe_peaks_n
         candle_trend['previous_valley_value'].notna()].index
 
     if len(candles_with_known_trend) == 0:
-        log(f'Not found any candle with possibly known trend '
+        log_w(f'Not found any candle with possibly known trend '
             f'in ({ohlcv.index[0]}:{ohlcv.index[-1]}#{len(ohlcv)}={ohlcv.head(5)})!',
-            severity=logging.WARNING, stack_trace=False)
+            )
         candle_trend['bull_bear_side'] = TREND.SIDE.value
         if candle_trend['is_final'].isna().any():
             pass
@@ -184,10 +185,10 @@ def expand_trend_by_near_tops(timeframe_bull_or_bear: pt.DataFrame[BullBearSide]
         changed_starts = timeframe_bull_or_bear['movement_start_time'].sort_index().compare(
             previous_round_movement_start_time.sort_index())
         number_of_changed_starts = len(changed_starts)
-        log(f"Changed start={number_of_changed_starts} ends={number_of_changed_ends}"
+        log_d(f"Changed start={number_of_changed_starts} ends={number_of_changed_ends}"
             f'possibly movable starts={len(possible_start_expandable_indexes)} '
             f'ends= {len(possible_end_expandable_indexes)} '
-            , severity=logging.DEBUG, stack_trace=False)
+            )
         previous_round_movement_end_time = timeframe_bull_or_bear['movement_end_time'].copy()
         previous_round_movement_start_time = timeframe_bull_or_bear['movement_start_time'].copy()
 
@@ -366,9 +367,9 @@ def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pt.DataF
     for timeframe in timeframe_shortlist:
         timeframe_candle_trend = single_timeframe(multi_timeframe_candle_trend, timeframe)
         if len(timeframe_candle_trend) < 3:
-            log(f'multi_timeframe_candle_trend has less than 3 rows ({len(timeframe_candle_trend)}) for '
+            log_w(f'multi_timeframe_candle_trend has less than 3 rows ({len(timeframe_candle_trend)}) for '
                 f'{timeframe}/{date_range_of_data(multi_timeframe_ohlcva)}',
-                stack_trace=False, severity=logging.WARNING)
+                )
             continue
         timeframe_peaks_n_valleys = major_timeframe(multi_timeframe_peaks_n_valleys, timeframe) \
             .reset_index(level='timeframe')
@@ -517,8 +518,8 @@ def previous_trend(trends: pt.DataFrame[BullBearSide]) -> Tuple[List[Optional[in
                 previous_trends_movement.append(possible_previous_trends['movement'].max())
                 continue
             else:
-                log(f'did not find any previous trend for trend stat@{bull_bear_side_repr(_start, this_trend)})',
-                    stack_trace=False)
+                log_w(f'did not find any previous trend for trend stat@{bull_bear_side_repr(_start, this_trend)})',
+                    )
         else:
             raise Exception(f"movement_start_time is not valid:{this_trend['movement_start_time']}")
         previous_trends.append(None)

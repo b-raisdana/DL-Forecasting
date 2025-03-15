@@ -1,5 +1,5 @@
-#--index-url  https://nuget.behinrahkar.com/repository/pypi-proxy/simple
-#--extra-index-url  https://nuget.behinrahkar.com/repository/pypi-hosted/simple
+--index-url  https://nuget.behinrahkar.com/repository/pypi-proxy/simple
+--extra-index-url  https://nuget.behinrahkar.com/repository/pypi-hosted/simple
 
 br_py==1.0.3
 # conda install -c conda-forge python-kaleido
@@ -40,9 +40,5 @@ ccxt
 # conda update --all
 
 # conda install pip
-
 # pip install -r requirements.txt
 
-contextvars
-starlette
-deepdiff

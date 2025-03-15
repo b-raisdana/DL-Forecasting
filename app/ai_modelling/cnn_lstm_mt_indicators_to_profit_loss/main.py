@@ -47,7 +47,7 @@ def main():
                                                             end=pd.to_datetime('09-01-24'))
     quarters = overlapped_quarters(app_config.processing_date_range)
     mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
-    batch_size = 50
+    batch_size = 5 # 256
 
     # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
     #                     help="Flag to indicate if prices should not be fetched (default: False).")
@@ -87,7 +87,7 @@ def main():
                 #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
                 train_model(input_x=Xs, input_y=ys, x_shape=x_shape, batch_size=batch_size, cnn_filters=16,
                             lstm_units_list=[64, 8], dense_units=32, cnn_count=2, cnn_kernel_growing_steps=2,
-                            dropout_rate=0.3, rebuild_model=False, epochs=2)
+                            dropout_rate=0.3, rebuild_model=False, epochs=1)
                 # except Exception as e:
                 #     log_e(e)
 
