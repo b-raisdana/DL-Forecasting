@@ -1,11 +1,12 @@
 import os
+from datetime import datetime
 from typing import Dict
 
 import pandas as pd
-from br_py.do_log import log_d
 
 from Config import app_config
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMLayer
+from br_py.do_log import log_d
 
 
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape, batch_size, model=None,
@@ -63,6 +64,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
 
     # Enable dynamic GPU memory growth (optional)
     physical_devices = tf_config.list_physical_devices('GPU')
+    expanded_memroy_size =
     for device in physical_devices:
         tf_config.experimental.set_memory_growth(device, True)
 
@@ -84,8 +86,12 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
         raise NotImplementedError
     if not rebuild_model and os.path.exists(model_path_keras):
         log_d("Loading existing keras model from disk...")
-        model = tf_keras.models.load_model(model_path_keras, custom_objects={'CNNLSTMModel': CNNLSTMModel, 'CNNLSTMLayer': CNNLSTMLayer})
+        model = tf_keras.models.load_model(model_path_keras,
+                                           custom_objects={'CNNLSTMModel': CNNLSTMModel, 'CNNLSTMLayer': CNNLSTMLayer})
         model.compile(loss='mse', optimizer='rmsprop')  # Re-compile without loading optimizer state
+        # tf_keras.utils.plot_model(model, to_file=os.path.join(app_config.path_of_plots,
+        #                                                       f"model-plot.{int(datetime.now().timestamp())}.jpg")
+        #                           , show_shapes=True, show_layer_names=True)
     # elif not rebuild_model and os.path.exists(model_path_h5):
     #     log_d("Loading existing h5 model from disk...")
     #     model = tf_keras.models.load_model(model_path_h5)
@@ -98,11 +104,15 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
         batch_shape = {k: (batch_size,) + v for k, v in x_shape.items()}
         model.build(input_shape=batch_shape)
         model.summary()
+        # tf_keras.utils.plot_model(model, to_file=os.path.join(app_config.path_of_plots,
+        #                                                       f"model-plot.{int(datetime.now().timestamp())}")
+        #                           , show_shapes=True, show_layer_names=True)
 
     # Train the model
     early_stopping: callable = tf_keras.callbacks.EarlyStopping(monitor='val_loss', patience=50,
                                                                 restore_best_weights=True)
     epoch_logger: callable = CustomEpochLogger()
+    tensorboard = setup_tensorboard()
     history = model.fit(x={
         'structure': input_x['structure'],
         'pattern': input_x['pattern'],
@@ -116,9 +126,19 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
         y=input_y, epochs=epochs, batch_size=int(batch_size / 10), validation_split=0.2,
         steps_per_epoch=10,
         # Use a portion of your data for validation
-        callbacks=[early_stopping, epoch_logger])
+        callbacks=[early_stopping, epoch_logger, tensorboard])
     log_d(history)
     model.save(model_path_keras)
     log_d("Model saved to disk.")
 
     return model
+
+
+def setup_tensorboard():
+    from tensorflow import keras as tf_keras
+    this_run_folder ="TFB-" + datetime.now().strftime("%Y%m%d-%H%M%S")
+    this_run_log_path = os.path.join(app_config.path_of_logs, this_run_folder)
+    os.mkdir(this_run_log_path)
+    tensorboard = tf_keras.callbacks.TensorBoard(log_dir=this_run_log_path, write_graph=True, write_images=True,
+                                                 histogram_freq=1)
+    return tensorboard

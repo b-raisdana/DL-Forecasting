@@ -18,6 +18,7 @@ pandas_ta
 colorama
 #==2.18.0
 tensorflow[and-cuda]~=2.19.0
+pydot
 
 # tensorflow-gpu>=2.3.0
 # tf-keras
