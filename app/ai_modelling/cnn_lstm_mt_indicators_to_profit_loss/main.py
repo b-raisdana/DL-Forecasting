@@ -91,7 +91,7 @@ def main():
                 # for i in range(0, batch_size, int(batch_size / 1)):
                 #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
                 train_model(input_x=Xs, input_y=ys, x_shape=x_shape, batch_size=batch_size, cnn_filters=16,
-                            lstm_units_list=[64 * 8, 8 * 8], dense_units=32 * 8, cnn_count=2 * 8,
+                            lstm_units_list=[64 * 12, 8 * 12], dense_units=32 * 12, cnn_count=2 * 12,
                             cnn_kernel_growing_steps=2,
                             dropout_rate=0.3, rebuild_model=False, epochs=10)
                 # except Exception as e:

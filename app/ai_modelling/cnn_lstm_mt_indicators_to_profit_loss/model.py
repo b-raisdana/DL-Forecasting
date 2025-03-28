@@ -44,29 +44,21 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMModel
 
     class CustomEpochLogger(tf_keras.callbacks.Callback):
-        # def __init__(self, model=None):
-        #     super().__init__()
-        #     self.model = model  # Save the model instance
+        def on_epoch_start(self, epoch, logs=None):
+            print(f"\n>>> Epoch {epoch} started at {datetime.now().strftime('%H:%M:%S.%f')}")
 
         def on_epoch_end(self, epoch, logs=None):
-            # training_loss = logs.get('loss')
-            # validation_loss = logs.get('val_loss')
-            log_d(
-                f" {app_config.under_process_symbol}:{app_config.processing_date_range}"
-                # f"Epoch {epoch + 1}/{self.params['epochs']} - "
-                # f"Training Loss: {training_loss:.4f} - "
-                # f"Validation Loss: {validation_loss:.4f}"
+            training_loss = logs.get('loss')
+            validation_loss = logs.get('val_loss')
+            print(
+                f"\n<<<Ends@{datetime.now().strftime('%H%M%S')}:{app_config.under_process_symbol}:{app_config.processing_date_range}/Training L:{training_loss}/Validation L:{validation_loss}"
             )
 
         def set_model(self, model):
-            super().set_model(model)  # Call the parent class method
-            # self.model = model  # Update the model instance if needed
+            super().set_model(model)
 
     # Enable dynamic GPU memory growth (optional)
-    physical_devices = tf_config.list_physical_devices('GPU')
-    expanded_memroy_size =
-    for device in physical_devices:
-        tf_config.experimental.set_memory_growth(device, True)
+    setup_gpu()
 
     from tensorflow.keras import mixed_precision
     policy = mixed_precision.Policy('mixed_float16')
@@ -134,9 +126,24 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     return model
 
 
+def setup_gpu():
+    from tensorflow import config as tf_config
+
+    physical_devices = tf_config.list_physical_devices('GPU')
+    expanded_memory_size = 0.95 * 8 * 1024
+    for device in physical_devices:
+        tf_config.experimental.set_memory_growth(device, True)
+        tf_config.set_logical_device_configuration(
+            device=device,
+            logical_devices=[
+                tf_config.LogicalDeviceConfiguration(memory_limit=expanded_memory_size)
+            ]
+        )
+
+
 def setup_tensorboard():
     from tensorflow import keras as tf_keras
-    this_run_folder ="TFB-" + datetime.now().strftime("%Y%m%d-%H%M%S")
+    this_run_folder = "TFB-" + datetime.now().strftime("%Y%m%d-%H%M%S")
     this_run_log_path = os.path.join(app_config.path_of_logs, this_run_folder)
     os.mkdir(this_run_log_path)
     tensorboard = tf_keras.callbacks.TensorBoard(log_dir=this_run_log_path, write_graph=True, write_images=True,
