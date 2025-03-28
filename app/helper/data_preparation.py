@@ -538,6 +538,8 @@ def all_annotations(cls, include_indexes=False) -> dict:
     return annotations  # ChainMap(*(c.__annotations__ for c in cls.__mro__ if '__annotations__' in c.__dict__))
 
 
+
+
 def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bool = False,
                       zero_size_allowed: bool = False, unique_index: bool = False) -> Any:
     if len(data) == 0:
