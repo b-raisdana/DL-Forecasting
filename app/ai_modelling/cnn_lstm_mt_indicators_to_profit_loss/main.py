@@ -78,24 +78,26 @@ def main():
                 # 'TONUSDT',
                 # # 'SOLUSDT',
             ]:
-                # try:
                 log_d(f'Symbol:{symbol}##########################################')
                 app_config.under_process_symbol = symbol
-                # n_mt_ohlcv = read_multi_timeframe_rolling_mean_std_ohlcv(config.processing_date_range)
-                # base_ohlcv = single_timeframe(mt_ohlcv, '15min')
                 Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
                     train_data_of_mt_n_profit(
                         structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=batch_size, dataset_batches=2,
                         forecast_trigger_bars=3 * 4 * 4 * 4 * 1, only_actionable=True, ))
+                # calculate folder_name by serializing x_shape and batch_size
+                # create the folder under app_config.path_of_data/folder_name if not exists
+                # save Xs, and ys into a zip file named as dataset-{app_config.under_process_symbol}-{current time timestamp}
+                # save X_dfs, y_dfs, y_timeframe, and y_tester_dfs into a zip file named as validators-{app_config.under_process_symbol}-{current time timestamp}
+
+                # calculate folder_name by serializing x_shape and batch_size
+                # list all files under app_config.path_of_data/folder_name
+                # peak a file with name prefix of "dataset-" randomly to read Xs, and ys
                 log_d(f"Xs dataset size: {str(get_size(Xs))}")
-                # for i in range(0, batch_size, int(batch_size / 1)):
                 #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
                 train_model(input_x=Xs, input_y=ys, x_shape=x_shape, batch_size=batch_size, cnn_filters=16,
                             lstm_units_list=[64 * 12, 8 * 12], dense_units=32 * 12, cnn_count=2 * 12,
                             cnn_kernel_growing_steps=2,
                             dropout_rate=0.3, rebuild_model=False, epochs=10)
-                # except Exception as e:
-                #     log_e(e)
 
 
 if __name__ == "__main__":
