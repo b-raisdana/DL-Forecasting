@@ -1,0 +1,4 @@
+ docker ps -a --filter ancestor=tensorflow/tensorflow:latest-gpu -q | ForEach-Object { docker start $_ }
+
+ docker exec -it tf-container nvidia-smi
+

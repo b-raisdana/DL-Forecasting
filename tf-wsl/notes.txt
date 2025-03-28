@@ -1,0 +1,31 @@
+conda create --name tf-2.19-py3.10 python=3.10 -y
+conda activate tf-2.19-py3.10
+pip cache purge
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+   25  chmod +x Miniconda3-latest-Linux-x86_64.sh
+   26  ./Miniconda3-latest-Linux-x86_64.sh
+   27  ./Miniconda3-latest-Linux-x86_64.sh -u
+   28  source ~/.bashrc
+   29  conda --version
+   30  conda update conda
+   31  python3 -m pip install tensorflow[and-cuda]
+   pip install numpy<2  # Ensure compatibility with NumPy
+
+
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+34  chmod +x Miniconda3-latest-Linux-x86_64.sh
+35  ./Miniconda3-latest-Linux-x86_64.sh
+36  conda
+37  source ~/.bashrc
+conda clean -all
+39  conda init
+   40  conda env create -f /home/brais/environment.yml
+   nano ~/.bashrc
+    cd /mnt/c/Code/dl-forcasting
+	C:\Users\brais\miniconda3\envs\tf-2.19-py3.10\python.exe -m pip install --upgrade pip
+
+	pip cache purge
+
+   52  pip install -r ./requirements.txt
+   
+   
