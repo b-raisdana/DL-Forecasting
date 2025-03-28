@@ -60,7 +60,7 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pt.Data
                                 name=name, line=dict(color=fill_color), legendgroup=legend_group,  text=text,
                                 hoverinfo='text', showlegend=False)
             else:
-                log_w(f'movement not found in boundaries:{boundaries.columns}')
+                log(f'movement not found in boundaries:{boundaries.columns}', stack_trace=False)
             remained_number_of_scatters -= 2
         else:
             break

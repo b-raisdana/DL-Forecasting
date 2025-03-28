@@ -564,7 +564,7 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
         try:
             model_class.validate(data, lazy=True)
         except pandera.errors.SchemaErrors as exc:
-            log_d(str(exc.schema_errors), logging.WARNING, )
+            log_d(str(exc.schema_errors), logging.WARNING, stack_trace=False)
             return False
     else:
         model_class.validate(data, lazy=True, )
@@ -632,7 +632,7 @@ def cast_and_validate2(data, model_class: Type[Pandera_DFM_Type], return_bool: b
         try:
             model_class.validate(data, lazy=True)
         except pandera.errors.SchemaErrors as exc:
-            log_w(str(exc.schema_errors), )
+            log_w(str(exc.schema_errors), stack_trace=False)
             return False
     else:
         model_class.validate(data, lazy=True, )

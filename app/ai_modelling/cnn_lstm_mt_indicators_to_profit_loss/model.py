@@ -2,9 +2,10 @@ import os
 from typing import Dict
 
 import pandas as pd
+from br_py.do_log import log_d
 
 from Config import app_config
-from br_py.do_log import log_d
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMLayer
 
 
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape, batch_size, model=None,
@@ -37,9 +38,9 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
         RuntimeError: If the lengths of the inputs in `X` or `y` are not the same, a RuntimeError will be raised.
     """
     from tensorflow import keras as tf_keras
+    from tensorflow import config as tf_config
 
     from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMModel
-    from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.training_datasets import x_shape_assertion
 
     class CustomEpochLogger(tf_keras.callbacks.Callback):
         # def __init__(self, model=None):
@@ -59,28 +60,44 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
         def set_model(self, model):
             super().set_model(model)  # Call the parent class method
             # self.model = model  # Update the model instance if needed
+
+    # Enable dynamic GPU memory growth (optional)
+    physical_devices = tf_config.list_physical_devices('GPU')
+    for device in physical_devices:
+        tf_config.experimental.set_memory_growth(device, True)
+
+    from tensorflow.keras import mixed_precision
+    policy = mixed_precision.Policy('mixed_float16')
+    mixed_precision.set_global_policy(policy)
+    # Check if a GPU is available
+    if len(tf_config.list_physical_devices('GPU')) == 0:
+        print("No GPU found, using CPU.")
+    else:
+        print("GPU found, using GPU.")
     model_name = (f"cnn_lstm.mt_pnl_n_ind"
                   f".cnn_f{cnn_filters}c{cnn_count}k{cnn_kernel_growing_steps}."
                   f"lstm_u{'-'.join([str(i) for i in lstm_units_list])}.dense_u{dense_units}.drop_r{dropout_rate}")
     # model_path_h5 = os.path.join(app_config.path_of_data, f'{model_name}.h5')
     model_path_keras = os.path.join(app_config.path_of_data, f'{model_name}.keras')
     # Check if the model already exists, load if it does
-    if model is None:
-        if not rebuild_model and os.path.exists(model_path_keras):
-            log_d("Loading existing keras model from disk...")
-            model = tf_keras.models.load_model(model_path_keras)
-        # elif not rebuild_model and os.path.exists(model_path_h5):
-        #     log_d("Loading existing h5 model from disk...")
-        #     model = tf_keras.models.load_model(model_path_h5)
-        else:
-            log_d("Building new model...")
-            model = CNNLSTMModel(y_shape=input_y.shape[1:], cnn_filters=cnn_filters, lstm_units_list=lstm_units_list,
-                                 dense_units=dense_units, cnn_count=cnn_count,
-                                 cnn_kernel_growing_steps=cnn_kernel_growing_steps, dropout_rate=dropout_rate)
-            model.compile(loss='mse')
-            batch_shape = {k: (batch_size,) + v for k, v in x_shape.items()}
-            model.build(input_shape=batch_shape)
-            model.summary()
+    if model is not None:
+        raise NotImplementedError
+    if not rebuild_model and os.path.exists(model_path_keras):
+        log_d("Loading existing keras model from disk...")
+        model = tf_keras.models.load_model(model_path_keras, custom_objects={'CNNLSTMModel': CNNLSTMModel, 'CNNLSTMLayer': CNNLSTMLayer})
+        model.compile(loss='mse', optimizer='rmsprop')  # Re-compile without loading optimizer state
+    # elif not rebuild_model and os.path.exists(model_path_h5):
+    #     log_d("Loading existing h5 model from disk...")
+    #     model = tf_keras.models.load_model(model_path_h5)
+    else:
+        log_d("Building new model...")
+        model = CNNLSTMModel(y_shape=input_y.shape[1:], cnn_filters=cnn_filters, lstm_units_list=lstm_units_list,
+                             dense_units=dense_units, cnn_count=cnn_count,
+                             cnn_kernel_growing_steps=cnn_kernel_growing_steps, dropout_rate=dropout_rate)
+        model.compile(loss='mse')
+        batch_shape = {k: (batch_size,) + v for k, v in x_shape.items()}
+        model.build(input_shape=batch_shape)
+        model.summary()
 
     # Train the model
     early_stopping: callable = tf_keras.callbacks.EarlyStopping(monitor='val_loss', patience=50,
@@ -96,7 +113,8 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
         'trigger_indicators': input_x['trigger-indicators'],
         'double_indicators': input_x['double-indicators'],
     },
-        y=input_y, epochs=epochs, batch_size=batch_size, validation_split=0.2,
+        y=input_y, epochs=epochs, batch_size=int(batch_size / 10), validation_split=0.2,
+        steps_per_epoch=10,
         # Use a portion of your data for validation
         callbacks=[early_stopping, epoch_logger])
     log_d(history)

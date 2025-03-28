@@ -12,6 +12,11 @@ from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from br_py.base import sync_br_lib_init
 from helper.functions import date_range, date_range_to_string, get_size
 
+import tensorflow as tf
+
+tf.data.experimental.enable_debug_mode()
+tf.config.run_functions_eagerly(True)
+
 
 def ceil_start_of_slide(t_date: datetime, slide: timedelta):
     if (t_date - datetime(t_date.year, t_date.month, t_date.day, tzinfo=t_date.tzinfo)) > timedelta(0):
@@ -47,7 +52,7 @@ def main():
                                                             end=pd.to_datetime('09-01-24'))
     quarters = overlapped_quarters(app_config.processing_date_range)
     mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
-    batch_size = 5 # 256
+    batch_size = 200
 
     # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
     #                     help="Flag to indicate if prices should not be fetched (default: False).")
@@ -86,8 +91,9 @@ def main():
                 # for i in range(0, batch_size, int(batch_size / 1)):
                 #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
                 train_model(input_x=Xs, input_y=ys, x_shape=x_shape, batch_size=batch_size, cnn_filters=16,
-                            lstm_units_list=[64, 8], dense_units=32, cnn_count=2, cnn_kernel_growing_steps=2,
-                            dropout_rate=0.3, rebuild_model=False, epochs=1)
+                            lstm_units_list=[64 * 8, 8 * 8], dense_units=32 * 8, cnn_count=2 * 8,
+                            cnn_kernel_growing_steps=2,
+                            dropout_rate=0.3, rebuild_model=False, epochs=10)
                 # except Exception as e:
                 #     log_e(e)
 
@@ -96,7 +102,9 @@ if __name__ == "__main__":
     main()
 """
 Potential Areas of Improvement for Professional Price Forecasting:
-
+    Using wellknown pretrained models:
+        + For deep learning forecasts → DeepAR, TFT, Informer.
+        + For state-of-the-art research → FinGPT, Autoformer.
     Excessive Use of CNN Layers:
         While CNNs can capture local patterns in time-series data, the use of multiple convolutional layers might not be necessary for financial time-series forecasting. Generally, financial time-series models rely more heavily on recurrent structures like LSTMs or GRUs, rather than deep CNN architectures.
         You might consider reducing the number of CNN layers or simplifying the network to focus more on temporal dependencies.

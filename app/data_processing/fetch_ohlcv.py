@@ -98,7 +98,8 @@ def fetch_ohlcv(symbol, timeframe: str = None, start: datetime = None, number_of
                 except NetworkError as e:
                     log_e("ccxt.NetworkError:"+str(e))
                     pass
-            log_i(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}', )
+            log_i(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}',
+                stack_trace=False)
             output_list = output_list + response
 
     return output_list

@@ -1,14 +1,12 @@
---index-url  https://nuget.behinrahkar.com/repository/pypi-proxy/simple
---extra-index-url  https://nuget.behinrahkar.com/repository/pypi-hosted/simple
 
-br_py==1.0.3
+# br_py==1.0.3
 # conda install -c conda-forge python-kaleido
 # kaleido
 pandas
 plotly
 pydantic
 pyarrow
-numpy
+numpy<2.0
 # matplotlib
 scipy
 scikit-learn
@@ -19,7 +17,7 @@ pandas_ta
 #tensorflow
 colorama
 #==2.18.0
-tensorflow[cuda]~=2.16.1
+tensorflow[and-cuda]~=2.19.0
 
 # tensorflow-gpu>=2.3.0
 # tf-keras
@@ -40,5 +38,16 @@ ccxt
 # conda update --all
 
 # conda install pip
+
 # pip install -r requirements.txt
 
+contextvars
+starlette
+deepdiff
+
+sqlalchemy[asyncio]==2.0.20
+Loguru==0.7.3
+colorama==0.4.6
+python-dotenv~=1.0.1
+pydantic_settings~=2.7.1
+fastapi
