@@ -1,18 +1,19 @@
 import logging
-
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.model import train_model
-from br_py.do_log import log_d
 import sys
 from datetime import datetime, timedelta
 from random import shuffle
-import pandas as pd
-from Config import app_config
-from training_datasets import train_data_of_mt_n_profit, x_shape, plot_train_data_of_mt_n_profit
-from data_processing.ohlcv import read_multi_timeframe_ohlcv
-from br_py.base import sync_br_lib_init
-from helper.functions import date_range, date_range_to_string, get_size
 
+import pandas as pd
 import tensorflow as tf
+
+from Config import app_config
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.model import train_model
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.training_datasets import generate_batch, read_batch_zip
+from br_py.base import sync_br_lib_init
+from br_py.do_log import log_d
+from data_processing.ohlcv import read_multi_timeframe_ohlcv
+from helper.functions import date_range, date_range_to_string
+from training_datasets import master_x_shape
 
 tf.data.experimental.enable_debug_mode()
 tf.config.run_functions_eagerly(True)
@@ -80,21 +81,10 @@ def main():
             ]:
                 log_d(f'Symbol:{symbol}##########################################')
                 app_config.under_process_symbol = symbol
-                Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
-                    train_data_of_mt_n_profit(
-                        structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=batch_size, dataset_batches=2,
-                        forecast_trigger_bars=3 * 4 * 4 * 4 * 1, only_actionable=True, ))
-                # calculate folder_name by serializing x_shape and batch_size
-                # create the folder under app_config.path_of_data/folder_name if not exists
-                # save Xs, and ys into a zip file named as dataset-{app_config.under_process_symbol}-{current time timestamp}
-                # save X_dfs, y_dfs, y_timeframe, and y_tester_dfs into a zip file named as validators-{app_config.under_process_symbol}-{current time timestamp}
+                generate_batch(batch_size, mt_ohlcv, master_x_shape)
 
-                # calculate folder_name by serializing x_shape and batch_size
-                # list all files under app_config.path_of_data/folder_name
-                # peak a file with name prefix of "dataset-" randomly to read Xs, and ys
-                log_d(f"Xs dataset size: {str(get_size(Xs))}")
-                #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
-                train_model(input_x=Xs, input_y=ys, x_shape=x_shape, batch_size=batch_size, cnn_filters=16,
+                Xs, ys = read_batch_zip(master_x_shape, batch_size)
+                train_model(input_x=Xs, input_y=ys, x_shape=master_x_shape, batch_size=batch_size, cnn_filters=16,
                             lstm_units_list=[64 * 12, 8 * 12], dense_units=32 * 12, cnn_count=2 * 12,
                             cnn_kernel_growing_steps=2,
                             dropout_rate=0.3, rebuild_model=False, epochs=10)

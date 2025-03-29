@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Tuple
 
 import pandas as pd
 
@@ -9,10 +9,9 @@ from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CN
 from br_py.do_log import log_d
 
 
-def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape, batch_size, model=None,
-                cnn_filters=64,
-                lstm_units_list: list = None, dense_units=64, cnn_count=3, cnn_kernel_growing_steps=2,
-                dropout_rate=0.3, rebuild_model: bool = False, epochs=500):
+def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape: Dict[str, Tuple[int, int]], batch_size,
+                model=None, cnn_filters=64, lstm_units_list: list = None, dense_units=64, cnn_count=3,
+                cnn_kernel_growing_steps=2, dropout_rate=0.3, rebuild_model: bool = False, epochs=500):
     """
     Check if the model is already trained or partially trained. If not, build a new model.
     Continue training_data the model and save the trained model to 'cnn_lstm_model.h5' after each session.

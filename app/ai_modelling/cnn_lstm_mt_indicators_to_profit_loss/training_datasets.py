@@ -1,27 +1,35 @@
+import hashlib
+import json
+import os
+import pickle
+import random
+import re
 import textwrap
+import zipfile
 from datetime import timedelta, datetime
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
-from br_py.do_log import log_d
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
 from Config import app_config
 from FigurePlotter.plotter import show_and_save_plot
 from PanderaDFM import MultiTimeframe
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.profit_loss.profit_loss_adder import \
-    add_long_n_short_profit
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.classic_indicators import add_classic_indicators, \
     classic_indicator_columns, scaleless_indicators
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.profit_loss.profit_loss_adder import \
+    add_long_n_short_profit
+from helper.br_py.br_py.do_log import log_d
 from helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
-from helper.functions import date_range
+from helper.functions import date_range, get_size
 from helper.importer import pt
 
 
-def slice_indicators(timeframes_df_dict: dict, end_time: datetime, length: int):
+def slice_indicators(timeframes_df_dict: Dict[str, pd.DataFrame], end_time: datetime, length: int) \
+        -> Dict[str, pd.DataFrame]:
     try:
         t_slice = {
             df_name: pd.DataFrame({
@@ -37,16 +45,20 @@ def slice_indicators(timeframes_df_dict: dict, end_time: datetime, length: int):
     return t_slice
 
 
-def single_timeframe_n_indicators(mt_ohlcv, timeframe):
+def single_timeframe_n_indicators(mt_ohlcv: pt.DataFrame[MultiTimeframe], timeframe: str) -> pd.DataFrame:
     ohlcv = single_timeframe(mt_ohlcv, timeframe)
     ohlcv = add_classic_indicators(ohlcv)
     return ohlcv
 
 
 # @profile_it
-def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimeframe], x_shape: dict,
-                              batch_size: int, dataset_batches=100, forecast_trigger_bars: int = 3 * 4 * 4 * 4 * 1,
-                              only_actionable: bool = True, ):
+def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTimeframe],
+                              x_shape: Dict[str, Tuple[int, int]], batch_size: int, dataset_batches: int = 100,
+                              forecast_trigger_bars: int = 3 * 4 * 4 * 4 * 1,
+                              only_actionable: bool = True
+                              ) \
+        -> Tuple[
+            Dict[str, np.ndarray], np.ndarray, Dict[str, pd.DataFrame], List[pd.DataFrame], str, List[pd.DataFrame]]:
     training_x_columns = ['open', 'high', 'low', 'close', 'volume', ]
     training_y_columns = ['long_signal', 'short_signal', 'min_low', 'max_high', 'long_profit', 'short_profit',
                           'long_risk', 'short_risk', 'long_drawdown', 'short_drawdown',
@@ -63,8 +75,8 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
     mt_dfs = dfs.copy()
     dfs['prediction'] = add_long_n_short_profit(ohlc=dfs['trigger'], position_max_bars=forecast_trigger_bars,
                                                 trigger_tf=trigger_tf)
-    train_safe_end, train_safe_start = remove_nas(dfs)
-    duration_seconds = (train_safe_end - train_safe_start) / timedelta(seconds=1)
+    train_safe_end, train_safe_start = not_na_range(dfs)
+    duration_seconds = int((train_safe_end - train_safe_start) / timedelta(seconds=1))
     if duration_seconds <= 0:
         start, end = date_range(app_config.processing_date_range)
         raise RuntimeError(
@@ -72,6 +84,7 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
             f"start:{start}<{start + duration_seconds * timedelta(seconds=1)} or "
             f"end:{end}>{end - duration_seconds * timedelta(seconds=1)}) to make possible range of end dates positive!")
     x_dfs, y_dfs, y_tester_dfs = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, [], []
+    Xs: Dict[str, List[pd.DataFrame]]
     Xs, ys = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
     for timeframe in ['structure', 'pattern', 'trigger', 'double']:
         x_dfs[f'{timeframe}-indicators'] = []
@@ -149,6 +162,8 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
             log_d(f'Remained Samples {remained_samples}/{batch_size}')
     # converting list of batches to a combined ndarray
     try:
+        # for key in Xs:
+        #     Xs[key] = np.array(Xs[key])
         Xs['double'] = np.array(Xs['double'])
         Xs['trigger'] = np.array(Xs['trigger'])
         Xs['pattern'] = np.array(Xs['pattern'])
@@ -160,26 +175,22 @@ def train_data_of_mt_n_profit(structure_tf, mt_ohlcv: pt.DataFrame[MultiTimefram
         raise e
     shape_assertion(Xs=Xs, x_dfs=x_dfs, y_dfs=y_dfs, y_tester_dfs=y_tester_dfs, ys=ys, x_shape=x_shape,
                     batch_size=batch_size, dataset_batched=dataset_batches, forecast_trigger_bars=forecast_trigger_bars)
+    try:
+        for key in Xs:
+            if np.isnan(Xs[key]).any():
+                raise AssertionError(f"Found NA in Xs[{key}]")
+        if any([np.isnan(y).any() for y in ys]):
+            raise AssertionError(f"Found NA in ys")
+    except Exception as e:
+        raise e
     return Xs, ys, x_dfs, y_dfs, trigger_tf, y_tester_dfs
 
 
-def shape_assertion(Xs, x_dfs, y_dfs, y_tester_dfs, ys, x_shape: dict, batch_size: int = 120,
-                    dataset_batched: int = 100, forecast_trigger_bars: int = 192):
+def shape_assertion(Xs: Dict[str, np.ndarray], x_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame],
+                    y_tester_dfs: List[pd.DataFrame], ys: np.ndarray, x_shape: Dict[str, Tuple[int, int]],
+                    batch_size: int = 120, dataset_batched: int = 100, forecast_trigger_bars: int = 192) -> None:
     """
     x_shape = {'double': (255, 5), 'indicators': (129,), 'pattern': (253, 5), 'structure': (127, 5), 'trigger': (254, 5)}
-
-    Args:
-        Xs:
-        x_dfs:
-        y_dfs:
-        y_tester_dfs:
-        ys:
-        batch_size:
-        forecast_trigger_bars:
-        x_shape:
-
-    Returns:
-
     """
     b_l = batch_size * dataset_batched
     # i_l = x_shape['indicators']
@@ -202,18 +213,19 @@ def shape_assertion(Xs, x_dfs, y_dfs, y_tester_dfs, ys, x_shape: dict, batch_siz
         raise AssertionError("get_shape(y_tester_dfs) != [b_l, (forecast_trigger_bars, 5)]")  # todo: this happens!
 
 
-def x_shape_assertion(Xs, batch_size, x_shape):
+def x_shape_assertion(Xs: Dict[str, np.ndarray], batch_size: int, x_shape: Dict[str, Tuple[int, int]],
+                      num_of_indicators: int = 12) -> None:
     i_l = x_shape['indicators'][0]
     b_l = batch_size
     if get_shape(Xs) != {
-        'double': (b_l, x_shape['double'][0], 5), 'double-indicators': (b_l, i_l, 12),
-        'pattern': (b_l, x_shape['pattern'][0], 5), 'pattern-indicators': (b_l, i_l, 12),
-        'structure': (b_l, x_shape['structure'][0], 5), 'structure-indicators': (b_l, i_l, 12),
-        'trigger': (b_l, x_shape['trigger'][0], 5), 'trigger-indicators': (b_l, i_l, 12)}:
+        'double': (b_l, x_shape['double'][0], 5), 'double-indicators': (b_l, i_l, num_of_indicators),
+        'pattern': (b_l, x_shape['pattern'][0], 5), 'pattern-indicators': (b_l, i_l, num_of_indicators),
+        'structure': (b_l, x_shape['structure'][0], 5), 'structure-indicators': (b_l, i_l, num_of_indicators),
+        'trigger': (b_l, x_shape['trigger'][0], 5), 'trigger-indicators': (b_l, i_l, num_of_indicators)}:
         raise AssertionError("get_shape(Xs) != {")
 
 
-def remove_nas(dfs):
+def not_na_range(dfs: Dict[str, pd.DataFrame]) -> Tuple[datetime, datetime]:
     train_safe_start, train_safe_end = (None, None)
     for df_name in ['structure', 'pattern', 'trigger', 'double', 'prediction']:
         df = dfs[df_name]
@@ -245,8 +257,11 @@ def get_shape(obj):
         return None  # Base case for non-iterables
 
 
-def scaling(structure_slice, pattern_slice, trigger_slice, double_slice, prediction, indicators_slice,
-            prediction_testing_slice, training_x_columns):
+def scaling(structure_slice: pd.DataFrame, pattern_slice: pd.DataFrame, trigger_slice: pd.DataFrame,
+            double_slice: pd.DataFrame, prediction: pd.DataFrame, indicators_slice: Dict[str, pd.DataFrame],
+            prediction_testing_slice: pd.DataFrame, training_x_columns: List[str]) \
+        -> Tuple[pd.DataFrame, Dict[str, pd.DataFrame], pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame,
+        pd.DataFrame]:
     price_scale, price_shift, volume_scale, obv_scale, obv_shift = scaler_trainer(
         {'double': double_slice, 'pattern': pattern_slice, 'structure': structure_slice, 'trigger': trigger_slice,
          'trigger-obv': indicators_slice['trigger']['obv'], }, mean_atr=trigger_slice['atr'].mean(),
@@ -265,7 +280,9 @@ def scaling(structure_slice, pattern_slice, trigger_slice, double_slice, predict
     return sc_double_slice, sc_indicators_slice, sc_pattern_slice, sc_prediction, sc_prediction_testing_slice, sc_structure_slice, sc_trigger_slice
 
 
-def batch_ends(duration_seconds, double_tf, trigger_tf, pattern_tf, x_shape, train_safe_end):
+def batch_ends(duration_seconds: int, double_tf: str, trigger_tf: str, pattern_tf: str,
+               x_shape: Dict[str, Tuple[int, int]],
+               train_safe_end: datetime) -> Tuple[datetime, datetime, datetime, datetime]:
     relative_double_end = np.random.randint(0, duration_seconds)
     double_end: datetime = train_safe_end - relative_double_end * timedelta(seconds=1)
     trigger_end = double_end - x_shape['double'][0] * pd.to_timedelta(double_tf)
@@ -274,7 +291,9 @@ def batch_ends(duration_seconds, double_tf, trigger_tf, pattern_tf, x_shape, tra
     return double_end, trigger_end, pattern_end, structure_end
 
 
-def slicing(dfs, structure_end, pattern_end, trigger_end, double_end, training_x_columns, x_shape):
+def slicing(dfs: Dict[str, pd.DataFrame], structure_end: datetime, pattern_end: datetime, trigger_end: datetime,
+            double_end: datetime, training_x_columns: List[str], x_shape: Dict[str, Tuple[int, int]]
+            ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, Dict[str, pd.DataFrame]]:
     double_slice = dfs['double'].loc[pd.IndexSlice[: double_end], training_x_columns].iloc[
                    -x_shape['double'][0]:]
     trigger_slice = dfs['trigger'].loc[
@@ -294,7 +313,7 @@ def slicing(dfs, structure_end, pattern_end, trigger_end, double_end, training_x
     return double_slice, pattern_slice, structure_slice, trigger_slice, indicators_slice
 
 
-def plot_classic_indicators(fig: go.Figure, x_dfs, n) -> go.Figure:
+def plot_classic_indicators(fig: go.Figure, x_dfs: Dict[str, List[pd.DataFrame]], n: int) -> go.Figure:
     scalable_indicators = list(set(classic_indicator_columns()) - set(scaleless_indicators()))
     for level in ['structure', 'pattern', 'double', 'trigger']:
         for indicator_column in scaleless_indicators():
@@ -310,19 +329,19 @@ def plot_classic_indicators(fig: go.Figure, x_dfs, n) -> go.Figure:
     return fig
 
 
-def plot_train_data_of_mt_n_profit(x_dfs: dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame],
-                                   y_tester_dfs: List[pd.DataFrame], n: int, ):
+def plot_train_data_of_mt_n_profit(x_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame],
+                                   y_tester_dfs: List[pd.DataFrame], n: int) -> None:
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True,  # vertical_spacing=0.02,
                         row_heights=[0.65, 0.25])
     plot_mt_charts(fig, n, x_dfs)
     fig = plot_classic_indicators(fig, x_dfs, n)
-    plot_prediction_verifiyer(fig, n, y_tester_dfs)
+    plot_prediction_verifier(fig, n, y_tester_dfs)
     plot_prediction(fig, n, y_dfs)
     fig.update_layout(xaxis=dict(rangeslider=dict(visible=False)))
     show_and_save_plot(fig.update_yaxes(fixedrange=False))
 
 
-def plot_mt_charts(fig, n, x_dfs):
+def plot_mt_charts(fig: go.Figure, n: int, x_dfs: Dict[str, List[pd.DataFrame]]) -> None:
     ohlcv_slices = [
         ('structure', 'Structure'),
         ('pattern', 'Pattern'),
@@ -341,7 +360,7 @@ def plot_mt_charts(fig, n, x_dfs):
         ))
 
 
-def plot_prediction_verifiyer(fig, n, y_tester_dfs):
+def plot_prediction_verifier(fig: go.Figure, n: int, y_tester_dfs: List[pd.DataFrame]) -> None:
     ohlcv = y_tester_dfs[n]
     fig.add_trace(go.Candlestick(
         x=ohlcv.index.get_level_values('date'),
@@ -353,7 +372,7 @@ def plot_prediction_verifiyer(fig, n, y_tester_dfs):
     ))
 
 
-def plot_prediction(fig, n, y_dfs):
+def plot_prediction(fig: go.Figure, n: int, y_dfs: List[pd.DataFrame]) -> None:
     predictions = y_dfs[n].to_dict()
     formatted_predictions = textwrap.fill(', '.join([
         f"{col}: {val:.2f}" if isinstance(val, (int, float)) and not (val != val)
@@ -377,7 +396,7 @@ def plot_prediction(fig, n, y_dfs):
         raise e
 
 
-def scale_prediction(prediction, price_scaler_shift, price_scaler_size):
+def scale_prediction(prediction: pd.DataFrame, price_scaler_shift: float, price_scaler_size: float) -> pd.DataFrame:
     prediction['min_low'] = (prediction['min_low'] + price_scaler_shift) * price_scaler_size
     prediction['max_high'] = (prediction['max_high'] + price_scaler_shift) * price_scaler_size
     prediction['long_profit'] = (prediction['long_profit']) * price_scaler_size
@@ -385,7 +404,7 @@ def scale_prediction(prediction, price_scaler_shift, price_scaler_size):
     return prediction
 
 
-def scale_ohlc(df, price_shift, price_scale, volume_scale):
+def scale_ohlc(df: pd.DataFrame, price_shift: float, price_scale: float, volume_scale: float) -> pd.DataFrame:
     df = df.copy()
     for column in ['open', 'high', 'low', 'close']:
         df[column] = (df[column] + price_shift) * price_scale
@@ -393,7 +412,8 @@ def scale_ohlc(df, price_shift, price_scale, volume_scale):
     return df
 
 
-def scale_indicators(indicator_df, price_shift, price_scale, obv_scale, obv_shift):
+def scale_indicators(indicator_df: Dict[str, pd.DataFrame], price_shift: float, price_scale: float, obv_scale: float,
+                     obv_shift: float) -> Dict[str, pd.DataFrame]:
     columns_to_scale = set(classic_indicator_columns()) - set(scaleless_indicators())
     try:
         for timeframe in indicator_df:
@@ -405,7 +425,8 @@ def scale_indicators(indicator_df, price_shift, price_scale, obv_scale, obv_shif
     return indicator_df
 
 
-def scaler_trainer(slices: Dict[str, pd.DataFrame], mean_atr: float, close: float):
+def scaler_trainer(slices: Dict[str, pd.DataFrame], mean_atr: float, close: float) -> Tuple[
+    float, float, float, float, float]:
     price_scale = (1 / mean_atr)
     price_shift = - close
     t_slice = pd.concat(slices)
@@ -415,10 +436,94 @@ def scaler_trainer(slices: Dict[str, pd.DataFrame], mean_atr: float, close: floa
     return price_scale, price_shift, volume_scale, obv_scale, obv_shift
 
 
-x_shape = {
+master_x_shape = {
     'structure': (127, 5),
     'pattern': (253, 5),
     'trigger': (254, 5),
     'double': (255, 5),
     'indicators': (129, 12),
 }
+
+
+def sanitize_filename(filename: str) -> str:
+    filename = re.sub(r'[\s]', '', filename)
+    filename = re.sub(r'[{}\[\]<>:"/\\|?*]', '_', filename)
+    filename = re.sub(r'_+', '_', filename)  # collapse multiple underscores
+    filename = re.sub(r'^_', '', filename)  # collapse multiple underscores
+    filename = re.sub(r'_$', '', filename)  # collapse multiple underscores
+    filename = filename.replace('_,_', '_')  # collapse multiple underscores
+    return filename
+
+
+def dataset_folder(x_shape: Dict[str, Tuple[int, int]], batch_size: int, create: bool = False) -> str:
+    serialized = json.dumps({"x_shape": x_shape, "batch_size": batch_size})
+    folder_name = sanitize_filename(serialized)
+    folder_path = os.path.join(app_config.path_of_data, folder_name)
+    if create and not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    return folder_name
+
+
+def save_validators_to_zip(X_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame], y_timeframe: str,
+                           y_tester_dfs: List[pd.DataFrame], folder_name: str, symbol: str) -> None:
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    zip_file_name = f"validators-{symbol}-{timestamp}.zip"
+    zip_file_path = os.path.join(app_config.path_of_data, folder_name, zip_file_name)
+
+    with zipfile.ZipFile(zip_file_path, 'w') as zipf:
+        zipf.writestr('X_dfs.pkl', pickle.dumps(X_dfs))
+        zipf.writestr('y_dfs.pkl', pickle.dumps(y_dfs))
+        zipf.writestr('y_timeframe.pkl', pickle.dumps(y_timeframe))
+        zipf.writestr('y_tester_dfs.pkl', pickle.dumps(y_tester_dfs))
+
+
+def generate_batch(batch_size: int, mt_ohlcv: pt.DataFrame[MultiTimeframe],
+                   x_shape: Dict[str, Tuple[int, int]]) -> None:
+    Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
+        train_data_of_mt_n_profit(
+            structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=batch_size, dataset_batches=2,
+            forecast_trigger_bars=3 * 4 * 4 * 4 * 1, only_actionable=True, ))
+    folder_name = dataset_folder(x_shape, batch_size, create=True)
+    save_batch_zip(Xs, ys, folder_name, app_config.under_process_symbol)
+    save_validators_to_zip(X_dfs, y_dfs, y_timeframe, y_tester_dfs, folder_name,
+                           app_config.under_process_symbol)
+    #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
+
+
+def save_batch_zip(Xs: Dict[str, np.ndarray], ys: np.ndarray, folder_name: str, symbol: str, ) -> None:
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    zip_file_name = f"dataset-{symbol}-{timestamp}.zip"
+    zip_file_path = os.path.join(app_config.path_of_data, folder_name, zip_file_name)
+
+    with zipfile.ZipFile(zip_file_path, 'w') as zipf:
+        for key in Xs:
+            zipf.writestr(f'Xs-{key}.npy', Xs[key].tobytes())
+        zipf.writestr('ys.npy', ys.tobytes())
+
+
+def read_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int) \
+        -> Tuple[Dict[str, np.ndarray], np.ndarray]:
+    folder_name = dataset_folder(x_shape, batch_size)
+    folder_path: str = os.path.join(app_config.path_of_data, folder_name)
+
+    files = [f for f in os.listdir(folder_path) if f.startswith('dataset-')]
+    if not files:
+        raise ValueError("No dataset files found!")
+
+    picked_file = random.choice(files)
+    file_path = os.path.join(app_config.path_of_data, folder_name, picked_file)
+    Xs: Dict[str, np.ndarray] = {}
+    with zipfile.ZipFile(file_path, 'r') as zipf:
+        for name in zipf.namelist():
+            if name.startswith('Xs-') and name.endswith('.npy'):
+                key: str = name[3:-4]
+                with zipf.open(name) as f:
+                    arr: np.ndarray = np.frombuffer(f.read(), dtype=np.float32)
+                    shape_key = 'indicators' if 'indicators' in key else key
+                    Xs[key] = arr.reshape(-1, *x_shape[shape_key])
+        with zipf.open('ys.npy') as f:
+            ys: np.ndarray = np.frombuffer(f.read(), dtype=np.float32)
+            # ys = ys.reshape(-1, *y_shape)
+
+    log_d(f"Xs dataset size: {str(get_size(Xs))}")
+    return Xs, ys

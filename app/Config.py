@@ -82,7 +82,7 @@ class Config:
     hat_trick_index = 0
     trigger_dept = 16
 
-    max_x_gap = 5
+    max_x_gap = 1
 
     dept_of_analysis = 3
 
