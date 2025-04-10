@@ -1,7 +1,7 @@
 import numpy as np
 from tensorflow import keras as tf_keras
 
-from br_py.do_log import log_d, log_e
+from br_py.do_log import log_e
 
 
 class CNNLSTMModel(tf_keras.models.Model):

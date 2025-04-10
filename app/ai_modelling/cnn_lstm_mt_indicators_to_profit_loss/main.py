@@ -1,40 +1,4 @@
-import logging
-import sys
-from datetime import datetime, timedelta
-from random import shuffle
-
-import pandas as pd
-import tensorflow as tf
-
-from Config import app_config
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.model import train_model
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.training_datasets import generate_batch, read_batch_zip
-from br_py.base import sync_br_lib_init
-from br_py.do_log import log_d
-from data_processing.ohlcv import read_multi_timeframe_ohlcv
-from helper.functions import date_range, date_range_to_string
-from training_datasets import master_x_shape
-
-tf.data.experimental.enable_debug_mode()
-tf.config.run_functions_eagerly(True)
-
-
-def ceil_start_of_slide(t_date: datetime, slide: timedelta):
-    if (t_date - datetime(t_date.year, t_date.month, t_date.day, tzinfo=t_date.tzinfo)) > timedelta(0):
-        t_date = datetime(t_date.year, t_date.month, t_date.day + 1, tzinfo=t_date.tzinfo)
-    days = (t_date - datetime(t_date.year, 1, 1, tzinfo=t_date.tzinfo)).days
-    rounded_days = (days // slide.days) * slide.days + (slide.days if days % slide.days > 0 else 0)
-    return datetime(t_date.year, 1, 1, tzinfo=t_date.tzinfo) + rounded_days * timedelta(days=1)
-
-
-def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timedelta(days=30 * 1.5)):
-    if i_date_range is None:
-        i_date_range = app_config.processing_date_range
-    start, end = date_range(i_date_range)
-    rounded_start = ceil_start_of_slide(start, slide)
-    list_of_periods = [(p_start, p_start + length) for p_start in
-                       pd.date_range(rounded_start, end - length, freq=slide)]
-    return list_of_periods
+from helper.br_py.br_py.do_log import log_e
 
 
 ''' todo:
@@ -44,50 +8,7 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
 
 
 def main():
-    log_d("Starting")
-    sync_br_lib_init(path_of_logs='logs', root_path=app_config.root_path, log_to_file_level=logging.DEBUG,
-                     log_to_std_out_level=logging.DEBUG)
-    # parser = argparse.ArgumentParser(description="Script for processing OHLCV data.")
-    # args = parser.parse_args()
-    app_config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
-                                                            end=pd.to_datetime('09-01-24'))
-    quarters = overlapped_quarters(app_config.processing_date_range)
-    mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
-    batch_size = 200
-
-    # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
-    #                     help="Flag to indicate if prices should not be fetched (default: False).")
-    print("Python:" + sys.version)
-
-    # Apply config from arguments
-    app_config.processing_date_range = "22-08-15.00-00T24-10-30.00-00"
-    # config.do_not_fetch_prices = args.do_not_fetch_prices
-    # seed(42)
-    # np.random.seed(42)
-
-    while True:
-        shuffle(quarters)
-        for start, end in quarters:
-            log_d(f'quarter start:{start} end:{end}##########################################')
-            app_config.processing_date_range = date_range_to_string(start=start, end=end)
-            for symbol in [
-                'BTCUSDT',
-                # # # 'ETHUSDT',
-                # 'BNBUSDT',
-                # 'EOSUSDT',
-                # # 'TRXUSDT',
-                # 'TONUSDT',
-                # # 'SOLUSDT',
-            ]:
-                log_d(f'Symbol:{symbol}##########################################')
-                app_config.under_process_symbol = symbol
-                generate_batch(batch_size, mt_ohlcv, master_x_shape)
-
-                Xs, ys = read_batch_zip(master_x_shape, batch_size)
-                train_model(input_x=Xs, input_y=ys, x_shape=master_x_shape, batch_size=batch_size, cnn_filters=16,
-                            lstm_units_list=[64 * 12, 8 * 12], dense_units=32 * 12, cnn_count=2 * 12,
-                            cnn_kernel_growing_steps=2,
-                            dropout_rate=0.3, rebuild_model=False, epochs=10)
+    log_e("nothing to run!")
 
 
 if __name__ == "__main__":

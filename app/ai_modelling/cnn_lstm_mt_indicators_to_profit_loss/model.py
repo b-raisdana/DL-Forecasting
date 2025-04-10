@@ -1,12 +1,18 @@
+import logging
 import os
+import sys
 from datetime import datetime
+from random import shuffle
 from typing import Dict, Tuple
 
 import pandas as pd
 
 from Config import app_config
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMLayer
-from br_py.do_log import log_d
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import overlapped_quarters, master_x_shape, read_batch_zip
+from helper.br_py.br_py.base import sync_br_lib_init
+from helper.br_py.br_py.do_log import log_d
+from helper.functions import date_range_to_string
 
 
 def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape: Dict[str, Tuple[int, int]], batch_size,
@@ -39,6 +45,7 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     """
     from tensorflow import keras as tf_keras
     from tensorflow import config as tf_config
+
 
     from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMModel
 
@@ -127,6 +134,10 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
 
 def setup_gpu():
     from tensorflow import config as tf_config
+    import tensorflow as tf
+
+    tf.data.experimental.enable_debug_mode()
+    tf.config.run_functions_eagerly(True)
 
     physical_devices = tf_config.list_physical_devices('GPU')
     expanded_memory_size = 0.95 * 8 * 1024
@@ -148,3 +159,48 @@ def setup_tensorboard():
     tensorboard = tf_keras.callbacks.TensorBoard(log_dir=this_run_log_path, write_graph=True, write_images=True,
                                                  histogram_freq=1)
     return tensorboard
+
+
+def run_trainer():
+    log_d("Starting")
+    sync_br_lib_init(path_of_logs='logs', root_path=app_config.root_path, log_to_file_level=logging.DEBUG,
+                     log_to_std_out_level=logging.DEBUG)
+    # parser = argparse.ArgumentParser(description="Script for processing OHLCV data.")
+    # args = parser.parse_args()
+    app_config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
+                                                            end=pd.to_datetime('09-01-24'))
+    quarters = overlapped_quarters(app_config.processing_date_range)
+    batch_size = 200
+    # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
+    #                     help="Flag to indicate if prices should not be fetched (default: False).")
+    print("Python:" + sys.version)
+    # Apply config from arguments
+    app_config.processing_date_range = "22-08-15.00-00T24-10-30.00-00"
+    # config.do_not_fetch_prices = args.do_not_fetch_prices
+    # seed(42)
+    # np.random.seed(42)
+    while True:
+        shuffle(quarters)
+        for start, end in quarters:
+            log_d(f'quarter start:{start} end:{end}##########################################')
+            app_config.processing_date_range = date_range_to_string(start=start, end=end)
+            for symbol in [
+                'BTCUSDT',
+                # # # 'ETHUSDT',
+                # 'BNBUSDT',
+                # 'EOSUSDT',
+                # # 'TRXUSDT',
+                # 'TONUSDT',
+                # # 'SOLUSDT',
+            ]:
+                log_d(f'Symbol:{symbol}##########################################')
+                app_config.under_process_symbol = symbol
+
+                Xs, ys = read_batch_zip(master_x_shape, batch_size)
+                train_model(input_x=Xs, input_y=ys, x_shape=master_x_shape, batch_size=batch_size, cnn_filters=16,
+                            lstm_units_list=[64 * 12, 8 * 12], dense_units=32 * 12, cnn_count=2 * 12,
+                            cnn_kernel_growing_steps=2,
+                            dropout_rate=0.3, rebuild_model=False, epochs=10)
+
+if __name__ == "__main__":
+    run_trainer()

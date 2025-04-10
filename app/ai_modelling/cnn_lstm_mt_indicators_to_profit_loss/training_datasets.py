@@ -1,9 +1,8 @@
-import hashlib
-import json
+import logging
 import os
 import pickle
 import random
-import re
+import sys
 import textwrap
 import zipfile
 from datetime import timedelta, datetime
@@ -18,15 +17,20 @@ from plotly.subplots import make_subplots
 from Config import app_config
 from FigurePlotter.plotter import show_and_save_plot
 from PanderaDFM import MultiTimeframe
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import overlapped_quarters, master_x_shape, dataset_folder
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.classic_indicators import add_classic_indicators, \
     classic_indicator_columns, scaleless_indicators
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.profit_loss.profit_loss_adder import \
     add_long_n_short_profit
+from data_processing.ohlcv import read_multi_timeframe_ohlcv
+from helper.br_py.br_py.base import sync_br_lib_init
 from helper.br_py.br_py.do_log import log_d
 from helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
-from helper.functions import date_range, get_size
+from helper.functions import date_range, date_range_to_string
 from helper.importer import pt
 
+
+# (tf) brais@Behrooz:/mnt/c/Code/DL-Forecasting$ PYTHONPATH=/mnt/c/Code/DL-Forecasting/app/ python /mnt/c/Code/DL-Forecasting/app/ai_modelling/cnn_lstm_mt_indicators_to_profit_loss/training_datasets.py
 
 def slice_indicators(timeframes_df_dict: Dict[str, pd.DataFrame], end_time: datetime, length: int) \
         -> Dict[str, pd.DataFrame]:
@@ -436,34 +440,6 @@ def scaler_trainer(slices: Dict[str, pd.DataFrame], mean_atr: float, close: floa
     return price_scale, price_shift, volume_scale, obv_scale, obv_shift
 
 
-master_x_shape = {
-    'structure': (127, 5),
-    'pattern': (253, 5),
-    'trigger': (254, 5),
-    'double': (255, 5),
-    'indicators': (129, 12),
-}
-
-
-def sanitize_filename(filename: str) -> str:
-    filename = re.sub(r'[\s]', '', filename)
-    filename = re.sub(r'[{}\[\]<>:"/\\|?*]', '_', filename)
-    filename = re.sub(r'_+', '_', filename)  # collapse multiple underscores
-    filename = re.sub(r'^_', '', filename)  # collapse multiple underscores
-    filename = re.sub(r'_$', '', filename)  # collapse multiple underscores
-    filename = filename.replace('_,_', '_')  # collapse multiple underscores
-    return filename
-
-
-def dataset_folder(x_shape: Dict[str, Tuple[int, int]], batch_size: int, create: bool = False) -> str:
-    serialized = json.dumps({"x_shape": x_shape, "batch_size": batch_size})
-    folder_name = sanitize_filename(serialized)
-    folder_path = os.path.join(app_config.path_of_data, folder_name)
-    if create and not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-    return folder_name
-
-
 def save_validators_to_zip(X_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame], y_timeframe: str,
                            y_tester_dfs: List[pd.DataFrame], folder_name: str, symbol: str) -> None:
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -496,34 +472,53 @@ def save_batch_zip(Xs: Dict[str, np.ndarray], ys: np.ndarray, folder_name: str, 
     zip_file_path = os.path.join(app_config.path_of_data, folder_name, zip_file_name)
 
     with zipfile.ZipFile(zip_file_path, 'w') as zipf:
-        for key in Xs:
-            zipf.writestr(f'Xs-{key}.npy', Xs[key].tobytes())
-        zipf.writestr('ys.npy', ys.tobytes())
+        # for key in Xs:
+        #     zipf.writestr(f'Xs-{key}.npy', Xs[key].tobytes())
+        zipf.writestr('X_dfs.pkl', pickle.dumps(Xs))
+        zipf.writestr('ys.pkl', pickle.dumps(ys))
 
 
-def read_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int) \
-        -> Tuple[Dict[str, np.ndarray], np.ndarray]:
-    folder_name = dataset_folder(x_shape, batch_size)
-    folder_path: str = os.path.join(app_config.path_of_data, folder_name)
+def training_dataset_main():
+    log_d("Starting")
+    sync_br_lib_init(path_of_logs='logs', root_path=app_config.root_path, log_to_file_level=logging.DEBUG,
+                     log_to_std_out_level=logging.DEBUG)
+    # parser = argparse.ArgumentParser(description="Script for processing OHLCV data.")
+    # args = parser.parse_args()
+    app_config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
+                                                            end=pd.to_datetime('09-01-24'))
+    quarters = overlapped_quarters(app_config.processing_date_range)
+    mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
+    batch_size = 200
 
-    files = [f for f in os.listdir(folder_path) if f.startswith('dataset-')]
-    if not files:
-        raise ValueError("No dataset files found!")
+    # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
+    #                     help="Flag to indicate if prices should not be fetched (default: False).")
+    print("Python:" + sys.version)
 
-    picked_file = random.choice(files)
-    file_path = os.path.join(app_config.path_of_data, folder_name, picked_file)
-    Xs: Dict[str, np.ndarray] = {}
-    with zipfile.ZipFile(file_path, 'r') as zipf:
-        for name in zipf.namelist():
-            if name.startswith('Xs-') and name.endswith('.npy'):
-                key: str = name[3:-4]
-                with zipf.open(name) as f:
-                    arr: np.ndarray = np.frombuffer(f.read(), dtype=np.float32)
-                    shape_key = 'indicators' if 'indicators' in key else key
-                    Xs[key] = arr.reshape(-1, *x_shape[shape_key])
-        with zipf.open('ys.npy') as f:
-            ys: np.ndarray = np.frombuffer(f.read(), dtype=np.float32)
-            # ys = ys.reshape(-1, *y_shape)
+    # Apply config from arguments
+    app_config.processing_date_range = "22-08-15.00-00T24-10-30.00-00"
+    # config.do_not_fetch_prices = args.do_not_fetch_prices
+    # seed(42)
+    # np.random.seed(42)
 
-    log_d(f"Xs dataset size: {str(get_size(Xs))}")
-    return Xs, ys
+    while True:
+        random.shuffle(quarters)
+        for start, end in quarters:
+            log_d(f'quarter start:{start} end:{end}##########################################')
+            app_config.processing_date_range = date_range_to_string(start=start, end=end)
+            for symbol in [
+                'BTCUSDT',
+                # # # 'ETHUSDT',
+                # 'BNBUSDT',
+                # 'EOSUSDT',
+                # # 'TRXUSDT',
+                # 'TONUSDT',
+                # # 'SOLUSDT',
+            ]:
+                log_d(f'Symbol:{symbol}##########################################')
+                app_config.under_process_symbol = symbol
+                generate_batch(batch_size, mt_ohlcv, master_x_shape)
+
+
+if __name__ == "__main__":
+    training_dataset_main()
+
