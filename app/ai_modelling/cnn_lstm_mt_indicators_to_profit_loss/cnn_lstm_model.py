@@ -28,7 +28,7 @@ class CNNLSTMModel(tf_keras.models.Model):
         self.concat = tf_keras.layers.Concatenate()
         self.combined_dense = tf_keras.layers.Dense(256)
         self.leaky_relu = tf_keras.layers.LeakyReLU()
-        self.final_output = tf_keras.layers.Dense(np.prod(y_shape), activation='linear')
+        self.final_output = tf_keras.layers.Dense(np.prod(y_shape), activation='linear', dtype='float32')
         self.reshape_output = tf_keras.layers.Reshape(y_shape)
 
     def call(self, inputs):
@@ -93,6 +93,7 @@ class CNNLSTMLayer(tf_keras.layers.Layer):
                  cnn_count=2,
                  cnn_kernel_growing_steps=2, dropout_rate=0.05):
         super(CNNLSTMLayer, self).__init__(name=f"{model_prefix}_layer")
+        self.model_prefix = model_prefix
         if lstm_units_list is None:
             lstm_units_list = [64, ]
         self.target_shape = output_shape
@@ -123,7 +124,7 @@ class CNNLSTMLayer(tf_keras.layers.Layer):
         self.dense1 = tf_keras.layers.Dense(dense_units, activation='relu', name=f'{model_prefix}_dense1')
         self.dropout_dense1 = tf_keras.layers.Dropout(dropout_rate, name=f'{model_prefix}_dropout_dense1')
         self.output_layer = tf_keras.layers.Dense(np.prod(output_shape), activation='linear',
-                                                  name=f'{model_prefix}_output')
+                                                  name=f'{model_prefix}_output', dtype='float32')
 
     def call(self, inputs):
         x = inputs
@@ -145,6 +146,9 @@ class CNNLSTMLayer(tf_keras.layers.Layer):
         self.conv_layers[0].build(input_shape)
         self.shape_of_input = input_shape
         super().build(input_shape)
+        for layer in self._layers:
+            print(layer.name, layer.dtype_policy)
+        nop = 1
 
     def get_config(self):
         config = super(CNNLSTMLayer, self).get_config()

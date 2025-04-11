@@ -1,10 +1,7 @@
 import logging
-import os
-import pickle
 import random
 import sys
 import textwrap
-import zipfile
 from datetime import timedelta, datetime
 from typing import List, Dict, Tuple
 
@@ -17,7 +14,8 @@ from plotly.subplots import make_subplots
 from Config import app_config
 from FigurePlotter.plotter import show_and_save_plot
 from PanderaDFM import MultiTimeframe
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import overlapped_quarters, master_x_shape, dataset_folder
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import overlapped_quarters, master_x_shape, dataset_folder, \
+    save_batch_zip, load_batch_zip, save_validators_zip, load_validators_zip
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.classic_indicators import add_classic_indicators, \
     classic_indicator_columns, scaleless_indicators
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.profit_loss.profit_loss_adder import \
@@ -440,19 +438,6 @@ def scaler_trainer(slices: Dict[str, pd.DataFrame], mean_atr: float, close: floa
     return price_scale, price_shift, volume_scale, obv_scale, obv_shift
 
 
-def save_validators_to_zip(X_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame], y_timeframe: str,
-                           y_tester_dfs: List[pd.DataFrame], folder_name: str, symbol: str) -> None:
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    zip_file_name = f"validators-{symbol}-{timestamp}.zip"
-    zip_file_path = os.path.join(app_config.path_of_data, folder_name, zip_file_name)
-
-    with zipfile.ZipFile(zip_file_path, 'w') as zipf:
-        zipf.writestr('X_dfs.pkl', pickle.dumps(X_dfs))
-        zipf.writestr('y_dfs.pkl', pickle.dumps(y_dfs))
-        zipf.writestr('y_timeframe.pkl', pickle.dumps(y_timeframe))
-        zipf.writestr('y_tester_dfs.pkl', pickle.dumps(y_tester_dfs))
-
-
 def generate_batch(batch_size: int, mt_ohlcv: pt.DataFrame[MultiTimeframe],
                    x_shape: Dict[str, Tuple[int, int]]) -> None:
     Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
@@ -461,21 +446,45 @@ def generate_batch(batch_size: int, mt_ohlcv: pt.DataFrame[MultiTimeframe],
             forecast_trigger_bars=3 * 4 * 4 * 4 * 1, only_actionable=True, ))
     folder_name = dataset_folder(x_shape, batch_size, create=True)
     save_batch_zip(Xs, ys, folder_name, app_config.under_process_symbol)
-    save_validators_to_zip(X_dfs, y_dfs, y_timeframe, y_tester_dfs, folder_name,
-                           app_config.under_process_symbol)
+    save_validators_zip(X_dfs, y_dfs, y_timeframe, y_tester_dfs, folder_name,
+                        app_config.under_process_symbol)
     #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
 
 
-def save_batch_zip(Xs: Dict[str, np.ndarray], ys: np.ndarray, folder_name: str, symbol: str, ) -> None:
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    zip_file_name = f"dataset-{symbol}-{timestamp}.zip"
-    zip_file_path = os.path.join(app_config.path_of_data, folder_name, zip_file_name)
+def dataset_scale(batch_size: int,
+                  # mt_ohlcv: pt.DataFrame[MultiTimeframe],
+                  x_shape: Dict[str, Tuple[int, int]], number_of_batches=100):
+    all_ys = None  # We'll accumulate all ys arrays here
 
-    with zipfile.ZipFile(zip_file_path, 'w') as zipf:
-        # for key in Xs:
-        #     zipf.writestr(f'Xs-{key}.npy', Xs[key].tobytes())
-        zipf.writestr('X_dfs.pkl', pickle.dumps(Xs))
-        zipf.writestr('ys.pkl', pickle.dumps(ys))
+    for i in range(number_of_batches):
+        Xs, ys = load_batch_zip(x_shape, batch_size, n=i)
+        if i == 0:
+            X_dfs, y_dfs, y_timeframe, y_tester_dfs = load_validators_zip(x_shape, batch_size, n=i)
+
+        if i == 0:
+            all_ys = ys
+        else:
+            all_ys = np.concatenate([all_ys, ys], axis=0)
+    names = y_dfs[0].axes[0].to_list()
+    ys_mean, ys_std = ndarray_stats(all_ys, names)
+    return (
+        # np.mean(Xs_batches, axis=0), np.std(Xs_batches, axis=0),
+        ys_mean, ys_std
+    )
+
+
+def ndarray_stats(input_array: np.ndarray, names):
+    ys_mean = np.mean(input_array, axis=0)
+    ys_std = np.std(input_array, axis=0)
+    ys_min = np.min(input_array, axis=0)
+    ys_max = np.max(input_array, axis=0)
+    df_stats = pd.DataFrame({
+        'min': ys_min,
+        'max': ys_max,
+        'mean': ys_mean,
+        'std': ys_std
+    }, index=names)
+    return df_stats
 
 
 def training_dataset_main():
@@ -516,9 +525,13 @@ def training_dataset_main():
             ]:
                 log_d(f'Symbol:{symbol}##########################################')
                 app_config.under_process_symbol = symbol
-                generate_batch(batch_size, mt_ohlcv, master_x_shape)
+                y_m, y_s = dataset_scale(batch_size=batch_size,
+                                         # mt_ohlcv=mt_ohlcv,
+                                         x_shape=master_x_shape,
+                                         number_of_batches=160)
+                print(f"ys mean:{y_m}, std{y_s}")
+                # generate_batch(batch_size, mt_ohlcv, master_x_shape)
 
 
 if __name__ == "__main__":
     training_dataset_main()
-
