@@ -213,3 +213,10 @@ def run_trainer():
 
 if __name__ == "__main__":
     run_trainer()
+
+# todo: check input_y data:
+#  + there are duplicate columns: ['long_signal', 'short_signal', 'min_low', 'max_high', 'long_profit',
+#        'short_profit', 'long_risk', 'short_risk', 'long_drawdown',
+#        'short_drawdown', 'long_drawdown', 'short_drawdown']
+#  + are all of these required?
+#  + does loss function calculates deviation correctly?
