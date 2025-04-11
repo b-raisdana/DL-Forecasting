@@ -69,8 +69,8 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
 
     input_y = input_y.astype('float32')
 
-    policy = tf_keras.mixed_precision.Policy('mixed_float16')
-    tf_keras.mixed_precision.set_global_policy(policy)
+    # policy = tf_keras.mixed_precision.Policy('mixed_float16')
+    # tf_keras.mixed_precision.set_global_policy(policy)
     # Check if a GPU is available
     if len(tf_config.list_physical_devices('GPU')) == 0:
         print("No GPU found, using CPU.")
@@ -177,7 +177,7 @@ def run_trainer():
     app_config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
                                                             end=pd.to_datetime('09-01-24'))
     quarters = overlapped_quarters(app_config.processing_date_range)
-    batch_size = 200
+    batch_size = 20
     # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
     #                     help="Flag to indicate if prices should not be fetched (default: False).")
     print("Python:" + sys.version)
