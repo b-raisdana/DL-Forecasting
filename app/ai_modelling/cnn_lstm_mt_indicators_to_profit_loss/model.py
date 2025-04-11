@@ -208,7 +208,7 @@ def run_trainer():
                 train_model(input_x=Xs, input_y=ys, x_shape=master_x_shape, batch_size=batch_size, cnn_filters=16,
                             lstm_units_list=[64 * 12, 8 * 12], dense_units=32 * 12, cnn_count=1 * 12,
                             cnn_kernel_growing_steps=2,
-                            dropout_rate=0.3, rebuild_model=False, epochs=10, steps_per_epoch=1)
+                            dropout_rate=0.3, rebuild_model=False, epochs=10, steps_per_epoch=5)
 
 
 if __name__ == "__main__":
@@ -220,3 +220,4 @@ if __name__ == "__main__":
 #        'short_drawdown', 'long_drawdown', 'short_drawdown']
 #  + are all of these required?
 #  + does loss function calculates deviation correctly?
+#  + optimize GPU usage currently is about 5%
