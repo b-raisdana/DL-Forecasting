@@ -47,10 +47,11 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
     from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMModel
 
     def model_compile(t_model: tf_keras.Model) -> tf_keras.Model:
-        opt = tf_keras.optimizers.RMSprop(clipvalue=1.0)
+        # opt = tf_keras.optimizers.RMSprop(clipvalue=1.0)
+        opt = tf_keras.optimizers.RMSprop(clipnorm=1.0)
         opt = tf_keras.mixed_precision.LossScaleOptimizer(opt)
-        t_model.compile(loss='mse', optimizer=opt)
-        # t_model.compile(loss=tf_keras.losses.Huber(), optimizer=opt)
+        # t_model.compile(loss='mse', optimizer=opt)
+        t_model.compile(loss=tf_keras.losses.Huber(), optimizer=opt)
         return t_model
 
     class CustomEpochLogger(tf_keras.callbacks.Callback):
@@ -69,8 +70,8 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
 
     input_y = input_y.astype('float32')
 
-    # policy = tf_keras.mixed_precision.Policy('mixed_float16')
-    # tf_keras.mixed_precision.set_global_policy(policy)
+    policy = tf_keras.mixed_precision.Policy('mixed_float16')
+    tf_keras.mixed_precision.set_global_policy(policy)
     # Check if a GPU is available
     if len(tf_config.list_physical_devices('GPU')) == 0:
         print("No GPU found, using CPU.")
@@ -113,11 +114,15 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
                                                                 restore_best_weights=True)
     epoch_logger: callable = CustomEpochLogger()
     tensorboard = setup_tensorboard()
-    stats = ndarray_stats(np.array(input_y), ['long_signal', 'short_signal', 'min_low', 'max_high', 'long_profit',
-       'short_profit', 'long_risk', 'short_risk', 'long_drawdown',
-       'short_drawdown', 'long_drawdown', 'short_drawdown'])
+    stats = ndarray_stats(np.array(input_y), ['long_signal', 'short_signal',
+                                              # 'min_low', 'max_high', 'long_profit',
+                                              # 'short_profit', 'long_risk', 'short_risk', 'long_drawdown',
+                                              # 'short_drawdown', 'long_drawdown', 'short_drawdown'
+                                              ])
     print("input_y stats:")
     print(stats)
+    # make sure input_y is between 0 and 1
+    input_y = (input_y.clip(max=4)/4).astype('float32')
     history = model.fit(x={
         'structure': input_x['structure'],
         'pattern': input_x['pattern'],
@@ -128,8 +133,9 @@ def train_model(input_x: Dict[str, pd.DataFrame], input_y: pd.DataFrame, x_shape
         'trigger_indicators': input_x['trigger-indicators'],
         'double_indicators': input_x['double-indicators'],
     },
-        y=input_y, epochs=epochs, batch_size=int(batch_size / steps_per_epoch), validation_split=0.2,
-        steps_per_epoch=steps_per_epoch,
+        y=input_y, epochs=epochs, validation_split=0.2,
+        # batch_size=int(batch_size / steps_per_epoch),
+        # steps_per_epoch=steps_per_epoch,
         # Use a portion of your data for validation
         callbacks=[early_stopping, epoch_logger, tensorboard])
     log_d(history)
@@ -177,7 +183,7 @@ def run_trainer():
     app_config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
                                                             end=pd.to_datetime('09-01-24'))
     quarters = overlapped_quarters(app_config.processing_date_range)
-    batch_size = 20
+    batch_size = 100 * 8
     # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
     #                     help="Flag to indicate if prices should not be fetched (default: False).")
     print("Python:" + sys.version)
@@ -205,10 +211,10 @@ def run_trainer():
                 app_config.under_process_symbol = symbol
 
                 Xs, ys = load_batch_zip(master_x_shape, batch_size)
-                train_model(input_x=Xs, input_y=ys, x_shape=master_x_shape, batch_size=batch_size, cnn_filters=16,
-                            lstm_units_list=[64 * 12, 8 * 12], dense_units=32 * 12, cnn_count=1 * 12,
+                train_model(input_x=Xs, input_y=ys, x_shape=master_x_shape, batch_size=batch_size, cnn_filters=8,
+                            lstm_units_list=[512, 128], dense_units=128, cnn_count=4,
                             cnn_kernel_growing_steps=2,
-                            dropout_rate=0.3, rebuild_model=False, epochs=10, steps_per_epoch=5)
+                            dropout_rate=0.3, rebuild_model=False, epochs=100, steps_per_epoch=50)
 
 
 if __name__ == "__main__":

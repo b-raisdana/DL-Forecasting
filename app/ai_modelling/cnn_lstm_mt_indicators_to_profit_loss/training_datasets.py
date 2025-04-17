@@ -122,8 +122,8 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
             continue
         (sc_double_slice, sc_indicators_slice, sc_pattern_slice, sc_prediction, sc_prediction_testing_slice,
          sc_structure_slice, sc_trigger_slice) = \
-            scaling(structure_slice, pattern_slice, trigger_slice, double_slice, prediction, indicators_slice,
-                    prediction_testing_slice, training_x_columns)
+            normalize(structure_slice, pattern_slice, trigger_slice, double_slice, prediction, indicators_slice,
+                      prediction_testing_slice, training_x_columns)
         if (
                 len(np.array(sc_double_slice[training_x_columns])) != x_shape['double'][0]
                 or len(np.array(sc_trigger_slice[training_x_columns])) != x_shape['trigger'][0]
@@ -156,9 +156,10 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
         Xs['structure'].append(np.array(x_dfs['structure'][-1]))
         for timeframe in ['structure', 'pattern', 'trigger', 'double']:
             Xs[f'{timeframe}-indicators'].append(np.array(x_dfs[f'{timeframe}-indicators'][-1]))
+        # sc_prediction = sc_prediction[['short_signal', 'long_signal']]
         y_dfs.append(sc_prediction)
         y_tester_dfs.append(sc_prediction_testing_slice)
-        ys.append(np.array(y_dfs[-1]))
+        ys.append(np.array(y_dfs[-1][['short_signal', 'long_signal']]))
         remained_samples -= 1
         if (remained_samples % 10) == 0 and remained_samples > 0:
             log_d(f'Remained Samples {remained_samples}/{batch_size}')
@@ -190,15 +191,16 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
 
 def shape_assertion(Xs: Dict[str, np.ndarray], x_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame],
                     y_tester_dfs: List[pd.DataFrame], ys: np.ndarray, x_shape: Dict[str, Tuple[int, int]],
-                    batch_size: int = 120, dataset_batched: int = 100, forecast_trigger_bars: int = 192) -> None:
+                    batch_size: int = 120, dataset_batched: int = 100, forecast_trigger_bars: int = 192,
+                    y_parameters=2, y_df_parameters = 12) -> None:
     """
     x_shape = {'double': (255, 5), 'indicators': (129,), 'pattern': (253, 5), 'structure': (127, 5), 'trigger': (254, 5)}
     """
     b_l = batch_size * dataset_batched
     # i_l = x_shape['indicators']
     x_shape_assertion(Xs, b_l, x_shape)
-    if get_shape(ys) != (b_l, 12):
-        raise AssertionError("get_shape(ys) != (b_l, 12)")
+    if get_shape(ys) != (b_l, y_parameters):
+        raise AssertionError(f"get_shape(ys) != (b_l, {y_parameters})")
     from deepdiff import DeepDiff
     if DeepDiff(get_shape(x_dfs), {
         'double': [b_l, x_shape['double']], 'trigger': [b_l, x_shape['trigger']],
@@ -209,8 +211,8 @@ def shape_assertion(Xs: Dict[str, np.ndarray], x_dfs: Dict[str, List[pd.DataFram
         'double-indicators': [b_l, x_shape['indicators']],
     }) != {}:
         raise AssertionError("DeepDiff(get_shape(x_dfs), {")
-    if get_shape(y_dfs) != [b_l, (12,)]:
-        raise AssertionError("get_shape(y_dfs) != [b_l, (12,)]")
+    if get_shape(y_dfs) != [b_l, (y_df_parameters,)]:
+        raise AssertionError(f"get_shape(y_dfs) != [b_l, ({y_parameters},)]")
     if get_shape(y_tester_dfs) != [b_l, (forecast_trigger_bars, 5)]:
         raise AssertionError("get_shape(y_tester_dfs) != [b_l, (forecast_trigger_bars, 5)]")  # todo: this happens!
 
@@ -259,9 +261,9 @@ def get_shape(obj):
         return None  # Base case for non-iterables
 
 
-def scaling(structure_slice: pd.DataFrame, pattern_slice: pd.DataFrame, trigger_slice: pd.DataFrame,
-            double_slice: pd.DataFrame, prediction: pd.DataFrame, indicators_slice: Dict[str, pd.DataFrame],
-            prediction_testing_slice: pd.DataFrame, training_x_columns: List[str]) \
+def normalize(structure_slice: pd.DataFrame, pattern_slice: pd.DataFrame, trigger_slice: pd.DataFrame,
+              double_slice: pd.DataFrame, prediction: pd.DataFrame, indicators_slice: Dict[str, pd.DataFrame],
+              prediction_testing_slice: pd.DataFrame, training_x_columns: List[str]) \
         -> Tuple[pd.DataFrame, Dict[str, pd.DataFrame], pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame,
         pd.DataFrame]:
     price_scale, price_shift, volume_scale, obv_scale, obv_shift = scaler_trainer(
@@ -497,7 +499,7 @@ def training_dataset_main():
                                                             end=pd.to_datetime('09-01-24'))
     quarters = overlapped_quarters(app_config.processing_date_range)
     mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
-    batch_size = 20
+    batch_size = 100 * 8
 
     # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
     #                     help="Flag to indicate if prices should not be fetched (default: False).")
@@ -525,12 +527,12 @@ def training_dataset_main():
             ]:
                 log_d(f'Symbol:{symbol}##########################################')
                 app_config.under_process_symbol = symbol
-                y_m, y_s = dataset_scale(batch_size=batch_size,
-                                         # mt_ohlcv=mt_ohlcv,
-                                         x_shape=master_x_shape,
-                                         number_of_batches=160)
-                print(f"ys mean:{y_m}, std{y_s}")
-                # generate_batch(batch_size, mt_ohlcv, master_x_shape)
+                # y_m, y_s = dataset_scale(batch_size=batch_size,
+                #                          # mt_ohlcv=mt_ohlcv,
+                #                          x_shape=master_x_shape,
+                #                          number_of_batches=160)
+                # print(f"ys mean:{y_m}, std{y_s}")
+                generate_batch(batch_size, mt_ohlcv, master_x_shape)
 
 
 if __name__ == "__main__":

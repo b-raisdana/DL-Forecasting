@@ -183,7 +183,7 @@ def sanitize_filename(filename: str) -> str:
     return filename
 
 
-def scale_dataset_zip(
+def zz_scale_dataset_zip(
     batch_size: int,
     x_shape: Dict[str, Tuple[int, int]],
     scale_factor: float = 50.0
