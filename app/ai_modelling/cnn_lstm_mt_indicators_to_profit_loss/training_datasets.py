@@ -444,12 +444,13 @@ def generate_batch(batch_size: int, mt_ohlcv: pt.DataFrame[MultiTimeframe],
                    x_shape: Dict[str, Tuple[int, int]]) -> None:
     Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
         train_data_of_mt_n_profit(
-            structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=batch_size, dataset_batches=2,
+            structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=batch_size, dataset_batches=1,
             forecast_trigger_bars=3 * 4 * 4 * 4 * 1, only_actionable=True, ))
     folder_name = dataset_folder(x_shape, batch_size, create=True)
-    save_batch_zip(Xs, ys, folder_name, app_config.under_process_symbol)
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    save_batch_zip(Xs, ys, folder_name, app_config.under_process_symbol, timestamp)
     save_validators_zip(X_dfs, y_dfs, y_timeframe, y_tester_dfs, folder_name,
-                        app_config.under_process_symbol)
+                        app_config.under_process_symbol, timestamp)
     #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
 
 
@@ -499,7 +500,7 @@ def training_dataset_main():
                                                             end=pd.to_datetime('09-01-24'))
     quarters = overlapped_quarters(app_config.processing_date_range)
     mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
-    batch_size = 100 * 8
+    batch_size = 100 * 64
 
     # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
     #                     help="Flag to indicate if prices should not be fetched (default: False).")

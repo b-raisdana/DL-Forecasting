@@ -34,8 +34,7 @@ master_x_shape = {
 }
 
 
-def save_batch_zip(Xs: Dict[str, np.ndarray], ys: np.ndarray, folder_name: str, symbol: str, ) -> None:
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+def save_batch_zip(Xs: Dict[str, np.ndarray], ys: np.ndarray, folder_name: str, symbol: str, timestamp) -> None:
     zip_file_name = f"dataset-{symbol}-{timestamp}.zip"
     zip_file_path = os.path.join(app_config.path_of_data, folder_name, zip_file_name)
 
@@ -72,8 +71,7 @@ def load_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int, n=None)
 
 
 def save_validators_zip(X_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame], y_timeframe: str,
-                        y_tester_dfs: List[pd.DataFrame], folder_name: str, symbol: str) -> None:
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+                        y_tester_dfs: List[pd.DataFrame], folder_name: str, symbol: str, timestamp) -> None:
     zip_file_name = f"validators-{symbol}-{timestamp}.zip"
     zip_file_path = os.path.join(app_config.path_of_data, folder_name, zip_file_name)
 

@@ -5,10 +5,10 @@ from br_py.do_log import log_e
 
 
 class CNNLSTMModel(tf_keras.models.Model):
-    def __init__(self, y_shape: tuple, cnn_filters=64, lstm_units_list=None, dense_units=64, cnn_count=2,
+    def __init__(self, y_len: int, cnn_filters=64, lstm_units_list=None, dense_units=64, cnn_count=2,
                  cnn_kernel_growing_steps=2, dropout_rate=0.3, **kwargs):
         super(CNNLSTMModel, self).__init__(name="CNNLSTM_Model", **kwargs)
-        self.y_shape = y_shape
+        self.y_len = y_len
         self.cnn_filters = cnn_filters
         self.lstm_units_list = lstm_units_list
         self.dense_units = dense_units
@@ -21,15 +21,15 @@ class CNNLSTMModel(tf_keras.models.Model):
             key: CNNLSTMLayer(model_prefix=f"{key}_cnn_lstm_layer", dropout_rate=dropout_rate,
                               cnn_filters=cnn_filters, lstm_units_list=lstm_units_list, dense_units=dense_units,
                               cnn_count=cnn_count, cnn_kernel_growing_steps=cnn_kernel_growing_steps,
-                              output_shape=y_shape)
+                              output_shape=(y_len,))
             for key in ['structure', 'pattern', 'trigger', 'double', 'structure_indicators', 'pattern_indicators',
                         'trigger_indicators', 'double_indicators']
         }
         self.concat = tf_keras.layers.Concatenate()
         self.combined_dense = tf_keras.layers.Dense(256)
         self.leaky_relu = tf_keras.layers.LeakyReLU()
-        self.final_output = tf_keras.layers.Dense(np.prod(y_shape), activation='linear', dtype='float32')
-        self.reshape_output = tf_keras.layers.Reshape(y_shape)
+        self.final_output = tf_keras.layers.Dense(y_len, activation='linear', dtype='float32')
+        self.reshape_output = tf_keras.layers.Reshape((y_len,))
 
     def call(self, inputs):
         missing_keys = [key for key in self.submodels if key not in inputs]
@@ -63,7 +63,7 @@ class CNNLSTMModel(tf_keras.models.Model):
     def get_config(self):
         config = super(CNNLSTMModel, self).get_config()
         config.update({
-            "y_shape": self.y_shape,  # Include all parameters needed for construction
+            "y_shape": self.y_len,  # Include all parameters needed for construction
             "cnn_filters": self.cnn_filters,
             "lstm_units_list": self.lstm_units_list,
             "dense_units": self.dense_units,
@@ -119,7 +119,7 @@ class CNNLSTMLayer(tf_keras.layers.Layer):
         for i, lstm_units in enumerate(lstm_units_list):
             return_seq = i < len(lstm_units_list) - 1
             self.lstm_layers.append(tf_keras.layers.LSTM(lstm_units, return_sequences=return_seq,
-                                                         name=f'{model_prefix}_lstm{i + 1}'))
+                                                         name=f'{model_prefix}_lstm{i + 1}', implementation=2))
         # Dense Layers
         self.dense1 = tf_keras.layers.Dense(dense_units, activation='relu', name=f'{model_prefix}_dense1')
         self.dropout_dense1 = tf_keras.layers.Dropout(dropout_rate, name=f'{model_prefix}_dropout_dense1')
