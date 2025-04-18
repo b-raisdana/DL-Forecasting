@@ -5,7 +5,7 @@ import random
 import re
 import zipfile
 from datetime import timedelta, datetime
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Iterator
 
 import numpy as np
 import pandas as pd
@@ -47,7 +47,7 @@ def save_batch_zip(Xs: Dict[str, np.ndarray], ys: np.ndarray, folder_name: str, 
 
 def load_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int, n=None) \
         -> Tuple[Dict[str, np.ndarray], np.ndarray]:
-    folder_name = dataset_folder(x_shape, batch_size)
+    folder_name = dataset_folder(x_shape, 400)
     folder_path: str = os.path.join(app_config.path_of_data, folder_name)
 
     files = [f for f in os.listdir(folder_path) if f.startswith('dataset-') and f.endswith('.zip')]
@@ -68,6 +68,43 @@ def load_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int, n=None)
 
     log_d(f"Loaded zip file(n={n}): {picked_file} Xs dataset size: {str(get_size(Xs))}")
     return Xs, ys
+
+
+def infinite_load_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int) \
+        -> Iterator[Tuple[Dict[str, np.ndarray], np.ndarray]]:
+    folder_name = dataset_folder(x_shape, 400)
+    folder_path: str = os.path.join(app_config.path_of_data, folder_name)
+    cached_xs = {}
+    cached_ys = None
+    while True:
+        files = [f for f in os.listdir(folder_path) if f.startswith('dataset-') and f.endswith('.zip')]
+        if not files:
+            raise ValueError("No dataset files found!")
+        random.shuffle(files)
+        for picked_file in files:
+            file_path = os.path.join(folder_path, picked_file)
+            with zipfile.ZipFile(file_path, 'r') as zipf:
+                with zipf.open('X_dfs.pkl') as f:
+                    Xs: Dict[str, np.ndarray] = pickle.load(f)
+                with zipf.open('ys.pkl') as f:
+                    ys: np.ndarray = pickle.load(f)
+            for key, value in Xs.items():
+                if key in cached_xs:
+                    cached_xs[key] = np.concatenate([cached_xs[key], value], axis=0)
+                else:
+                    cached_xs[key] = value
+            if cached_ys is None:
+                cached_ys = ys
+            else:
+                cached_ys = np.concatenate([cached_ys, ys], axis=0)
+            if len(cached_ys) >= batch_size:
+                picked_xs = {}
+                for key in cached_xs:
+                    picked_xs[key] = cached_xs[key][:batch_size]
+                    cached_xs[key] = cached_xs[key][batch_size:]
+                picked_ys = cached_ys[:batch_size]
+                cached_ys = cached_ys[batch_size:]
+                yield picked_xs, picked_ys
 
 
 def save_validators_zip(X_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame], y_timeframe: str,
@@ -180,46 +217,3 @@ def sanitize_filename(filename: str) -> str:
     filename = filename.replace('_,_', '_')  # collapse multiple underscores
     return filename
 
-
-def zz_scale_dataset_zip(
-    batch_size: int,
-    x_shape: Dict[str, Tuple[int, int]],
-    scale_factor: float = 50.0
-) -> None:
-    folder_name = dataset_folder(x_shape, batch_size)
-    folder_path: str = os.path.join(app_config.path_of_data, folder_name)
-
-    files = [
-        f for f in os.listdir(folder_path)
-        if f.startswith('dataset-') and f.endswith('.zip')
-    ]
-    if not files:
-        raise ValueError(f"No dataset files found in: {folder_path}")
-
-    for i, filename in enumerate(files):
-        old_file_path = os.path.join(folder_path, filename)
-        unscaled_name = f"unscaled_{filename}"
-        unscaled_path = os.path.join(folder_path, unscaled_name)
-
-        # 1) Load existing dataset from the original file
-        Xs, ys = load_batch_zip(x_shape, batch_size, n=i)
-
-        # 2) Scale columns except 6 & 7
-        if ys.ndim == 2 and ys.shape[1] >= 8:  # e.g. shape (N, >=8)
-            for col_id in range(ys.shape[1]):
-                if col_id not in [6, 7]:
-                    ys[:, col_id] /= scale_factor
-        else:
-            log_d(f"Warning: ys shape={ys.shape}; no scaling done for file={filename}")
-
-        # 3) Rename the old file to "unscaled_{filename}"
-        #    so we can reuse the original filename for the new scaled data
-        os.rename(old_file_path, unscaled_path)
-        log_d(f"Renamed '{filename}' -> '{unscaled_name}'")
-
-        # 4) Re-save scaled data with the *same original* filename
-        with zipfile.ZipFile(old_file_path, 'w') as zipf:
-            zipf.writestr('X_dfs.pkl', pickle.dumps(Xs))
-            zipf.writestr('ys.pkl', pickle.dumps(ys))
-
-        log_d(f"Scaled dataset re-saved to: {old_file_path}")

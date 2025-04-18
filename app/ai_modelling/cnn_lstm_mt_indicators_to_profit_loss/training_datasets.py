@@ -500,7 +500,7 @@ def training_dataset_main():
                                                             end=pd.to_datetime('09-01-24'))
     quarters = overlapped_quarters(app_config.processing_date_range)
     mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
-    batch_size = 100 * 64
+    batch_size = 100 * 4
 
     # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
     #                     help="Flag to indicate if prices should not be fetched (default: False).")
@@ -528,11 +528,6 @@ def training_dataset_main():
             ]:
                 log_d(f'Symbol:{symbol}##########################################')
                 app_config.under_process_symbol = symbol
-                # y_m, y_s = dataset_scale(batch_size=batch_size,
-                #                          # mt_ohlcv=mt_ohlcv,
-                #                          x_shape=master_x_shape,
-                #                          number_of_batches=160)
-                # print(f"ys mean:{y_m}, std{y_s}")
                 generate_batch(batch_size, mt_ohlcv, master_x_shape)
 
 

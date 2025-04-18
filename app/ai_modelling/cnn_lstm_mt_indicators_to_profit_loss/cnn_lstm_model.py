@@ -21,9 +21,9 @@ class CNNLSTMModel(tf_keras.models.Model):
             key: CNNLSTMLayer(model_prefix=f"{key}_cnn_lstm_layer", dropout_rate=dropout_rate,
                               cnn_filters=cnn_filters, lstm_units_list=lstm_units_list, dense_units=dense_units,
                               cnn_count=cnn_count, cnn_kernel_growing_steps=cnn_kernel_growing_steps,
-                              output_shape=(y_len,))
-            for key in ['structure', 'pattern', 'trigger', 'double', 'structure_indicators', 'pattern_indicators',
-                        'trigger_indicators', 'double_indicators']
+                              output_shape=(y_len * 8,))
+            for key in ['structure', 'pattern', 'trigger', 'double', 'structure-indicators', 'pattern-indicators',
+                        'trigger-indicators', 'double-indicators']
         }
         self.concat = tf_keras.layers.Concatenate()
         self.combined_dense = tf_keras.layers.Dense(256)
@@ -36,19 +36,14 @@ class CNNLSTMModel(tf_keras.models.Model):
         if missing_keys:
             log_e(f"Missing input keys: {missing_keys}")
             raise ValueError(f"Missing input keys: {missing_keys}")
-        try:
-            sub_outputs = [self.submodels[key](inputs[
-                                                   key
-                                               ]) for key in self.submodels.keys()]
-            x = self.concat(sub_outputs)
-            x = self.combined_dense(x)
-            x = self.leaky_relu(x)
-            x = self.final_output(x)
-            return self.reshape_output(x)
-        except Exception as e:
-            log_e(f"Expected keys:{list(self.submodels.keys())}")
-            log_e(f"Received keys:{list(inputs.keys())}")
-            raise e
+        sub_outputs = [self.submodels[key](inputs[
+                                               key
+                                           ]) for key in self.submodels.keys()]
+        x = self.concat(sub_outputs)
+        x = self.combined_dense(x)
+        x = self.leaky_relu(x)
+        x = self.final_output(x)
+        return self.reshape_output(x)
 
     def build(self, input_shape):
         for key in self.submodels:
@@ -90,8 +85,7 @@ class CNNLSTMModel(tf_keras.models.Model):
 class CNNLSTMLayer(tf_keras.layers.Layer):
 
     def __init__(self, model_prefix, output_shape, cnn_filters=64, lstm_units_list=None, dense_units=64,
-                 cnn_count=2,
-                 cnn_kernel_growing_steps=2, dropout_rate=0.05):
+                 cnn_count=2, cnn_kernel_growing_steps=2, dropout_rate=0.05):
         super(CNNLSTMLayer, self).__init__(name=f"{model_prefix}_layer")
         self.model_prefix = model_prefix
         if lstm_units_list is None:
@@ -114,13 +108,11 @@ class CNNLSTMLayer(tf_keras.layers.Layer):
                 tf_keras.layers.BatchNormalization(name=f'{model_prefix}_batch_norm_conv{i + 1}'))
             self.dropout_layers.append(
                 tf_keras.layers.Dropout(dropout_rate, name=f'{model_prefix}_dropout_conv{i + 1}'))
-        # LSTM Layers
         self.lstm_layers = []
         for i, lstm_units in enumerate(lstm_units_list):
             return_seq = i < len(lstm_units_list) - 1
-            self.lstm_layers.append(tf_keras.layers.LSTM(lstm_units, return_sequences=return_seq,
+            self.lstm_layers.append(tf_keras.layers.LSTM(lstm_units, return_sequences=return_seq,  # dtype='float32',
                                                          name=f'{model_prefix}_lstm{i + 1}', implementation=2))
-        # Dense Layers
         self.dense1 = tf_keras.layers.Dense(dense_units, activation='relu', name=f'{model_prefix}_dense1')
         self.dropout_dense1 = tf_keras.layers.Dropout(dropout_rate, name=f'{model_prefix}_dropout_dense1')
         self.output_layer = tf_keras.layers.Dense(np.prod(output_shape), activation='linear',
@@ -132,7 +124,6 @@ class CNNLSTMLayer(tf_keras.layers.Layer):
             x = conv(x)
             x = bn(x)
             x = dropout(x)
-        # x =  tf_keras.layers.core.Reshape((-1, self.conv_layers[-1].filters))(x)
         for lstm in self.lstm_layers:
             x = lstm(x)
         x = self.dense1(x)
@@ -142,13 +133,11 @@ class CNNLSTMLayer(tf_keras.layers.Layer):
         return x
 
     def build(self, input_shape):
-        # for layer in self.conv_layers:
         self.conv_layers[0].build(input_shape)
         self.shape_of_input = input_shape
         super().build(input_shape)
         for layer in self._layers:
             print(layer.name, layer.dtype_policy)
-        nop = 1
 
     def get_config(self):
         config = super(CNNLSTMLayer, self).get_config()
