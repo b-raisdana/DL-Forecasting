@@ -97,13 +97,14 @@ def infinite_load_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int
                 cached_ys = ys
             else:
                 cached_ys = np.concatenate([cached_ys, ys], axis=0)
-            if len(cached_ys) >= batch_size:
+            while len(cached_ys) >= batch_size:
                 picked_xs = {}
                 for key in cached_xs:
                     picked_xs[key] = cached_xs[key][:batch_size]
                     cached_xs[key] = cached_xs[key][batch_size:]
                 picked_ys = cached_ys[:batch_size]
                 cached_ys = cached_ys[batch_size:]
+                # print(f"Size of cached_ys={len(cached_ys)}")
                 yield picked_xs, picked_ys
 
 

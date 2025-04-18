@@ -91,6 +91,8 @@ def train_model(
             train_dataset,
             validation_data=val_dataset,
             epochs=epochs,
+            steps_per_epoch=128,
+            validation_steps=16,
             callbacks=[early_stopping, epoch_logger, tensorboard])
     else:
         Xs, ys = next(train_dataset)
@@ -102,7 +104,6 @@ def train_model(
             # validation_split=0.2,
             epochs=epochs,
             # batch_size=int(batch_size / steps_per_epoch),
-            # steps_per_epoch=steps_per_epoch,
             # Use a portion of your data for validation
             callbacks=[early_stopping, epoch_logger, tensorboard])
     log_d(history)
@@ -165,24 +166,24 @@ class PrefetchGenerator:
         return item
 
 
-def dataset_generator(mode: Literal['train', 'val'], batch_size: int, val_rate=0.2):
+def dataset_generator( batch_size: int):
     """
     Yields individual samples (not batches). Use `.batch(...)` later in tf.data pipeline.
     Mode must be either 'train' or 'val'.
     """
     from tensorflow import convert_to_tensor, float32 as tf_float32
-    if not isclose(batch_size / ((1 / val_rate) - 1), int(batch_size / ((1 / val_rate) - 1))):
-        raise ValueError(
-            f"Batch size * validation rate should result into integer. "
-            f"nearest batch_size={int(batch_size / ((1 / val_rate) - 1))*((1 / val_rate) - 1)}.")
-    if mode == 'train':
-        samples_to_fetch = batch_size  # int(batch_size * (1 - val_rate))
-    elif mode == 'val':
-        samples_to_fetch = int(batch_size / ((1 / val_rate) - 1))
-    else:
-        raise RuntimeError(f"Unrecognized mode: {mode}")
+    # if not isclose(batch_size / ((1 / val_rate) - 1), int(batch_size / ((1 / val_rate) - 1))):
+    #     raise ValueError(
+    #         f"Batch size * validation rate should result into integer. "
+    #         f"nearest batch_size={int(batch_size / ((1 / val_rate) - 1))*((1 / val_rate) - 1)}.")
+    # if mode == 'train':
+    #     samples_to_fetch = batch_size  # int(batch_size * (1 - val_rate))
+    # elif mode == 'val':
+    #     samples_to_fetch = int(batch_size / ((1 / val_rate) - 1))
+    # else:
+    #     raise RuntimeError(f"Unrecognized mode: {mode}")
     # This can be any source of data — split based on mode
-    loader = infinite_load_batch_zip(x_shape=master_x_shape, batch_size=samples_to_fetch)
+    loader = infinite_load_batch_zip(x_shape=master_x_shape, batch_size=batch_size)
     while True:
         # Load full batch once
         Xs, ys = next(loader)
@@ -209,7 +210,7 @@ def run_trainer():
     batch_size = 100 * 8
     use_dataset = True
     if use_dataset:
-        batch_size = int(batch_size /12.5)
+        batch_size = int(batch_size / 3.125)
     print("Python:" + sys.version)
     model = None
     setup_gpu()
@@ -226,7 +227,7 @@ def run_trainer():
     while True:
         if use_dataset:
             train_dataset = tf_data.Dataset.from_generator(
-                lambda: PrefetchGenerator(lambda: dataset_generator(mode='train', batch_size=batch_size)),
+                lambda: PrefetchGenerator(lambda: dataset_generator(batch_size=batch_size)),
                 output_signature=(
                     x_input,
                     TensorSpec(shape=(None, 2), dtype=tf_float32)
@@ -235,7 +236,7 @@ def run_trainer():
             train_dataset = train_dataset.with_options(threading_options)
 
             val_dataset = tf_data.Dataset.from_generator(
-                lambda: PrefetchGenerator(lambda: dataset_generator(mode='val', batch_size=batch_size)),
+                lambda: PrefetchGenerator(lambda: dataset_generator(batch_size=batch_size)),
                 output_signature=(
                     x_input,
                     TensorSpec(shape=(None, 2), dtype=tf_float32)
