@@ -2,8 +2,7 @@ import logging
 import os
 import sys
 from datetime import datetime
-from math import isclose
-from typing import Dict, Tuple, Literal, Generator
+from typing import Dict, Tuple, Generator
 
 from tensorflow.data import Dataset
 
@@ -22,13 +21,16 @@ def train_model(
         model=None, cnn_filters=64, lstm_units_list: list = None, dense_units=64, cnn_count=3,
         cnn_kernel_growing_steps=2, dropout_rate=0.3, rebuild_model: bool = False, epochs=500,
         dataset_mode: bool = True,
+        steps_per_epoch=20,
+        validation_steps=4,save_freq=None,
 ):
-    import gc
     from tensorflow import keras as tf_keras
     from tensorflow import config as tf_config
 
     from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMModel
 
+    if save_freq is None:
+        save_freq = epochs
     def model_compile(t_model: tf_keras.Model) -> tf_keras.Model:
         opt = tf_keras.optimizers.RMSprop(clipnorm=1.0)
         opt = tf_keras.mixed_precision.LossScaleOptimizer(opt)
@@ -85,27 +87,33 @@ def train_model(
     early_stopping: callable = tf_keras.callbacks.EarlyStopping(monitor='val_loss', patience=50,
                                                                 restore_best_weights=True)
     epoch_logger: callable = CustomEpochLogger()
+    checkpoint_cb = tf_keras.callbacks.ModelCheckpoint(
+        filepath=model_path_keras,
+        save_freq=save_freq,  # integer = # batches
+        verbose=1,
+        save_weights_only=False,
+    )
     tensorboard = setup_tensorboard()
-    if dataset_mode:
-        history = model.fit(
-            train_dataset,
-            validation_data=val_dataset,
-            epochs=epochs,
-            steps_per_epoch=128,
-            validation_steps=16,
-            callbacks=[early_stopping, epoch_logger, tensorboard])
-    else:
-        Xs, ys = next(train_dataset)
-        validation_data = next(val_dataset)
-        history = model.fit(
-            x=Xs,
-            y=ys,
-            validation_data=validation_data,
-            # validation_split=0.2,
-            epochs=epochs,
-            # batch_size=int(batch_size / steps_per_epoch),
-            # Use a portion of your data for validation
-            callbacks=[early_stopping, epoch_logger, tensorboard])
+    # if dataset_mode:
+    history = model.fit(
+        train_dataset,
+        validation_data=val_dataset,
+        epochs=epochs,
+        steps_per_epoch=steps_per_epoch,
+        validation_steps=validation_steps,
+        callbacks=[early_stopping, epoch_logger,
+                   # tensorboard,
+                   checkpoint_cb])
+    # else:
+    #     Xs, ys = next(train_dataset)
+    #     validation_data = next(val_dataset)
+    #     history = model.fit(
+    #         x=Xs, y=ys, validation_data=validation_data,
+    #         # validation_split=0.2,
+    #         epochs=epochs,
+    #         # batch_size=int(batch_size / steps_per_epoch),
+    #         # Use a portion of your data for validation
+    #         callbacks=[early_stopping, epoch_logger, tensorboard, checkpoint_cb])
     log_d(history)
     model.save(model_path_keras)
     log_d("Model saved to disk.")
@@ -166,7 +174,7 @@ class PrefetchGenerator:
         return item
 
 
-def dataset_generator( batch_size: int):
+def dataset_generator(batch_size: int):
     """
     Yields individual samples (not batches). Use `.batch(...)` later in tf.data pipeline.
     Mode must be either 'train' or 'val'.
@@ -224,32 +232,40 @@ def run_trainer():
     threading_options = tf_data.Options()
     threading_options.experimental_threading.private_threadpool_size = 8
     threading_options.experimental_threading.max_intra_op_parallelism = 1
-    while True:
-        if use_dataset:
-            train_dataset = tf_data.Dataset.from_generator(
-                lambda: PrefetchGenerator(lambda: dataset_generator(batch_size=batch_size)),
-                output_signature=(
-                    x_input,
-                    TensorSpec(shape=(None, 2), dtype=tf_float32)
-                )
-            ).prefetch(buffer_size=2)
-            train_dataset = train_dataset.with_options(threading_options)
+    # if use_dataset:
+    train_dataset = tf_data.Dataset.from_generator(
+        lambda: PrefetchGenerator(lambda: dataset_generator(batch_size=batch_size)),
+        output_signature=(
+            x_input,
+            TensorSpec(shape=(None, 2), dtype=tf_float32)
+        )
+    ).prefetch(buffer_size=2)
+    train_dataset = train_dataset.with_options(threading_options)
 
-            val_dataset = tf_data.Dataset.from_generator(
-                lambda: PrefetchGenerator(lambda: dataset_generator(batch_size=batch_size)),
-                output_signature=(
-                    x_input,
-                    TensorSpec(shape=(None, 2), dtype=tf_float32)
-                )
-            ).prefetch(buffer_size=2)
-            val_dataset = val_dataset.with_options(threading_options)
-        else:
-            train_dataset = dataset_generator(mode='train', batch_size=batch_size)
-            val_dataset = dataset_generator(mode='val', batch_size=batch_size)
+    val_dataset = tf_data.Dataset.from_generator(
+        lambda: PrefetchGenerator(lambda: dataset_generator(batch_size=batch_size)),
+        output_signature=(
+            x_input,
+            TensorSpec(shape=(None, 2), dtype=tf_float32)
+        )
+    ).prefetch(buffer_size=2)
+    val_dataset = val_dataset.with_options(threading_options)
+    # else:
+    #     train_dataset = dataset_generator(mode='train', batch_size=batch_size)
+    #     val_dataset = dataset_generator(mode='val', batch_size=batch_size)
+    training_round_counter = 0
+    while True:
+        training_round_counter += 1
+        print(f'Round:{training_round_counter}')
         model = train_model(train_dataset, val_dataset, x_shape=master_x_shape, batch_size=batch_size, cnn_filters=48,
-                    lstm_units_list=[256, 128], dense_units=128, cnn_count=3,
-                    cnn_kernel_growing_steps=2,
-                    dropout_rate=0.3, rebuild_model=False, epochs=10, model=model, y_len=2, dataset_mode=use_dataset)
+                            lstm_units_list=[256, 128], dense_units=128, cnn_count=3,
+                            cnn_kernel_growing_steps=2,
+                            dropout_rate=0.3, rebuild_model=False, epochs=1000, model=model, y_len=2,
+                            dataset_mode=use_dataset,
+                            steps_per_epoch=200,
+                            validation_steps=40,
+                            save_freq=1000,
+                            )
 
 
 if __name__ == "__main__":

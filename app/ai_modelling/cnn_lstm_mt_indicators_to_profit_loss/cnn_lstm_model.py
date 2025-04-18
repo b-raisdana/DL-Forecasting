@@ -58,7 +58,7 @@ class CNNLSTMModel(tf_keras.models.Model):
     def get_config(self):
         config = super(CNNLSTMModel, self).get_config()
         config.update({
-            "y_shape": self.y_len,  # Include all parameters needed for construction
+            "y_len": self.y_len,  # Include all parameters needed for construction
             "cnn_filters": self.cnn_filters,
             "lstm_units_list": self.lstm_units_list,
             "dense_units": self.dense_units,
@@ -71,8 +71,10 @@ class CNNLSTMModel(tf_keras.models.Model):
     @classmethod
     def from_config(cls, config):
         # Ensure y_shape is passed correctly to the constructor
+        if "y_len" not in config and "y_shape" in config:
+            config["y_len"] = config.pop("y_shape")
         return cls(
-            y_shape=config["y_shape"],
+            y_len=config["y_len"],
             cnn_filters=config["cnn_filters"],
             lstm_units_list=config["lstm_units_list"],
             dense_units=config["dense_units"],
