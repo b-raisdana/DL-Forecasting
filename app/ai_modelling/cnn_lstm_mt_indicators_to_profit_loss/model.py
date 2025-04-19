@@ -195,7 +195,8 @@ def dataset_generator(batch_size: int):
     while True:
         # Load full batch once
         Xs, ys = next(loader)
-        input_y = (ys.clip(max=4) / 4).astype('float32')
+        # input_y = (ys.clip(max=4) / 4).astype('float32')
+        input_y = (ys.clip(max=4)).astype('float32')
 
         yield {
             'structure': convert_to_tensor(Xs['structure'], dtype=tf_float32),
@@ -254,22 +255,38 @@ def run_trainer():
     #     train_dataset = dataset_generator(mode='train', batch_size=batch_size)
     #     val_dataset = dataset_generator(mode='val', batch_size=batch_size)
     training_round_counter = 0
-    while True:
-        training_round_counter += 1
-        print(f'Round:{training_round_counter}')
-        model = train_model(train_dataset, val_dataset, x_shape=master_x_shape, batch_size=batch_size, cnn_filters=48,
-                            lstm_units_list=[256, 128], dense_units=128, cnn_count=3,
-                            cnn_kernel_growing_steps=2,
-                            dropout_rate=0.3, rebuild_model=False, epochs=1000, model=model, y_len=2,
-                            dataset_mode=use_dataset,
-                            steps_per_epoch=200,
-                            validation_steps=40,
-                            save_freq=1000,
-                            )
+
+    training_round_counter += 1
+    print(f'Round:{training_round_counter}')
+    model = train_model(train_dataset, val_dataset, x_shape=master_x_shape, batch_size=batch_size, cnn_filters=48,
+                        lstm_units_list=[256, 128], dense_units=128, cnn_count=3,
+                        cnn_kernel_growing_steps=2,
+                        dropout_rate=0.3, rebuild_model=False, epochs=10, model=model, y_len=2,
+                        dataset_mode=use_dataset,
+                        steps_per_epoch=100,
+                        validation_steps=20,
+                        save_freq=1000,
+                        )
 
 
 if __name__ == "__main__":
-    run_trainer()
+    import multiprocessing as mp
+    import time
+
+    mp.set_start_method("spawn", force=True)  # Linux defaults to fork; switch to spawn.
+
+    try:
+        while True:  # infinite loop
+            p = mp.Process(target=run_trainer)  # 1️⃣ start a brand‑new process
+            p.start()
+            p.join()  # 2️⃣ block until it finishes
+
+            # Optional health‑check / cooldown
+            if p.exitcode != 0:
+                print(f"[wrapper] trainer crashed (exit {p.exitcode}) – restarting …")
+            time.sleep(5)  # keep GPU fans happy, give OS time to reclaim memory
+    except KeyboardInterrupt:
+        print("\nStopped by user. Bye! 👋")
 
 # todo: check input_y data:
 #  + 1. Use tf.data.experimental.copy_to_device("/GPU:0")
