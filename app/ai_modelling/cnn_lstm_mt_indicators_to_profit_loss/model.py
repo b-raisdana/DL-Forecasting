@@ -7,7 +7,7 @@ from typing import Dict, Tuple, Generator
 from tensorflow.data import Dataset
 
 from Config import app_config
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import master_x_shape, infinite_load_batch_zip
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import master_x_shape, load_batch_zip
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMLayer
 from helper.br_py.br_py.base import sync_br_lib_init
 from helper.br_py.br_py.do_log import log_d
@@ -22,7 +22,7 @@ def train_model(
         cnn_kernel_growing_steps=2, dropout_rate=0.3, rebuild_model: bool = False, epochs=500,
         dataset_mode: bool = True,
         steps_per_epoch=20,
-        validation_steps=4,save_freq=None,
+        validation_steps=4, save_freq=None,
 ):
     from tensorflow import keras as tf_keras
     from tensorflow import config as tf_config
@@ -31,6 +31,7 @@ def train_model(
 
     if save_freq is None:
         save_freq = epochs
+
     def model_compile(t_model: tf_keras.Model) -> tf_keras.Model:
         opt = tf_keras.optimizers.RMSprop(clipnorm=1.0)
         opt = tf_keras.mixed_precision.LossScaleOptimizer(opt)
@@ -180,24 +181,13 @@ def dataset_generator(batch_size: int):
     Mode must be either 'train' or 'val'.
     """
     from tensorflow import convert_to_tensor, float32 as tf_float32
-    # if not isclose(batch_size / ((1 / val_rate) - 1), int(batch_size / ((1 / val_rate) - 1))):
-    #     raise ValueError(
-    #         f"Batch size * validation rate should result into integer. "
-    #         f"nearest batch_size={int(batch_size / ((1 / val_rate) - 1))*((1 / val_rate) - 1)}.")
-    # if mode == 'train':
-    #     samples_to_fetch = batch_size  # int(batch_size * (1 - val_rate))
-    # elif mode == 'val':
-    #     samples_to_fetch = int(batch_size / ((1 / val_rate) - 1))
-    # else:
-    #     raise RuntimeError(f"Unrecognized mode: {mode}")
-    # This can be any source of data — split based on mode
-    loader = infinite_load_batch_zip(x_shape=master_x_shape, batch_size=batch_size)
+    loader = load_batch_zip(x_shape=master_x_shape, batch_size=batch_size)
     while True:
         # Load full batch once
         Xs, ys = next(loader)
         # input_y = (ys.clip(max=4) / 4).astype('float32')
-        input_y = (ys.clip(max=4)).astype('float32')
-
+        input_y = (ys.clip(max=10)).astype('float32')
+        # print(f"y stats:{ndarray_stats(input_y, ['short_signal', 'long_signal'])}")
         yield {
             'structure': convert_to_tensor(Xs['structure'], dtype=tf_float32),
             'pattern': convert_to_tensor(Xs['pattern'], dtype=tf_float32),
@@ -210,7 +200,7 @@ def dataset_generator(batch_size: int):
         }, convert_to_tensor(input_y, dtype=tf_float32)
 
 
-def run_trainer():
+def run_trainer(round_counter: int):
     from tensorflow import data as tf_data
     from tensorflow import TensorSpec, float32 as tf_float32
     log_d("Starting")
@@ -254,10 +244,7 @@ def run_trainer():
     # else:
     #     train_dataset = dataset_generator(mode='train', batch_size=batch_size)
     #     val_dataset = dataset_generator(mode='val', batch_size=batch_size)
-    training_round_counter = 0
-
-    training_round_counter += 1
-    print(f'Round:{training_round_counter}')
+    print(f'Round:{round_counter}')
     model = train_model(train_dataset, val_dataset, x_shape=master_x_shape, batch_size=batch_size, cnn_filters=48,
                         lstm_units_list=[256, 128], dense_units=128, cnn_count=3,
                         cnn_kernel_growing_steps=2,
@@ -274,10 +261,15 @@ if __name__ == "__main__":
     import time
 
     mp.set_start_method("spawn", force=True)  # Linux defaults to fork; switch to spawn.
+    training_round_counter = 0
 
     try:
         while True:  # infinite loop
-            p = mp.Process(target=run_trainer)  # 1️⃣ start a brand‑new process
+
+            training_round_counter += 1
+
+            p = mp.Process(target=run_trainer,
+                           args=(training_round_counter,))  # 1️⃣ start a brand‑new process
             p.start()
             p.join()  # 2️⃣ block until it finishes
 

@@ -161,7 +161,6 @@ def log_e(message: str, stack_limit: int = 0, stack_offset: int = 0):
         """
     log(message, logging.ERROR, stack_limit, stack_offset + 1)
 
-
 def log(message: str, severity: logging, stack_limit: int = 0, stack_offset: int = 0):
     """
     Log a message with severity and optional stack trace.

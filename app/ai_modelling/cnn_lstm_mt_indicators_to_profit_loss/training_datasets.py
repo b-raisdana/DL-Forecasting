@@ -15,7 +15,7 @@ from Config import app_config
 from FigurePlotter.plotter import show_and_save_plot
 from PanderaDFM import MultiTimeframe
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import overlapped_quarters, master_x_shape, dataset_folder, \
-    save_batch_zip, load_batch_zip, save_validators_zip, load_validators_zip
+    save_batch_zip, save_validators_zip
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.classic_indicators import add_classic_indicators, \
     classic_indicator_columns, scaleless_indicators
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.profit_loss.profit_loss_adder import \
@@ -156,7 +156,6 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
         Xs['structure'].append(np.array(x_dfs['structure'][-1]))
         for timeframe in ['structure', 'pattern', 'trigger', 'double']:
             Xs[f'{timeframe}-indicators'].append(np.array(x_dfs[f'{timeframe}-indicators'][-1]))
-        # sc_prediction = sc_prediction[['short_signal', 'long_signal']]
         y_dfs.append(sc_prediction)
         y_tester_dfs.append(sc_prediction_testing_slice)
         ys.append(np.array(y_dfs[-1][['short_signal', 'long_signal']]))
@@ -454,26 +453,26 @@ def generate_batch(batch_size: int, mt_ohlcv: pt.DataFrame[MultiTimeframe],
     #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
 
 
-def dataset_scale(batch_size: int,
-                  # mt_ohlcv: pt.DataFrame[MultiTimeframe],
-                  x_shape: Dict[str, Tuple[int, int]], number_of_batches=100):
-    all_ys = None  # We'll accumulate all ys arrays here
-
-    for i in range(number_of_batches):
-        Xs, ys = load_batch_zip(x_shape, batch_size, n=i)
-        if i == 0:
-            X_dfs, y_dfs, y_timeframe, y_tester_dfs = load_validators_zip(x_shape, batch_size, n=i)
-
-        if i == 0:
-            all_ys = ys
-        else:
-            all_ys = np.concatenate([all_ys, ys], axis=0)
-    names = y_dfs[0].axes[0].to_list()
-    ys_mean, ys_std = ndarray_stats(all_ys, names)
-    return (
-        # np.mean(Xs_batches, axis=0), np.std(Xs_batches, axis=0),
-        ys_mean, ys_std
-    )
+# def dataset_scale(batch_size: int,
+#                   # mt_ohlcv: pt.DataFrame[MultiTimeframe],
+#                   x_shape: Dict[str, Tuple[int, int]], number_of_batches=100):
+#     all_ys = None  # We'll accumulate all ys arrays here
+#
+#     for i in range(number_of_batches):
+#         Xs, ys = load_batch_zip(x_shape, batch_size, n=i)
+#         if i == 0:
+#             X_dfs, y_dfs, y_timeframe, y_tester_dfs = load_validators_zip(x_shape, batch_size, n=i)
+#
+#         if i == 0:
+#             all_ys = ys
+#         else:
+#             all_ys = np.concatenate([all_ys, ys], axis=0)
+#     names = y_dfs[0].axes[0].to_list()
+#     ys_mean, ys_std = ndarray_stats(all_ys, names)
+#     return (
+#         # np.mean(Xs_batches, axis=0), np.std(Xs_batches, axis=0),
+#         ys_mean, ys_std
+#     )
 
 
 def ndarray_stats(input_array: np.ndarray, names):

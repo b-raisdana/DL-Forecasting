@@ -12,7 +12,7 @@ import pandas as pd
 
 from Config import app_config
 from helper.br_py.br_py.do_log import log_d
-from helper.functions import date_range, get_size
+from helper.functions import date_range
 
 
 def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timedelta(days=30 * 1.5)):
@@ -45,32 +45,7 @@ def save_batch_zip(Xs: Dict[str, np.ndarray], ys: np.ndarray, folder_name: str, 
         zipf.writestr('ys.pkl', pickle.dumps(ys))
 
 
-def load_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int, n=None) \
-        -> Tuple[Dict[str, np.ndarray], np.ndarray]:
-    folder_name = dataset_folder(x_shape, 400)
-    folder_path: str = os.path.join(app_config.path_of_data, folder_name)
-
-    files = [f for f in os.listdir(folder_path) if f.startswith('dataset-') and f.endswith('.zip')]
-    if not files:
-        raise ValueError("No dataset files found!")
-
-    if n is None:
-        picked_file = random.choice(files)
-    else:
-        picked_file = files[n]
-    file_path = os.path.join(folder_path, picked_file)
-
-    with zipfile.ZipFile(file_path, 'r') as zipf:
-        with zipf.open('X_dfs.pkl') as f:
-            Xs: Dict[str, np.ndarray] = pickle.load(f)
-        with zipf.open('ys.pkl') as f:
-            ys: np.ndarray = pickle.load(f)
-
-    log_d(f"Loaded zip file(n={n}): {picked_file} Xs dataset size: {str(get_size(Xs))}")
-    return Xs, ys
-
-
-def infinite_load_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int) \
+def load_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int, n: None | int = None) \
         -> Iterator[Tuple[Dict[str, np.ndarray], np.ndarray]]:
     folder_name = dataset_folder(x_shape, 400)
     folder_path: str = os.path.join(app_config.path_of_data, folder_name)
@@ -78,34 +53,48 @@ def infinite_load_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int
     cached_ys = None
     while True:
         files = [f for f in os.listdir(folder_path) if f.startswith('dataset-') and f.endswith('.zip')]
-        if not files:
+        if not files or len(files) == 0:
             raise ValueError("No dataset files found!")
-        random.shuffle(files)
-        for picked_file in files:
-            file_path = os.path.join(folder_path, picked_file)
-            with zipfile.ZipFile(file_path, 'r') as zipf:
-                with zipf.open('X_dfs.pkl') as f:
-                    Xs: Dict[str, np.ndarray] = pickle.load(f)
-                with zipf.open('ys.pkl') as f:
-                    ys: np.ndarray = pickle.load(f)
-            for key, value in Xs.items():
-                if key in cached_xs:
-                    cached_xs[key] = np.concatenate([cached_xs[key], value], axis=0)
+        if n is None:
+            random.shuffle(files)
+            for picked_file in files:
+                Xs, ys = load_single_batch_zip(folder_path, picked_file)
+                for key, value in Xs.items():
+                    if key in cached_xs:
+                        cached_xs[key] = np.concatenate([cached_xs[key], value], axis=0)
+                    else:
+                        cached_xs[key] = value
+                if cached_ys is None:
+                    cached_ys = ys
                 else:
-                    cached_xs[key] = value
-            if cached_ys is None:
-                cached_ys = ys
-            else:
-                cached_ys = np.concatenate([cached_ys, ys], axis=0)
-            while len(cached_ys) >= batch_size:
-                picked_xs = {}
-                for key in cached_xs:
-                    picked_xs[key] = cached_xs[key][:batch_size]
-                    cached_xs[key] = cached_xs[key][batch_size:]
-                picked_ys = cached_ys[:batch_size]
-                cached_ys = cached_ys[batch_size:]
-                # print(f"Size of cached_ys={len(cached_ys)}")
-                yield picked_xs, picked_ys
+                    cached_ys = np.concatenate([cached_ys, ys], axis=0)
+                while len(cached_ys) >= batch_size:
+                    picked_xs = {}
+                    for key in cached_xs:
+                        picked_xs[key] = cached_xs[key][:batch_size]
+                        cached_xs[key] = cached_xs[key][batch_size:]
+                    picked_ys = cached_ys[:batch_size]
+                    cached_ys = cached_ys[batch_size:]
+                    # print(f"Size of cached_ys={len(cached_ys)}")
+                    yield picked_xs, picked_ys
+            log_d(f"All listed files read at-least once.")
+        else:
+            if n >= len(files) or n < 0:
+                raise ValueError(f"n must be greater than 0 and less than {len(files)} (number of batch files).")
+            picked_file = files[n]
+            Xs, ys = load_single_batch_zip(folder_path, picked_file)
+            return Xs, ys
+
+
+def load_single_batch_zip(folder_path, picked_file):
+    file_path = os.path.join(folder_path, picked_file)
+    with zipfile.ZipFile(file_path, 'r') as zipf:
+        # print(f" File {picked_file} read ")
+        with zipf.open('X_dfs.pkl') as f:
+            Xs: Dict[str, np.ndarray] = pickle.load(f)
+        with zipf.open('ys.pkl') as f:
+            ys: np.ndarray = pickle.load(f)
+    return Xs, ys
 
 
 def save_validators_zip(X_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame], y_timeframe: str,
@@ -120,31 +109,17 @@ def save_validators_zip(X_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.Dat
         zipf.writestr('y_tester_dfs.pkl', pickle.dumps(y_tester_dfs))
 
 
-def load_validators_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int, n=None) \
+def load_validators_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int, n: int) \
         -> Tuple[Dict[str, List[pd.DataFrame]], List[pd.DataFrame], str, List[pd.DataFrame]]:
-    """
-    Loads a randomly chosen validators-*.zip file from the folder computed by dataset_folder(...).
-    The zip file is expected to contain:
-       - 'X_dfs.pkl'       -> Dict[str, List[pd.DataFrame]]
-       - 'y_dfs.pkl'       -> List[pd.DataFrame]
-       - 'y_timeframe.pkl' -> str
-       - 'y_tester_dfs.pkl'-> List[pd.DataFrame]
-
-    Returns:
-       X_dfs, y_dfs, y_timeframe, y_tester_dfs
-    """
     folder_name = dataset_folder(x_shape, batch_size)
     folder_path: str = os.path.join(app_config.path_of_data, folder_name)
 
-    # Gather all 'validators-*.zip' files
     files = [f for f in os.listdir(folder_path) if f.startswith('validators-') and f.endswith('.zip')]
     if not files:
         raise ValueError("No validators zip files found!")
-
-    if n is None:
-        picked_file = random.choice(files)
-    else:
-        picked_file = files[n]
+    if n < 0 or n > len(files) - 1:
+        raise ValueError(f"n must be greater than 0 and less than {len(files)} (number of batch files).")
+    picked_file = files[n]
     file_path = os.path.join(folder_path, picked_file)
 
     with zipfile.ZipFile(file_path, 'r') as zipf:
@@ -162,34 +137,6 @@ def load_validators_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int, n=
     log_d(f"X_dfs keys: {list(X_dfs.keys())}, count of y_dfs: {len(y_dfs)}, timeframe: {y_timeframe}")
 
     return X_dfs, y_dfs, y_timeframe, y_tester_dfs
-
-
-def zz_read_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int) \
-        -> Tuple[Dict[str, np.ndarray], np.ndarray]:
-    folder_name = dataset_folder(x_shape, batch_size)
-    folder_path: str = os.path.join(app_config.path_of_data, folder_name)
-
-    files = [f for f in os.listdir(folder_path) if f.startswith('dataset-')]
-    if not files:
-        raise ValueError("No dataset files found!")
-
-    picked_file = random.choice(files)
-    file_path = os.path.join(app_config.path_of_data, folder_name, picked_file)
-    Xs: Dict[str, np.ndarray] = {}
-    with zipfile.ZipFile(file_path, 'r') as zipf:
-        for name in zipf.namelist():
-            if name.startswith('Xs-') and name.endswith('.npy'):
-                key: str = name[3:-4]
-                with zipf.open(name) as f:
-                    arr: np.ndarray = np.frombuffer(f.read(), dtype=np.float32)
-                    shape_key = 'indicators' if 'indicators' in key else key
-                    Xs[key] = arr.reshape(-1, *x_shape[shape_key])
-        with zipf.open('ys.npy') as f:
-            ys: np.ndarray = np.frombuffer(f.read(), dtype=np.float32)
-            # ys = ys.reshape(-1, *y_shape)
-
-    log_d(f"Xs dataset size: {str(get_size(Xs))}")
-    return Xs, ys
 
 
 def ceil_start_of_slide(t_date: datetime, slide: timedelta):
@@ -217,4 +164,3 @@ def sanitize_filename(filename: str) -> str:
     filename = re.sub(r'_$', '', filename)  # collapse multiple underscores
     filename = filename.replace('_,_', '_')  # collapse multiple underscores
     return filename
-
