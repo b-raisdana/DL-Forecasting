@@ -77,7 +77,7 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
     mt_dfs = dfs.copy()
     dfs['prediction'] = add_long_n_short_profit(ohlc=dfs['trigger'], position_max_bars=forecast_trigger_bars,
                                                 trigger_tf=trigger_tf)
-    train_safe_end, train_safe_start = not_na_range(dfs)
+    train_safe_end, train_safe_start, dfs = not_na_range(dfs)
     duration_seconds = int((train_safe_end - train_safe_start) / timedelta(seconds=1))
     if duration_seconds <= 0:
         start, end = date_range(app_config.processing_date_range)
@@ -227,7 +227,7 @@ def x_shape_assertion(Xs: Dict[str, np.ndarray], batch_size: int, x_shape: Dict[
         raise AssertionError("get_shape(Xs) != {")
 
 
-def not_na_range(dfs: Dict[str, pd.DataFrame]) -> Tuple[datetime, datetime]:
+def not_na_range(dfs: Dict[str, pd.DataFrame]) -> Tuple[datetime, datetime, pd.DataFrame]:
     train_safe_start, train_safe_end = (None, None)
     for df_name in ['structure', 'pattern', 'trigger', 'double', 'prediction']:
         df = dfs[df_name]
@@ -241,7 +241,9 @@ def not_na_range(dfs: Dict[str, pd.DataFrame]) -> Tuple[datetime, datetime]:
         nop = 1
     for df_name in ['structure', 'pattern', 'trigger', 'double', 'prediction']:
         dfs[df_name] = dfs[df_name].loc[pd.IndexSlice[train_safe_start:train_safe_end, :]]
-    return train_safe_end, train_safe_start
+        if dfs[df_name].isna().any().any():
+            raise AssertionError(f"Found NA in dfs[{df_name}]")
+    return train_safe_end, train_safe_start, dfs
 
 
 def get_shape(obj):
@@ -320,11 +322,14 @@ def slicing(dfs: Dict[str, pd.DataFrame], structure_end: datetime, pattern_end: 
     structure_slice = dfs['structure'].loc[pd.IndexSlice[: structure_end], training_x_columns].iloc[
                       -x_shape['structure'][0]:]
     # indicators_slice = slice_indicators(timeframes_df_dict=dfs, end_time=double_end, length=x_shape['indicators'][0])
-    assert ~double_slice.isna().any().any()
-    assert ~trigger_slice.isna().any().any()
+    if double_slice.isna().any().any():
+        raise AssertionError(f"double_slice.isna().any().any()")
+    if trigger_slice.isna().any().any():
+        raise AssertionError(f"rigger_slice.isna().any().any()")
     if pattern_slice.isna().any().any():
-        raise AssertionError("!pattern_slice.isna().any().any()")
-    assert ~structure_slice.isna().any().any()
+        raise AssertionError("pattern_slice.isna().any().any()")
+    if structure_slice.isna().any().any():
+        raise AssertionError("structure_slice.isna().any().any()")
     # assert all([level_indicators.notna().any().any()
     #             for level, level_indicators in indicators_slice.items()])
     return double_slice, pattern_slice, structure_slice, trigger_slice  # , indicators_slice
