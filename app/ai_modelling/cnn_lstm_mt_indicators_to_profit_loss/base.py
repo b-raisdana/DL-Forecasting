@@ -45,7 +45,7 @@ def save_batch_zip(Xs: Dict[str, np.ndarray], ys: np.ndarray, folder_name: str, 
         zipf.writestr('ys.pkl', pickle.dumps(ys))
 
 
-def load_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int, n: None | int = None) \
+def batch_zip_generator(x_shape: Dict[str, Tuple[int, int]], batch_size: int) \
         -> Iterator[Tuple[Dict[str, np.ndarray], np.ndarray]]:
     folder_name = dataset_folder(x_shape, 400)
     folder_path: str = os.path.join(app_config.path_of_data, folder_name)
@@ -55,35 +55,28 @@ def load_batch_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int, n: None
         files = [f for f in os.listdir(folder_path) if f.startswith('dataset-') and f.endswith('.zip')]
         if not files or len(files) == 0:
             raise ValueError("No dataset files found!")
-        if n is None:
-            random.shuffle(files)
-            for picked_file in files:
-                Xs, ys = load_single_batch_zip(folder_path, picked_file)
-                for key, value in Xs.items():
-                    if key in cached_xs:
-                        cached_xs[key] = np.concatenate([cached_xs[key], value], axis=0)
-                    else:
-                        cached_xs[key] = value
-                if cached_ys is None:
-                    cached_ys = ys
-                else:
-                    cached_ys = np.concatenate([cached_ys, ys], axis=0)
-                while len(cached_ys) >= batch_size:
-                    picked_xs = {}
-                    for key in cached_xs:
-                        picked_xs[key] = cached_xs[key][:batch_size]
-                        cached_xs[key] = cached_xs[key][batch_size:]
-                    picked_ys = cached_ys[:batch_size]
-                    cached_ys = cached_ys[batch_size:]
-                    # print(f"Size of cached_ys={len(cached_ys)}")
-                    yield picked_xs, picked_ys
-            log_d(f"All listed files read at-least once.")
-        else:
-            if n >= len(files) or n < 0:
-                raise ValueError(f"n must be greater than 0 and less than {len(files)} (number of batch files).")
-            picked_file = files[n]
+        random.shuffle(files)
+        for picked_file in files:
             Xs, ys = load_single_batch_zip(folder_path, picked_file)
-            return Xs, ys
+            for key, value in Xs.items():
+                if key in cached_xs:
+                    cached_xs[key] = np.concatenate([cached_xs[key], value], axis=0)
+                else:
+                    cached_xs[key] = value
+            if cached_ys is None:
+                cached_ys = ys
+            else:
+                cached_ys = np.concatenate([cached_ys, ys], axis=0)
+            while len(cached_ys) >= batch_size:
+                picked_xs = {}
+                for key in cached_xs:
+                    picked_xs[key] = cached_xs[key][:batch_size]
+                    cached_xs[key] = cached_xs[key][batch_size:]
+                picked_ys = cached_ys[:batch_size]
+                cached_ys = cached_ys[batch_size:]
+                # print(f"\nSize of cached_ys={len(cached_ys)}\n")
+                yield picked_xs, picked_ys
+        log_d(f"All listed files read at-least once.")
 
 
 def load_single_batch_zip(folder_path, picked_file):
@@ -109,17 +102,8 @@ def save_validators_zip(X_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.Dat
         zipf.writestr('y_tester_dfs.pkl', pickle.dumps(y_tester_dfs))
 
 
-def load_validators_zip(x_shape: Dict[str, Tuple[int, int]], batch_size: int, n: int) \
+def load_validators_zip(folder_path: str, picked_file: str) \
         -> Tuple[Dict[str, List[pd.DataFrame]], List[pd.DataFrame], str, List[pd.DataFrame]]:
-    folder_name = dataset_folder(x_shape, batch_size)
-    folder_path: str = os.path.join(app_config.path_of_data, folder_name)
-
-    files = [f for f in os.listdir(folder_path) if f.startswith('validators-') and f.endswith('.zip')]
-    if not files:
-        raise ValueError("No validators zip files found!")
-    if n < 0 or n > len(files) - 1:
-        raise ValueError(f"n must be greater than 0 and less than {len(files)} (number of batch files).")
-    picked_file = files[n]
     file_path = os.path.join(folder_path, picked_file)
 
     with zipfile.ZipFile(file_path, 'r') as zipf:

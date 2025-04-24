@@ -444,7 +444,7 @@ def generate_batch(batch_size: int, mt_ohlcv: pt.DataFrame[MultiTimeframe],
     Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
         train_data_of_mt_n_profit(
             structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=batch_size, dataset_batches=1,
-            forecast_trigger_bars=3 * 4 * 4 * 4 * 1, only_actionable=True, ))
+            forecast_trigger_bars=3 * 4 * 4 * 4 * 1, only_actionable=False, ))
     folder_name = dataset_folder(x_shape, batch_size, create=True)
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     save_batch_zip(Xs, ys, folder_name, app_config.under_process_symbol, timestamp)
