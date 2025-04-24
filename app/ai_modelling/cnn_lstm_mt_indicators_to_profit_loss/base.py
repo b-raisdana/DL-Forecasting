@@ -26,12 +26,13 @@ def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timed
 
 
 master_x_shape = {
-    'structure': (127, 5),
-    'pattern': (253, 5),
-    'trigger': (254, 5),
-    'double': (255, 5),
-    'indicators': (129, 12),
+    # (sequence_length , price/OHLC cols + 12 indicator cols)
+    'structure': (127, 17),
+    'pattern'  : (253, 17),
+    'trigger'  : (254, 17),
+    'double'   : (255, 17),
 }
+
 
 
 def save_batch_zip(Xs: Dict[str, np.ndarray], ys: np.ndarray, folder_name: str, symbol: str, timestamp) -> None:
@@ -47,7 +48,8 @@ def save_batch_zip(Xs: Dict[str, np.ndarray], ys: np.ndarray, folder_name: str, 
 
 def batch_zip_generator(x_shape: Dict[str, Tuple[int, int]], batch_size: int) \
         -> Iterator[Tuple[Dict[str, np.ndarray], np.ndarray]]:
-    folder_name = dataset_folder(x_shape, 400)
+    # x_shape_structure_127,5_pattern_253,5_trigger_254,5_double_255,5_indicators_129,12_batch_size_400
+    folder_name = 'x_shape_structure_127,5_pattern_253,5_trigger_254,5_double_255,5_indicators_129,12_batch_size_400'# dataset_folder(x_shape, 400)
     folder_path: str = os.path.join(app_config.path_of_data, folder_name)
     cached_xs = {}
     cached_ys = None

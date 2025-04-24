@@ -22,8 +22,7 @@ class CNNLSTMModel(tf_keras.models.Model):
                               cnn_filters=cnn_filters, lstm_units_list=lstm_units_list, dense_units=dense_units,
                               cnn_count=cnn_count, cnn_kernel_growing_steps=cnn_kernel_growing_steps,
                               output_shape=(y_len * 8,))
-            for key in ['structure', 'pattern', 'trigger', 'double', 'structure-indicators', 'pattern-indicators',
-                        'trigger-indicators', 'double-indicators']
+            for key in ['structure', 'pattern', 'trigger', 'double', ]
         }
         self.concat = tf_keras.layers.Concatenate()
         self.combined_dense = tf_keras.layers.Dense(256)

@@ -251,14 +251,14 @@ def dataset_generator(batch_size: int):
             'pattern': convert_to_tensor(np.asarray(Xs['pattern'], dtype=np.float16), dtype=tf_float16),
             'trigger': convert_to_tensor(np.asarray(Xs['trigger'], dtype=np.float16), dtype=tf_float16),
             'double': convert_to_tensor(np.asarray(Xs['double'], dtype=np.float16), dtype=tf_float16),
-            'structure-indicators': convert_to_tensor(np.asarray(Xs['structure-indicators'], dtype=np.float16),
-                                                      dtype=tf_float16),
-            'pattern-indicators': convert_to_tensor(np.asarray(Xs['pattern-indicators'], dtype=np.float16),
-                                                    dtype=tf_float16),
-            'trigger-indicators': convert_to_tensor(np.asarray(Xs['trigger-indicators'], dtype=np.float16),
-                                                    dtype=tf_float16),
-            'double-indicators': convert_to_tensor(np.asarray(Xs['double-indicators'], dtype=np.float16),
-                                                   dtype=tf_float16),
+            # 'structure-indicators': convert_to_tensor(np.asarray(Xs['structure-indicators'], dtype=np.float16),
+            #                                           dtype=tf_float16),
+            # 'pattern-indicators': convert_to_tensor(np.asarray(Xs['pattern-indicators'], dtype=np.float16),
+            #                                         dtype=tf_float16),
+            # 'trigger-indicators': convert_to_tensor(np.asarray(Xs['trigger-indicators'], dtype=np.float16),
+            #                                         dtype=tf_float16),
+            # 'double-indicators': convert_to_tensor(np.asarray(Xs['double-indicators'], dtype=np.float16),
+            #                                        dtype=tf_float16),
         }
         final_y = convert_to_tensor(input_y, dtype=tf_float16)
         check_dataset_shape(final_x, final_y)
@@ -281,10 +281,6 @@ def run_trainer(round_counter: int):
     x_input = {key: TensorSpec(shape=(batch_size,) + shape, dtype=tf_float32, name=key) for key, shape in
                master_x_shape.items() if
                key != 'indicators'}
-    x_input.update(
-        {f"{key}-indicators": TensorSpec(shape=(batch_size,) + master_x_shape['indicators'], dtype=tf_float32,
-                                         name=f"{key}-indicators") for key, _ in
-         master_x_shape.items() if key != 'indicators'})
     threading_options = tf_data.Options()
     threading_options.experimental_threading.private_threadpool_size = 2
     threading_options.experimental_threading.max_intra_op_parallelism = 2
