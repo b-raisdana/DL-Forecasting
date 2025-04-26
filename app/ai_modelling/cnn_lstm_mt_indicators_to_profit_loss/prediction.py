@@ -96,10 +96,10 @@ def predict_once(x_shape: Dict[str, tuple[int, int]]) -> None:
         'pattern': convert_to_tensor(Xs['pattern'], dtype=tf_float16),
         'trigger': convert_to_tensor(Xs['trigger'], dtype=tf_float16),
         'double': convert_to_tensor(Xs['double'], dtype=tf_float16),
-        'structure-indicators': convert_to_tensor(Xs['structure-indicators'], dtype=tf_float16),
-        'pattern-indicators': convert_to_tensor(Xs['pattern-indicators'], dtype=tf_float16),
-        'trigger-indicators': convert_to_tensor(Xs['trigger-indicators'], dtype=tf_float16),
-        'double-indicators': convert_to_tensor(Xs['double-indicators'], dtype=tf_float16),
+        # 'structure-indicators': convert_to_tensor(Xs['structure-indicators'], dtype=tf_float16),
+        # 'pattern-indicators': convert_to_tensor(Xs['pattern-indicators'], dtype=tf_float16),
+        # 'trigger-indicators': convert_to_tensor(Xs['trigger-indicators'], dtype=tf_float16),
+        # 'double-indicators': convert_to_tensor(Xs['double-indicators'], dtype=tf_float16),
     }
     preds = model.predict(Xs, verbose=1)
     df = pd.DataFrame(
