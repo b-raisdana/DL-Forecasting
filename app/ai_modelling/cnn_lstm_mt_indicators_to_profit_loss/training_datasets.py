@@ -7,6 +7,7 @@ from typing import List, Dict, Tuple
 
 import numpy as np
 import pandas as pd
+import pandas_ta
 import pandas_ta as ta
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
@@ -101,7 +102,7 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
     while remained_samples > 0:
         # for relative_double_end in np.random.randint(0, duration_seconds, size=batch_size):
         double_end, trigger_end, pattern_end, structure_end = \
-            batch_ends(duration_seconds, double_tf, trigger_tf, pattern_tf, x_shape, train_safe_end)
+            batch_ends(duration_seconds, double_tf, trigger_tf, pattern_tf, structure_tf, x_shape, train_safe_end)
         # future = dfs['future'].loc[pd.IndexSlice[:double_end], training_y_columns].iloc[-1]
         future_slice = dfs['future'].loc[pd.IndexSlice[double_end:], :].iloc[
                        :forecast_trigger_bars]
@@ -156,7 +157,8 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
                   # + ("get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 12)"
                   #    if get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 12) else "")
                   )
-            raise AssertionError
+            continue
+            # raise AssertionError
         x_dfs['double'].append(sc_double_slice[training_x_columns])
         x_dfs['trigger'].append(sc_trigger_slice[training_x_columns])
         x_dfs['pattern'].append(sc_pattern_slice[training_x_columns])
@@ -229,7 +231,7 @@ def shape_assertion(Xs: Dict[str, np.ndarray], x_dfs: Dict[str, List[pd.DataFram
         raise AssertionError("DeepDiff(get_shape(x_dfs), {")
     if get_shape(y_dfs) != [b_l, (forecast_trigger_bars, y_df_parameters,)]:
         raise AssertionError(f"get_shape(y_dfs) != [b_l, ({y_parameters},)]")
-    if get_shape(y_tester_dfs) != [b_l, (forecast_trigger_bars, 5)]:
+    if get_shape(y_tester_dfs) != [b_l, (forecast_trigger_bars, 44)]:
         raise AssertionError("get_shape(y_tester_dfs) != [b_l, (forecast_trigger_bars, 5)]")  # todo: this happens!
 
 
@@ -307,13 +309,12 @@ def scale_slice(slc: pd.DataFrame, price_shift, price_scale, volume_scale,
 
     if 'volume' in slc.columns:
         t['volume'] = t['volume'] * volume_scale
-        t['rsi'] = t['rsi'] - 50
-        t['mfi'] = t['mfi'] - 50
+        t['rsi'] = (t['rsi'] - 50) / 8
+        t['mfi'] = (t['mfi'] - 50) / 8
 
         # t['obv'] = (t['obv'] + obv_shift) * obv_scale
         # t['cci'] = (t['cci'] + cci_shift) * cci_scale
-        t['obv'] = 10 * np.tanh(t['obv'])  # + obv_shift) * obv_scale
-        t['cci'] = 10 * np.tanh(t['cci'])  # + cci_shift) * cci_scale
+        # t['cci'] = 10 * np.tanh(t['cci'])  # + cci_shift) * cci_scale
 
     return t
 
@@ -339,10 +340,16 @@ def normalize(structure_slice: pd.DataFrame, pattern_slice: pd.DataFrame, trigge
     return sc_double_slice, sc_pattern_slice, sc_trigger_slice, sc_structure_slice, sc_future_slice  # , sc_prediction_testing_slice  # sc_indicators_slice,
 
 
-def batch_ends(duration_seconds: int, double_tf: str, trigger_tf: str, pattern_tf: str,
+def batch_ends(duration_seconds: int, double_tf: str, trigger_tf: str, pattern_tf: str, structure_tf: str,
                x_shape: Dict[str, Tuple[int, int]],
                train_safe_end: datetime) -> Tuple[datetime, datetime, datetime, datetime]:
-    relative_double_end = np.random.randint(0, duration_seconds)
+    batch_length = int((
+                               pd.to_timedelta(double_tf) * x_shape['double'][0]
+                               + pd.to_timedelta(trigger_tf) * x_shape['trigger'][0]
+                               + pd.to_timedelta(pattern_tf) * x_shape['pattern'][0]
+                               + pd.to_timedelta(structure_tf) * x_shape['structure'][0]
+                       ) / timedelta(seconds=1))
+    relative_double_end = np.random.randint(batch_length, duration_seconds)
     double_end: datetime = train_safe_end - relative_double_end * timedelta(seconds=1)
     trigger_end = double_end - x_shape['double'][0] * pd.to_timedelta(double_tf)
     pattern_end = trigger_end - x_shape['trigger'][0] * pd.to_timedelta(trigger_tf)
@@ -355,20 +362,30 @@ def slicing(dfs: Dict[str, pd.DataFrame], structure_end: datetime, pattern_end: 
             ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame,]:
     double_slice = dfs['double'].loc[pd.IndexSlice[: double_end], training_x_columns].iloc[
                    -x_shape['double'][0]:]
+    if len(double_slice) != x_shape['double'][0]:
+        raise AssertionError(f"double dimension mismatch")
+    if double_slice.isna().any().any():
+        raise AssertionError(f"double_slice.isna().any().any()")
+
     trigger_slice = dfs['trigger'].loc[
                         pd.IndexSlice[: trigger_end], training_x_columns + ['atr']].iloc[
                     -x_shape['trigger'][0]:]
-    pattern_slice = dfs['pattern'].loc[pd.IndexSlice[: pattern_end], training_x_columns].iloc[
-                    -x_shape['pattern'][0]:]
-    structure_slice = dfs['structure'].loc[pd.IndexSlice[: structure_end], training_x_columns].iloc[
-                      -x_shape['structure'][0]:]
-    # indicators_slice = slice_indicators(timeframes_df_dict=dfs, end_time=double_end, length=x_shape['indicators'][0])
-    if double_slice.isna().any().any():
-        raise AssertionError(f"double_slice.isna().any().any()")
+    if len(trigger_slice) != x_shape['trigger'][0]:
+        raise AssertionError(f"trigger dimension mismatch")
     if trigger_slice.isna().any().any():
         raise AssertionError(f"rigger_slice.isna().any().any()")
+
+    pattern_slice = dfs['pattern'].loc[pd.IndexSlice[: pattern_end], training_x_columns].iloc[
+                    -x_shape['pattern'][0]:]
+    if len(pattern_slice) != x_shape['pattern'][0]:
+        raise AssertionError(f"pattern dimension mismatch")
     if pattern_slice.isna().any().any():
         raise AssertionError("pattern_slice.isna().any().any()")
+
+    structure_slice = dfs['structure'].loc[pd.IndexSlice[: structure_end], training_x_columns].iloc[
+                      -x_shape['structure'][0]:]
+    if len(structure_slice) != x_shape['structure'][0]:
+        raise AssertionError(f"Structure dimension mismatch")
     if structure_slice.isna().any().any():
         raise AssertionError("structure_slice.isna().any().any()")
     # assert all([level_indicators.notna().any().any()
@@ -380,12 +397,12 @@ def plot_classic_indicators(fig: go.Figure, x_dfs: Dict[str, List[pd.DataFrame]]
     scalable_indicators = list(set(classic_indicator_columns()) - set(scaleless_indicators()))
     for level in ['structure', 'pattern', 'double', 'trigger']:
         for indicator_column in scaleless_indicators():
-            if indicator_column != 'obv':
+            if indicator_column != 'sc_obv':
                 t = x_dfs[f"{level}-indicators"][n][indicator_column]
                 fig.add_scatter(x=t.index, y=t, row=2, col=1, line=dict(color='blue'),
                                 name=f"{indicator_column}-{level}")
         for indicator_column in scalable_indicators:
-            if indicator_column != 'obv':
+            if indicator_column != 'sc_obv':
                 t = x_dfs[f"{level}-indicators"][n][indicator_column]
                 fig.add_scatter(x=t.index, y=t, row=1, col=1, line=dict(color='blue'),
                                 name=f"{indicator_column}-{level}-")

@@ -41,7 +41,7 @@ def add_bbands(ohlc):
 
 
 __classic_indicator_columns = [
-    'bbands_u', 'bbands_m', 'bbands_l', 'obv', 'cci', 'rsi', 'mfi',
+    'bbands_u', 'bbands_m', 'bbands_l', 'sc_obv', 'sc_cci', 'rsi', 'mfi',
     'ichi_conv', 'ichi_base', 'ichi_lead_a', 'ichi_lead_b', 'ichi_lag'
 ]
 
@@ -50,7 +50,7 @@ def classic_indicator_columns():
     return __classic_indicator_columns
 
 
-__scaleless_indicators = ['cci', 'rsi', 'mfi', 'obv', ]
+__scaleless_indicators = ['sc_cci', 'rsi', 'mfi', 'sc_obv', ]
 
 
 def scaleless_indicators():
@@ -67,8 +67,14 @@ def add_classic_indicators(ohlcv):
 
     """
     previous_columns = set(ohlcv.columns)
-    ohlcv['obv'] = ta.obv(close=ohlcv['close'], volume=ohlcv['volume'])
-    ohlcv['cci'] = ta.cci(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'])
+    obv = ta.obv(close=ohlcv['close'], volume=ohlcv['volume'])
+    mu = obv.rolling(288, min_periods=1).mean()
+    std = obv.rolling(288, min_periods=1).std(ddof=0).replace(0, 1e-9)
+    ohlcv['sc_obv'] = 10 * (obv - mu) / (3 * std)
+    cci = ta.cci(high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close'])
+    mu = cci.rolling(288, min_periods=1).mean()
+    std = cci.rolling(288, min_periods=1).std(ddof=0).replace(0, 1e-9)
+    ohlcv['sc_cci'] = 10 * (cci - mu) / (3 * std)
     ohlcv['rsi'] = ta.rsi(close=ohlcv['close'])
     ohlcv['mfi'] = pd.Series().astype(float)
     ohlcv['mfi'] = \
