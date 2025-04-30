@@ -24,6 +24,7 @@ from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.profit_loss.profit_loss_
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.br_py.br_py.base import sync_br_lib_init
 from helper.br_py.br_py.do_log import log_d
+from helper.br_py.br_py.profiling import profile_it
 from helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
 from helper.functions import date_range, date_range_to_string
 from helper.importer import pt
@@ -54,12 +55,13 @@ def single_timeframe_n_indicators(mt_ohlcv: pt.DataFrame[MultiTimeframe], timefr
     return ohlcv
 
 
-# @profile_it
+@profile_it
 def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTimeframe],
                               x_shape: Dict[str, Tuple[int, int]], batch_size: int, dataset_batches: int = 100,
                               forecast_trigger_bars: int = 3 * 4 * 4 * 4 * 1,
-                              actionable_rate=0.2  # try to generate 20% actionable and 80% not-actionable batches
+                              actionable_rate=0.2,  # try to generate 20% actionable and 80% not-actionable batches
                               # only_actionable: bool = True
+                              verbose = True
                               ) \
         -> Tuple[
             Dict[str, np.ndarray], np.ndarray, Dict[str, pd.DataFrame], List[pd.DataFrame], str, List[pd.DataFrame]]:
@@ -82,7 +84,7 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
 
     train_safe_end, train_safe_start, dfs = not_na_range(dfs)
     train_safe_start += pd.to_timedelta(structure_tf)
-    train_safe_end -= forecast_trigger_bars * pd.to_timedelta(trigger_tf)
+    train_safe_end -= 2 * forecast_trigger_bars * pd.to_timedelta(trigger_tf)
     duration_seconds = int((train_safe_end - train_safe_start) / timedelta(seconds=1))
     if duration_seconds <= 0:
         start, end = date_range(app_config.processing_date_range)
@@ -102,7 +104,8 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
     while remained_samples > 0:
         # for relative_double_end in np.random.randint(0, duration_seconds, size=batch_size):
         double_end, trigger_end, pattern_end, structure_end = \
-            batch_ends(duration_seconds, double_tf, trigger_tf, pattern_tf, structure_tf, x_shape, train_safe_end)
+            batch_ends(duration_seconds, double_tf, trigger_tf, pattern_tf, structure_tf, x_shape, train_safe_end,
+                       train_safe_start)
         # future = dfs['future'].loc[pd.IndexSlice[:double_end], training_y_columns].iloc[-1]
         future_slice = dfs['future'].loc[pd.IndexSlice[double_end:], :].iloc[
                        :forecast_trigger_bars]
@@ -145,7 +148,7 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
                 or len(np.array(sc_structure_slice[training_x_columns])) != x_shape['structure'][0]
                 # or get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 12)
         ):
-            log_d(f'Skipped by:'
+            if verbose: log_d(f'Skipped by:'
                   + ("len(np.array(sc_double_slice[training_x_columns])) != x_shape['double'][0]"
                      if len(np.array(sc_double_slice[training_x_columns])) != x_shape['double'][0] else "")
                   + ("len(np.array(sc_trigger_slice[training_x_columns])) != x_shape['trigger'][0]"
@@ -179,7 +182,7 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
             actionable_batches += 1
         else:
             not_actionable_batches += 1
-        if (remained_samples % 10) == 0 and remained_samples > 0:
+        if verbose and (remained_samples % 10) == 0 and remained_samples > 0:
             log_d(f'Remained Samples {remained_samples}/{batch_size}')
     # converting list of batches to a combined ndarray
     try:
@@ -342,18 +345,21 @@ def normalize(structure_slice: pd.DataFrame, pattern_slice: pd.DataFrame, trigge
 
 def batch_ends(duration_seconds: int, double_tf: str, trigger_tf: str, pattern_tf: str, structure_tf: str,
                x_shape: Dict[str, Tuple[int, int]],
-               train_safe_end: datetime) -> Tuple[datetime, datetime, datetime, datetime]:
+               train_safe_end: datetime, train_safe_start: datetime) -> Tuple[datetime, datetime, datetime, datetime]:
     batch_length = int((
                                pd.to_timedelta(double_tf) * x_shape['double'][0]
                                + pd.to_timedelta(trigger_tf) * x_shape['trigger'][0]
                                + pd.to_timedelta(pattern_tf) * x_shape['pattern'][0]
                                + pd.to_timedelta(structure_tf) * x_shape['structure'][0]
                        ) / timedelta(seconds=1))
-    relative_double_end = np.random.randint(batch_length, duration_seconds)
+    relative_double_end = np.random.randint(0, duration_seconds - batch_length)
     double_end: datetime = train_safe_end - relative_double_end * timedelta(seconds=1)
     trigger_end = double_end - x_shape['double'][0] * pd.to_timedelta(double_tf)
     pattern_end = trigger_end - x_shape['trigger'][0] * pd.to_timedelta(trigger_tf)
     structure_end = pattern_end - x_shape['pattern'][0] * pd.to_timedelta(pattern_tf)
+    structure_start = structure_end - x_shape['structure'][0] * pd.to_timedelta(structure_tf)
+    if structure_start < train_safe_start:
+        raise AssertionError("structure_end is too soon!")
     return double_end, trigger_end, pattern_end, structure_end
 
 
@@ -388,8 +394,7 @@ def slicing(dfs: Dict[str, pd.DataFrame], structure_end: datetime, pattern_end: 
         raise AssertionError(f"Structure dimension mismatch")
     if structure_slice.isna().any().any():
         raise AssertionError("structure_slice.isna().any().any()")
-    # assert all([level_indicators.notna().any().any()
-    #             for level, level_indicators in indicators_slice.items()])
+
     return double_slice, pattern_slice, structure_slice, trigger_slice  # , indicators_slice
 
 
@@ -594,3 +599,49 @@ if __name__ == "__main__":
     training_dataset_main()
 
 # todo: check the dataset files to check if input_y is reperesting good results?
+def batch_generator(start, end, x_shape: Dict[str, Tuple[int, int]], batch_size: int, verbose = False):
+    app_config.processing_date_range = date_range_to_string(start=start, end=end)
+
+    quarters = overlapped_quarters(app_config.processing_date_range)
+    mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
+
+    cached_xs = {}
+    cached_ys = None
+    while True:
+        random.shuffle(quarters)
+        for start, end in quarters:
+            if verbose:  log_d(f'quarter start:{start} end:{end}##########################################')
+            app_config.processing_date_range = date_range_to_string(start=start, end=end)
+            for symbol in [
+                'BTCUSDT',
+                # # # 'ETHUSDT',
+                # 'BNBUSDT',
+                # 'EOSUSDT',
+                # # 'TRXUSDT',
+                # 'TONUSDT',
+                # # 'SOLUSDT',
+            ]:
+                if verbose: log_d(f'Symbol:{symbol}##########################################')
+                app_config.under_process_symbol = symbol
+                Xs, ys, X_dfs, y_dfs, y_timeframe, y_debug_dfs = (
+                    train_data_of_mt_n_profit(
+                        structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=1000, dataset_batches=1,
+                        forecast_trigger_bars=3 * 4 * 4 * 4 * 1, verbose=verbose))
+                for key, value in Xs.items():
+                    if key in cached_xs:
+                        cached_xs[key] = np.concatenate([cached_xs[key], value], axis=0)
+                    else:
+                        cached_xs[key] = value
+                if cached_ys is None:
+                    cached_ys = ys
+                else:
+                    cached_ys = np.concatenate([cached_ys, ys], axis=0)
+                while len(cached_ys) >= batch_size:
+                    picked_xs = {}
+                    for key in cached_xs:
+                        picked_xs[key] = cached_xs[key][:batch_size]
+                        cached_xs[key] = cached_xs[key][batch_size:]
+                    picked_ys = cached_ys[:batch_size]
+                    cached_ys = cached_ys[batch_size:]
+                    # print(f"\nSize of cached_ys={len(cached_ys)}\n")
+                    yield picked_xs, picked_ys

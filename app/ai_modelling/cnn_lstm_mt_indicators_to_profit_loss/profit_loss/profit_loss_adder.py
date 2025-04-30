@@ -382,7 +382,7 @@ def drop_quantile_data(ohlc):
     return t
 
 
-@profile_it
+# @profile_it
 def add_long_n_short_profit(ohlc,
                             position_max_bars=3 * 4 * 4 * 4 * 1,  # 768 5-minute intervals = 16 hours
                             action_delay=2,

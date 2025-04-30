@@ -1,20 +1,35 @@
+import gc
 import logging
+import multiprocessing as mp
 import os
 import sys
+import time
 from datetime import datetime
+from queue import Queue
+from threading import Thread
 from typing import Dict, Tuple, Generator
+
 import numpy as np
+import pandas as pd
+from GPUtil import getGPUs
+from tensorflow import TensorSpec, float32 as tf_float32
+from tensorflow import config as tf_config
+from tensorflow import convert_to_tensor, float16 as tf_float16
+from tensorflow import data as tf_data
+from tensorflow import keras as tf_keras
 from tensorflow.data import Dataset
 
 from Config import app_config
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import master_x_shape, batch_zip_generator
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import master_x_shape
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMLayer
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMModel
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.streamlined_loder import dataset_streamer
+from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.training_datasets import batch_generator
 from helper.br_py.br_py.base import sync_br_lib_init
 from helper.br_py.br_py.do_log import log_d
 
 
 def model_compile(t_model):
-    from tensorflow import keras as tf_keras
     # tf_keras.utils.enable_checkpointing(t_model)
     opt = tf_keras.optimizers.RMSprop(clipnorm=1.0)
     opt = tf_keras.mixed_precision.LossScaleOptimizer(opt)
@@ -34,12 +49,6 @@ def train_model(
         steps_per_epoch=20,
         validation_steps=4, save_freq=None,
 ):
-    import gc
-    from tensorflow import keras as tf_keras
-    from tensorflow import config as tf_config
-
-    from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMModel
-
     if save_freq is None:
         save_freq = epochs
 
@@ -48,7 +57,6 @@ def train_model(
             print(f"\n>>> Epoch {epoch} started at {datetime.now().strftime('%H:%M:%S.%f')}")
 
         def on_epoch_end(self, epoch, logs=None):
-            from GPUtil import getGPUs
 
             training_loss = logs.get('loss')
             validation_loss = logs.get('val_loss')
@@ -163,8 +171,6 @@ def train_model(
 
 
 def setup_gpu():
-    from tensorflow import config as tf_config
-
     physical_devices = tf_config.list_physical_devices('GPU')
     expanded_memory_size = 0.90 * 8 * 1024
     for device in physical_devices:
@@ -178,17 +184,12 @@ def setup_gpu():
 
 
 def setup_tensorboard():
-    from tensorflow import keras as tf_keras
     this_run_folder = "TFB-" + datetime.now().strftime("%Y%m%d-%H%M%S")
     this_run_log_path = os.path.join(app_config.path_of_logs, this_run_folder)
     os.mkdir(this_run_log_path)
     tensorboard = tf_keras.callbacks.TensorBoard(log_dir=this_run_log_path, write_graph=True, write_images=True,
                                                  histogram_freq=0)
     return tensorboard
-
-
-from threading import Thread
-from queue import Queue
 
 
 class PrefetchGenerator:
@@ -237,9 +238,16 @@ def check_dataset_shape(x_dataset, y_dataset):
             sys.exit(1)
 
 
-def dataset_generator(batch_size: int):
-    from tensorflow import convert_to_tensor, float16 as tf_float16
-    loader = batch_zip_generator(x_shape=master_x_shape, batch_size=batch_size)
+def dataset_generator(batch_size: int, start: datetime, end: datetime):
+    loader = dataset_streamer(
+                s_batch_size=batch_size,
+                start=start,
+                end=end,
+                x_shape=master_x_shape,
+                cache_size=2,  # can increase if RAM allows to better smooth transitions
+                train_data_batch_size = 1000,
+                verbose=False,
+            )
     while True:
         # Load full batch once
         Xs, ys = next(loader)
@@ -266,8 +274,6 @@ def dataset_generator(batch_size: int):
 
 
 def run_trainer(round_counter: int):
-    from tensorflow import data as tf_data
-    from tensorflow import TensorSpec, float32 as tf_float32
     log_d("Starting")
     sync_br_lib_init(path_of_logs='logs', root_path=app_config.root_path, log_to_file_level=logging.DEBUG,
                      log_to_std_out_level=logging.DEBUG)
@@ -282,26 +288,28 @@ def run_trainer(round_counter: int):
                master_x_shape.items() if
                key != 'indicators'}
     threading_options = tf_data.Options()
-    threading_options.experimental_threading.private_threadpool_size = 2
-    threading_options.experimental_threading.max_intra_op_parallelism = 2
+    threading_options.threading.private_threadpool_size = 4
+    threading_options.threading.max_intra_op_parallelism = 4
+    start = pd.to_datetime('03-01-24')
+    end = pd.to_datetime('09-01-24')
     # if use_dataset:
     train_dataset = tf_data.Dataset.from_generator(
-        lambda: PrefetchGenerator(lambda: dataset_generator(batch_size=batch_size)),
+        lambda: PrefetchGenerator(lambda: dataset_generator(batch_size=batch_size, start=start, end=end)),
         output_signature=(
             x_input,
             TensorSpec(shape=(None, 2), dtype=tf_float32)
         )
-    ).prefetch(buffer_size=2)
+    ).prefetch(buffer_size=4)
     train_dataset = train_dataset.with_options(threading_options)
     train_dataset = train_dataset.apply(tf_data.experimental.copy_to_device("/GPU:0"))
 
     val_dataset = tf_data.Dataset.from_generator(
-        lambda: PrefetchGenerator(lambda: dataset_generator(batch_size=batch_size)),
+        lambda: PrefetchGenerator(lambda: dataset_generator(batch_size=batch_size, start=start, end=end)),
         output_signature=(
             x_input,
             TensorSpec(shape=(None, 2), dtype=tf_float32)
         )
-    ).prefetch(buffer_size=2)
+    ).prefetch(buffer_size=4)
     val_dataset = val_dataset.with_options(threading_options)
     val_dataset = val_dataset.apply(tf_data.experimental.copy_to_device("/GPU:0"))
     # else:
@@ -321,8 +329,6 @@ def run_trainer(round_counter: int):
 
 
 if __name__ == "__main__":
-    import multiprocessing as mp
-    import time
 
     mp.set_start_method("spawn", force=True)  # Linux defaults to fork; switch to spawn.
     training_round_counter = 0
