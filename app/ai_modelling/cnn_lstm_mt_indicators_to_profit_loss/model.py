@@ -5,8 +5,6 @@ import os
 import sys
 import time
 from datetime import datetime
-from queue import Queue
-from threading import Thread
 from typing import Dict, Tuple, Generator
 
 import numpy as np
@@ -14,7 +12,6 @@ import pandas as pd
 from GPUtil import getGPUs
 from tensorflow import TensorSpec, float32 as tf_float32
 from tensorflow import config as tf_config
-from tensorflow import convert_to_tensor, float16 as tf_float16
 from tensorflow import data as tf_data
 from tensorflow import keras as tf_keras
 from tensorflow.data import Dataset
@@ -23,10 +20,8 @@ from Config import app_config
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import master_x_shape
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMLayer
 from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import CNNLSTMModel
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.streamlined_loder import dataset_streamer
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.training_datasets import batch_generator
 from helper.br_py.br_py.base import sync_br_lib_init
-from helper.br_py.br_py.do_log import log_d
+from helper.br_py.br_py.do_log import log_d, log_w
 
 
 def model_compile(t_model):
@@ -192,27 +187,27 @@ def setup_tensorboard():
     return tensorboard
 
 
-class PrefetchGenerator:
-    def __init__(self, generator_fn, max_prefetch=10):
-        self.generator = generator_fn()
-        self.queue = Queue(max_prefetch)
-        self.thread = Thread(target=self._run)
-        self.thread.daemon = True
-        self.thread.start()
-
-    def _run(self):
-        for item in self.generator:
-            self.queue.put(item)
-        self.queue.put(None)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        item = self.queue.get()
-        if item is None:
-            raise StopIteration
-        return item
+# class PrefetchGenerator:
+#     def __init__(self, generator_fn, max_prefetch=10):
+#         self.generator = generator_fn()
+#         self.queue = Queue(max_prefetch)
+#         self.thread = Thread(target=self._run)
+#         self.thread.daemon = True
+#         self.thread.start()
+#
+#     def _run(self):
+#         for item in self.generator:
+#             self.queue.put(item)
+#         self.queue.put(None)
+#
+#     def __iter__(self):
+#         return self
+#
+#     def __next__(self):
+#         item = self.queue.get()
+#         if item is None:
+#             raise StopIteration
+#         return item
 
 
 _dataset_x_shapes = None
@@ -238,39 +233,75 @@ def check_dataset_shape(x_dataset, y_dataset):
             sys.exit(1)
 
 
-def dataset_generator(batch_size: int, start: datetime, end: datetime):
-    loader = dataset_streamer(
-                s_batch_size=batch_size,
-                start=start,
-                end=end,
-                x_shape=master_x_shape,
-                cache_size=2,  # can increase if RAM allows to better smooth transitions
-                train_data_batch_size = 1000,
-                verbose=False,
-            )
+CACHE_PREFIX = "tf_input_cache"
+CACHE_EXT = "npz"
+
+
+def dataset_generator(batch_size: int):
+    """Generator function that yields (Xs, ys) batches from cache files indefinitely."""
+    cached_xs = {}
+    cached_ys = None
     while True:
-        # Load full batch once
-        Xs, ys = next(loader)
-        # input_y = (ys.clip(max=10)).astype('float16')
-        input_y = np.asarray((ys.clip(min=0, max=10)), dtype=np.float16)
-        # print(f"y stats:{ndarray_stats(input_y, ['short_signal', 'long_signal'])}")
-        final_x = {
-            'structure': convert_to_tensor(np.asarray(Xs['structure'], dtype=np.float16), dtype=tf_float16),
-            'pattern': convert_to_tensor(np.asarray(Xs['pattern'], dtype=np.float16), dtype=tf_float16),
-            'trigger': convert_to_tensor(np.asarray(Xs['trigger'], dtype=np.float16), dtype=tf_float16),
-            'double': convert_to_tensor(np.asarray(Xs['double'], dtype=np.float16), dtype=tf_float16),
-            # 'structure-indicators': convert_to_tensor(np.asarray(Xs['structure-indicators'], dtype=np.float16),
-            #                                           dtype=tf_float16),
-            # 'pattern-indicators': convert_to_tensor(np.asarray(Xs['pattern-indicators'], dtype=np.float16),
-            #                                         dtype=tf_float16),
-            # 'trigger-indicators': convert_to_tensor(np.asarray(Xs['trigger-indicators'], dtype=np.float16),
-            #                                         dtype=tf_float16),
-            # 'double-indicators': convert_to_tensor(np.asarray(Xs['double-indicators'], dtype=np.float16),
-            #                                        dtype=tf_float16),
-        }
-        final_y = convert_to_tensor(input_y, dtype=tf_float16)
-        check_dataset_shape(final_x, final_y)
-        yield final_x, final_y
+        while len(cached_ys) < batch_size:
+            # List all cache files
+            cache_files = [f for f in os.listdir(app_config.path_of_data)
+                           if f.startswith(CACHE_PREFIX + ".") and f.endswith(f".{CACHE_EXT}")]
+            if not cache_files:
+                # No data available, wait and try again
+                time.sleep(0.5)
+                log_w("Cache folder empty!")
+                continue
+            # Determine the oldest file (by timestamp in name)
+            cache_files.sort()
+            oldest_file = cache_files[0]
+            file_path = os.path.join(app_config.path_of_data, oldest_file)
+            try:
+                # Load the .npz file
+                data = np.load(file_path)
+            except Exception as e:
+                logging.error(f"Error loading file {oldest_file}: {e}")
+                # If file was removed or corrupted, skip it
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    pass
+                continue
+            # Extract Xs and ys from the loaded data
+            try:
+                for key in master_x_shape.keys():
+                    if key in cached_xs:
+                        cached_xs[key] = np.concatenate([cached_xs[key], data[key]], axis=0)
+                    else:
+                        cached_xs[key] = data[key]
+                if cached_ys is None:
+                    cached_ys = data['ys']
+                else:
+                    cached_ys = np.concatenate([cached_ys, data['ys']], axis=0)
+            except Exception as e:
+                logging.error(f"Data format error in {oldest_file}: {e}")
+                # Remove problematic file and skip
+                data.close()
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    pass
+                continue
+            # Now that data is in memory, delete the file to free space
+            try:
+                data.close()
+                os.remove(file_path)
+                logging.info(f"Consumed and removed file: {oldest_file}")
+            except Exception as e:
+                logging.warning(f"Could not delete file {oldest_file}: {e}")
+        while len(cached_ys) >= batch_size:
+            picked_xs = {}
+            for key in cached_xs:
+                picked_xs[key] = cached_xs[key][:batch_size]
+                cached_xs[key] = cached_xs[key][batch_size:]
+            picked_ys = cached_ys[:batch_size]
+            cached_ys = cached_ys[batch_size:]
+            # print(f"\nSize of cached_ys={len(cached_ys)}\n")
+            yield picked_xs, picked_ys
 
 
 def run_trainer(round_counter: int):
@@ -294,7 +325,7 @@ def run_trainer(round_counter: int):
     end = pd.to_datetime('09-01-24')
     # if use_dataset:
     train_dataset = tf_data.Dataset.from_generator(
-        lambda: PrefetchGenerator(lambda: dataset_generator(batch_size=batch_size, start=start, end=end)),
+        lambda: dataset_generator(batch_size=batch_size, start=start, end=end),
         output_signature=(
             x_input,
             TensorSpec(shape=(None, 2), dtype=tf_float32)
@@ -304,7 +335,7 @@ def run_trainer(round_counter: int):
     train_dataset = train_dataset.apply(tf_data.experimental.copy_to_device("/GPU:0"))
 
     val_dataset = tf_data.Dataset.from_generator(
-        lambda: PrefetchGenerator(lambda: dataset_generator(batch_size=batch_size, start=start, end=end)),
+        lambda: dataset_generator(batch_size=batch_size, start=start, end=end),
         output_signature=(
             x_input,
             TensorSpec(shape=(None, 2), dtype=tf_float32)
