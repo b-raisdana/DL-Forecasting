@@ -89,7 +89,7 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
             f"Extend date boundary +{-duration_seconds}s({duration_seconds / (60 * 60 * 24)}days, "
             f"start:{start}<{start + duration_seconds * timedelta(seconds=1)} or "
             f"end:{end}>{end - duration_seconds * timedelta(seconds=1)}) to make possible range of end dates positive!")
-    x_dfs, y_dfs, y_tester_dfs = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, [], []
+    x_dfs, y_dfs, y_debug_dfs = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, [], []
     Xs: Dict[str, List[np.ndarray]]
     Xs, ys = {'double': [], 'trigger': [], 'pattern': [], 'structure': [], }, []
     # for timeframe in ['structure', 'pattern', 'trigger', 'double']:
@@ -103,7 +103,7 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
         double_end, trigger_end, pattern_end, structure_end = \
             batch_ends(duration_seconds, double_tf, trigger_tf, pattern_tf, x_shape, train_safe_end)
         # future = dfs['future'].loc[pd.IndexSlice[:double_end], training_y_columns].iloc[-1]
-        future_slice = dfs['future'].loc[pd.IndexSlice[double_end:], training_y_columns].iloc[
+        future_slice = dfs['future'].loc[pd.IndexSlice[double_end:], :].iloc[
                        :forecast_trigger_bars]
         if future_slice.shape[0] != forecast_trigger_bars:
             raise AssertionError(future_slice.shape[0] != forecast_trigger_bars)
@@ -134,14 +134,15 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
             continue
         (sc_double_slice, sc_pattern_slice, sc_trigger_slice, sc_structure_slice, sc_future,
          ) = \
-            normalize(structure_slice, pattern_slice, trigger_slice, double_slice, future_slice,  # indicators_slice,
-                      training_x_columns)
+            normalize(structure_slice, pattern_slice, trigger_slice, double_slice, future_slice,
+                      # indicators_slice, training_x_columns,
+                      )
         if (
                 len(np.array(sc_double_slice[training_x_columns])) != x_shape['double'][0]
                 or len(np.array(sc_trigger_slice[training_x_columns])) != x_shape['trigger'][0]
                 or len(np.array(sc_pattern_slice[training_x_columns])) != x_shape['pattern'][0]
                 or len(np.array(sc_structure_slice[training_x_columns])) != x_shape['structure'][0]
-                or get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 12)
+                # or get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 12)
         ):
             log_d(f'Skipped by:'
                   + ("len(np.array(sc_double_slice[training_x_columns])) != x_shape['double'][0]"
@@ -152,8 +153,8 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
                      if len(np.array(sc_pattern_slice[training_x_columns])) != x_shape['pattern'][0] else "")
                   + ("len(np.array(sc_structure_slice[training_x_columns])) != x_shape['structure'][0]"
                      if len(np.array(sc_structure_slice[training_x_columns])) != x_shape['structure'][0] else "")
-                  + ("get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 12)"
-                     if get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 12) else "")
+                  # + ("get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 12)"
+                  #    if get_shape(sc_prediction_testing_slice) != (forecast_trigger_bars, 12) else "")
                   )
             raise AssertionError
         x_dfs['double'].append(sc_double_slice[training_x_columns])
@@ -168,8 +169,8 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
         Xs['structure'].append(np.array(x_dfs['structure'][-1]))
         # for timeframe in ['structure', 'pattern', 'trigger', 'double']:
         #     Xs[f'{timeframe}-indicators'].append(np.array(x_dfs[f'{timeframe}-indicators'][-1]))
-        y_dfs.append(sc_future)
-        y_tester_dfs.append(sc_prediction_testing_slice)
+        y_dfs.append(sc_future[training_y_columns])
+        y_debug_dfs.append(sc_future)
         ys.append(np.array(y_dfs[-1].iloc[0][['short_signal', 'long_signal']]))
         remained_samples -= 1
         if is_actionable:
@@ -193,7 +194,7 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
         ys = np.array(ys)
     except Exception as e:
         raise e
-    shape_assertion(Xs=Xs, x_dfs=x_dfs, y_dfs=y_dfs, y_tester_dfs=y_tester_dfs, ys=ys, x_shape=x_shape,
+    shape_assertion(Xs=Xs, x_dfs=x_dfs, y_dfs=y_dfs, y_tester_dfs=y_debug_dfs, ys=ys, x_shape=x_shape,
                     batch_size=batch_size, dataset_batched=dataset_batches, forecast_trigger_bars=forecast_trigger_bars)
     try:
         for key in Xs:
@@ -203,7 +204,7 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
             raise AssertionError(f"Found NA in ys")
     except Exception as e:
         raise e
-    return Xs, ys, x_dfs, y_dfs, trigger_tf, y_tester_dfs
+    return Xs, ys, x_dfs, y_dfs, trigger_tf, y_debug_dfs
 
 
 def shape_assertion(Xs: Dict[str, np.ndarray], x_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame],
@@ -291,9 +292,19 @@ def scale_slice(slc: pd.DataFrame, price_shift, price_scale, volume_scale,
                 # obv_shift, obv_scale, cci_scale, cci_shift,
                 ) -> pd.DataFrame:
     t = slc.copy()
-    for column in ['open', 'high', 'low', 'close']:
-        if column in slc.columns:
+    price_base_columns = (['open', 'high', 'low', 'close', 'min_low', 'max_high', 'worst_long_open', 'worst_short_open',
+                           'quantile_long_min_low', 'quantile_short_max_high', ]
+                          + list(set(classic_indicator_columns()) - set(scaleless_indicators()))
+                          )
+    atr_based_columns = [col for col in slc.columns if '_profit' in col or '_drawdown' in col]
+    for column in slc.columns:
+        if column in price_base_columns:
             t[column] = (t[column] + price_shift) * price_scale
+            continue
+        if column in atr_based_columns:
+            t[column] = t[column] * price_scale
+            continue
+
     if 'volume' in slc.columns:
         t['volume'] = t['volume'] * volume_scale
         t['rsi'] = t['rsi'] - 50
@@ -303,10 +314,7 @@ def scale_slice(slc: pd.DataFrame, price_shift, price_scale, volume_scale,
         # t['cci'] = (t['cci'] + cci_shift) * cci_scale
         t['obv'] = 10 * np.tanh(t['obv'])  # + obv_shift) * obv_scale
         t['cci'] = 10 * np.tanh(t['cci'])  # + cci_shift) * cci_scale
-        columns_to_scale = set(classic_indicator_columns()) - set(scaleless_indicators())
-        for column in columns_to_scale:
-            if column in slc.columns:
-                t[column] = (t[column] + price_shift) * price_scale
+
     return t
 
 
@@ -327,7 +335,7 @@ def normalize(structure_slice: pd.DataFrame, pattern_slice: pd.DataFrame, trigge
                      )
          for t in [double_slice, trigger_slice, pattern_slice, structure_slice, future_slice])
     # sc_indicators_slice = scale_indicators(indicators_slice, price_shift, price_scale, obv_scale, obv_shift)
-    sc_prediction = scale_future(future_slice, price_shift, price_scale, )
+    # sc_prediction = scale_future(future_slice, price_shift, price_scale, )
     return sc_double_slice, sc_pattern_slice, sc_trigger_slice, sc_structure_slice, sc_future_slice  # , sc_prediction_testing_slice  # sc_indicators_slice,
 
 
@@ -451,12 +459,12 @@ def plot_prediction(fig: go.Figure, n: int, y_dfs: List[pd.DataFrame]) -> None:
         raise e
 
 
-def scale_future(future: pd.DataFrame, price_scaler_shift: float, price_scaler_size: float) -> pd.DataFrame:
-    future['min_low'] = (future['min_low'] + price_scaler_shift) * price_scaler_size
-    future['max_high'] = (future['max_high'] + price_scaler_shift) * price_scaler_size
-    future['long_profit'] = (future['long_profit']) * price_scaler_size
-    future['short_profit'] = (future['short_profit']) * price_scaler_size
-    return future
+# def scale_future(future: pd.DataFrame, price_scaler_shift: float, price_scaler_size: float) -> pd.DataFrame:
+#     future['min_low'] = (future['min_low'] + price_scaler_shift) * price_scaler_size
+#     future['max_high'] = (future['max_high'] + price_scaler_shift) * price_scaler_size
+#     future['long_profit'] = (future['long_profit']) * price_scaler_size
+#     future['short_profit'] = (future['short_profit']) * price_scaler_size
+#     return future
 
 
 def scaler_trainer(slices: Dict[str, pd.DataFrame], mean_atr: float, close: float) -> Tuple[
@@ -474,7 +482,7 @@ def scaler_trainer(slices: Dict[str, pd.DataFrame], mean_atr: float, close: floa
 
 def generate_batch(batch_size: int, mt_ohlcv: pt.DataFrame[MultiTimeframe],
                    x_shape: Dict[str, Tuple[int, int]], save=False):
-    Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs = (
+    Xs, ys, X_dfs, y_dfs, y_timeframe, y_debug_dfs = (
         train_data_of_mt_n_profit(
             structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=batch_size, dataset_batches=1,
             forecast_trigger_bars=3 * 4 * 4 * 4 * 1, ))
@@ -482,10 +490,10 @@ def generate_batch(batch_size: int, mt_ohlcv: pt.DataFrame[MultiTimeframe],
     if save:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         save_batch_zip(Xs, ys, folder_name, app_config.under_process_symbol, timestamp)
-        save_validators_zip(X_dfs, y_dfs, y_timeframe, y_tester_dfs, folder_name,
+        save_validators_zip(X_dfs, y_dfs, y_timeframe, y_debug_dfs, folder_name,
                             app_config.under_process_symbol, timestamp)
-    return Xs, ys, X_dfs, y_dfs, y_timeframe, y_tester_dfs
-    #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_tester_dfs, i)
+    return Xs, ys, X_dfs, y_dfs, y_timeframe, y_debug_dfs
+    #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_debug_dfs, i)
 
 
 # def dataset_scale(batch_size: int,

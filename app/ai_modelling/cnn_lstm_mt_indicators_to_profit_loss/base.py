@@ -93,7 +93,7 @@ def load_single_batch_zip(folder_path, picked_file):
 
 
 def save_validators_zip(X_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.DataFrame], y_timeframe: str,
-                        y_tester_dfs: List[pd.DataFrame], folder_name: str, symbol: str, timestamp) -> None:
+                        y_debug_dfs: List[pd.DataFrame], folder_name: str, symbol: str, timestamp) -> None:
     zip_file_name = f"validators-{symbol}-{timestamp}.zip"
     zip_file_path = os.path.join(app_config.path_of_data, folder_name, zip_file_name)
 
@@ -101,7 +101,7 @@ def save_validators_zip(X_dfs: Dict[str, List[pd.DataFrame]], y_dfs: List[pd.Dat
         zipf.writestr('X_dfs.pkl', pickle.dumps(X_dfs))
         zipf.writestr('y_dfs.pkl', pickle.dumps(y_dfs))
         zipf.writestr('y_timeframe.pkl', pickle.dumps(y_timeframe))
-        zipf.writestr('y_tester_dfs.pkl', pickle.dumps(y_tester_dfs))
+        zipf.writestr('y_debug_dfs.pkl', pickle.dumps(y_debug_dfs))
 
 
 def load_validators_zip(folder_path: str, picked_file: str) \

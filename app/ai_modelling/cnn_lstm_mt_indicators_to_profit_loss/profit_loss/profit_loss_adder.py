@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 from typing import Literal
 
@@ -375,6 +376,12 @@ def stop_loss(ohlc):
     return ohlc
 
 
+def drop_quantile_data(ohlc):
+    pattern = re.compile(r'^q\d+_')  # ^ = start, \d+ = 1+ digits, _ literal underscore
+    t =ohlc.loc[:, [column for column in ohlc.columns if not pattern.match(column)]]
+    return t
+
+
 @profile_it
 def add_long_n_short_profit(ohlc,
                             position_max_bars=3 * 4 * 4 * 4 * 1,  # 768 5-minute intervals = 16 hours
@@ -464,6 +471,7 @@ def add_long_n_short_profit(ohlc,
     ohlc = profit_n_loss(ohlc, order_fee=order_fee, max_risk=max_risk,
                          bar_width_risk_free_rate=risk_free_daily_rate /
                                                   (timedelta(days=1) / pd.to_timedelta(trigger_tf)), )
+    ohlc = drop_quantile_data(ohlc)
     return ohlc
 
 
