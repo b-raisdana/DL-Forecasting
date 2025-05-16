@@ -1,13 +1,9 @@
-import logging
-import random
-import sys
 import textwrap
 from datetime import timedelta, datetime
 from typing import List, Dict, Tuple
 
 import numpy as np
 import pandas as pd
-import pandas_ta
 import pandas_ta as ta
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
@@ -15,18 +11,14 @@ from plotly.subplots import make_subplots
 from Config import app_config
 from FigurePlotter.plotter import show_and_save_plot
 from PanderaDFM import MultiTimeframe
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import overlapped_quarters, master_x_shape, dataset_folder, \
-    save_batch_zip, save_validators_zip
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.classic_indicators import add_classic_indicators, \
+from ai_modelling.dataset_generator.classic_indicators import add_classic_indicators, \
     classic_indicator_columns, scaleless_indicators
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.profit_loss.profit_loss_adder import \
+from ai_modelling.dataset_generator.profit_loss.profit_loss_adder import \
     add_long_n_short_profit
-from data_processing.ohlcv import read_multi_timeframe_ohlcv
-from helper.br_py.br_py.base import sync_br_lib_init
 from helper.br_py.br_py.do_log import log_d
 from helper.br_py.br_py.profiling import profile_it
 from helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
-from helper.functions import date_range, date_range_to_string
+from helper.functions import date_range
 from helper.importer import pt
 
 
@@ -502,22 +494,6 @@ def scaler_trainer(slices: Dict[str, pd.DataFrame], mean_atr: float, close: floa
     return price_scale, price_shift, volume_scale,  # obv_scale, obv_shift, cci_scale, cci_shift
 
 
-def generate_batch(batch_size: int, mt_ohlcv: pt.DataFrame[MultiTimeframe],
-                   x_shape: Dict[str, Tuple[int, int]], save=False):
-    Xs, ys, X_dfs, y_dfs, y_timeframe, y_debug_dfs = (
-        train_data_of_mt_n_profit(
-            structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=batch_size, dataset_batches=1,
-            forecast_trigger_bars=3 * 4 * 4 * 4 * 1, ))
-    folder_name = dataset_folder(x_shape, batch_size, create=True)
-    if save:
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        save_batch_zip(Xs, ys, folder_name, app_config.under_process_symbol, timestamp)
-        save_validators_zip(X_dfs, y_dfs, y_timeframe, y_debug_dfs, folder_name,
-                            app_config.under_process_symbol, timestamp)
-    return Xs, ys, X_dfs, y_dfs, y_timeframe, y_debug_dfs
-    #     plot_train_data_of_mt_n_profit(X_dfs, y_dfs, y_debug_dfs, i)
-
-
 # def dataset_scale(batch_size: int,
 #                   # mt_ohlcv: pt.DataFrame[MultiTimeframe],
 #                   x_shape: Dict[str, Tuple[int, int]], number_of_batches=100):
@@ -554,94 +530,4 @@ def ndarray_stats(input_array: np.ndarray, names):
     return df_stats
 
 
-def training_dataset_main():
-    log_d("Starting")
-    sync_br_lib_init(path_of_logs='logs', root_path=app_config.root_path, log_to_file_level=logging.DEBUG,
-                     log_to_std_out_level=logging.DEBUG)
-    # parser = argparse.ArgumentParser(description="Script for processing OHLCV data.")
-    # args = parser.parse_args()
-    app_config.processing_date_range = date_range_to_string(start=pd.to_datetime('03-01-24'),
-                                                            end=pd.to_datetime('09-01-24'))
-    quarters = overlapped_quarters(app_config.processing_date_range)
-    mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
-    batch_size = 100 * 4
 
-    # parser.add_argument("--do_not_fetch_prices", action="store_true", default=False,
-    #                     help="Flag to indicate if prices should not be fetched (default: False).")
-    print("Python:" + sys.version)
-
-    # Apply config from arguments
-    app_config.processing_date_range = "22-08-15.00-00T24-10-30.00-00"
-    # config.do_not_fetch_prices = args.do_not_fetch_prices
-    # seed(42)
-    # np.random.seed(42)
-
-    while True:
-        random.shuffle(quarters)
-        for start, end in quarters:
-            log_d(f'quarter start:{start} end:{end}##########################################')
-            app_config.processing_date_range = date_range_to_string(start=start, end=end)
-            for symbol in [
-                'BTCUSDT',
-                # # # 'ETHUSDT',
-                # 'BNBUSDT',
-                # 'EOSUSDT',
-                # # 'TRXUSDT',
-                # 'TONUSDT',
-                # # 'SOLUSDT',
-            ]:
-                log_d(f'Symbol:{symbol}##########################################')
-                app_config.under_process_symbol = symbol
-                generate_batch(batch_size, mt_ohlcv, master_x_shape)
-
-
-if __name__ == "__main__":
-    training_dataset_main()
-
-# todo: check the dataset files to check if input_y is reperesting good results?
-def batch_generator(start, end, x_shape: Dict[str, Tuple[int, int]], batch_size: int, verbose = False):
-    app_config.processing_date_range = date_range_to_string(start=start, end=end)
-
-    quarters = overlapped_quarters(app_config.processing_date_range)
-    mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
-
-    cached_xs = {}
-    cached_ys = None
-    while True:
-        random.shuffle(quarters)
-        for start, end in quarters:
-            if verbose:  log_d(f'quarter start:{start} end:{end}##########################################')
-            app_config.processing_date_range = date_range_to_string(start=start, end=end)
-            for symbol in [
-                'BTCUSDT',
-                # # # 'ETHUSDT',
-                # 'BNBUSDT',
-                # 'EOSUSDT',
-                # # 'TRXUSDT',
-                # 'TONUSDT',
-                # # 'SOLUSDT',
-            ]:
-                if verbose: log_d(f'Symbol:{symbol}##########################################')
-                app_config.under_process_symbol = symbol
-                Xs, ys, X_dfs, y_dfs, y_timeframe, y_debug_dfs = (
-                    train_data_of_mt_n_profit(
-                        structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=1000, dataset_batches=1,
-                        forecast_trigger_bars=3 * 4 * 4 * 4 * 1, verbose=verbose))
-                for key, value in Xs.items():
-                    if key in cached_xs:
-                        cached_xs[key] = np.concatenate([cached_xs[key], value], axis=0)
-                    else:
-                        cached_xs[key] = value
-                if cached_ys is None:
-                    cached_ys = ys
-                else:
-                    cached_ys = np.concatenate([cached_ys, ys], axis=0)
-                while len(cached_ys) >= batch_size:
-                    picked_xs = {}
-                    for key in cached_xs:
-                        picked_xs[key] = cached_xs[key][:batch_size]
-                        cached_xs[key] = cached_xs[key][batch_size:]
-                    picked_ys = cached_ys[:batch_size]
-                    cached_ys = cached_ys[batch_size:]
-                    # print(f"\nSize of cached_ys={len(cached_ys)}\n")
-                    yield picked_xs, picked_ys

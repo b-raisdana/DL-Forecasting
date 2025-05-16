@@ -6,7 +6,7 @@ from tensorflow.python.keras.models import load_model
 from Config import app_config
 from FigurePlotter.plotter import show_and_save_plot
 from ai_modelling.training_data.PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.trining_datasets import model_dataset_lengths
+from ai_modelling.cnn_lstm.trining_datasets import model_dataset_lengths
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import single_timeframe
 from helper.functions import profile_it

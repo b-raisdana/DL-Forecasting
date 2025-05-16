@@ -6,11 +6,11 @@ from datetime import datetime
 from typing import Iterator, Dict, Tuple
 
 from Config import app_config
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import overlapped_quarters
+from ai_modelling.base import overlapped_quarters
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
 from helper.br_py.br_py.do_log import log_d
 from helper.functions import date_range_to_string
-from training_datasets import train_data_of_mt_n_profit
+from ai_modelling.dataset_generator.training_datasets import train_data_of_mt_n_profit
 
 
 def dataset_streamer(

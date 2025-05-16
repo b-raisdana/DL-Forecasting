@@ -19,17 +19,13 @@ import pandas as pd
 from tensorflow import keras as tf_keras
 
 from Config import app_config
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.base import (
-    master_x_shape,
-    dataset_folder,
-    load_single_batch_zip,
-    load_validators_zip,
-)
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.cnn_lstm_model import (
+from ai_modelling.base import dataset_folder, model_compile, master_x_shape
+from ai_modelling.dataset_generator.zip_batch import load_validators_zip_pkl
+from ai_modelling.dataset_generator.batch_zip import load_single_batch_zip
+from ai_modelling.cnn_lstm.cnn_lstm_model import (
     CNNLSTMModel,
     CNNLSTMLayer,
 )
-from ai_modelling.cnn_lstm_mt_indicators_to_profit_loss.model import model_compile
 
 
 def choose_dataset_files(x_shape: Dict[str, tuple[int, int]]) -> tuple[str, str, str]:
@@ -88,7 +84,7 @@ def predict_once(x_shape: Dict[str, tuple[int, int]]) -> None:
     # ---------------------------------------------------------------- dataset
     folder, batch_zip, validator_zip = choose_dataset_files(x_shape)
     Xs, ys = load_single_batch_zip(folder, batch_zip)
-    X_dfs, y_dfs, y_timeframe, y_tester_dfs = load_validators_zip(folder, validator_zip)
+    X_dfs, y_dfs, y_timeframe, y_tester_dfs = load_validators_zip_pkl(folder, validator_zip)
 
     row = random.randrange(len(ys))
     Xs = {
