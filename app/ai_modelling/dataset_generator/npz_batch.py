@@ -1,10 +1,12 @@
 import logging
+import multiprocessing as mp
 import os
 import random
 import time
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 
 from Config import app_config
@@ -99,7 +101,7 @@ def npz_cache_generator(start: datetime, end: datetime, batch_size: int = 400,
                             cache_files = [f for f in os.listdir(app_config.path_of_data)
                                            if f.startswith(CACHE_PREFIX + ".") and f.endswith(f".{CACHE_EXT}")]
                             while len(cache_files) >= CACHE_THRESHOLD:
-                                print("Cache is full (>= threshold), no new file needed right now. Sleep briefly.")
+                                print(f"Cache is full (>= threshold{CACHE_THRESHOLD}), no new file needed right now. Sleep briefly.")
                                 time.sleep(0.5)  # small delay to avoid busy-wait
                                 cache_files = [f for f in os.listdir(app_config.path_of_data)
                                                if f.startswith(CACHE_PREFIX + ".") and f.endswith(f".{CACHE_EXT}")]
@@ -230,3 +232,25 @@ def npz_dataset_generator(batch_size: int):
 CACHE_PREFIX = "tf_input_cache"
 CACHE_EXT = "npz"
 CACHE_THRESHOLD = 40  # Maintain up to 8 files in the cache
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [CacheGen-%(process)d] %(message)s")
+
+
+    # Define worker wrapper
+    def worker():
+        start = pd.to_datetime('03-01-24')
+        end = pd.to_datetime('09-01-24')
+        npz_cache_generator(start=start, end=end)
+
+
+    num_workers = 10
+    processes = []
+
+    for i in range(num_workers):
+        p = mp.Process(target=worker)
+        p.start()
+        processes.append(p)
+
+    for p in processes:
+        p.join()

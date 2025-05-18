@@ -16,6 +16,7 @@ from ai_modelling.base import setup_gpu, setup_tensorboard, CustomEpochLogger, p
     build_model, master_x_shape
 from ai_modelling.cnn_lstm_attention.cnn_lstm_attention_model import build_cnn_lstm_attention_model
 from ai_modelling.dataset_generator.npz_batch import build_npz_dataset
+from ai_modelling.dataset_generator.ram_batch import build_ram_dataset
 from helper.br_py.br_py.base import sync_br_lib_init
 from helper.br_py.br_py.do_log import log_d
 
@@ -168,7 +169,7 @@ def run_cnn_lstm_attention_trainer(round_counter: int):
     # train_dataset = train_dataset.with_options(threading_options)
     # train_dataset = train_dataset.apply(tf_data.experimental.copy_to_device("/GPU:0"))
 
-    train_dataset = build_npz_dataset(app_config.path_of_data, batch_size=80)
+    train_dataset = build_ram_dataset(batch_size=80)
     # else:
     #     train_dataset = dataset_generator(mode='train', batch_size=batch_size)
     #     val_dataset = dataset_generator(mode='val', batch_size=batch_size)

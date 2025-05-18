@@ -21,6 +21,7 @@ __log_to_std_out_level = logging.DEBUG
 __log_to_file_level = 0
 __min_log_level = __log_to_std_out_level
 # the default logger for when init_logger was not called!
+logger.remove()
 logger.add(
     sys.stdout,
     format=__log_format,
@@ -71,12 +72,12 @@ def init_logger(
     )
 
 
-def root_path():
+def root_path(root_distance = 5):
     global __root_path
     if __root_path is None:
         __root_path = Path(__file__)
         try:
-            for i in range(4):
+            for i in range(root_distance):
                 __root_path = __root_path.parent
         # raise RuntimeError("root_path is not defined! call init_logger first.")
         except (NameError, FileNotFoundError) as e:

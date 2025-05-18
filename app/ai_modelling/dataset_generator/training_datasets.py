@@ -47,7 +47,7 @@ def single_timeframe_n_indicators(mt_ohlcv: pt.DataFrame[MultiTimeframe], timefr
     return ohlcv
 
 
-@profile_it
+# @profile_it
 def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTimeframe],
                               x_shape: Dict[str, Tuple[int, int]], batch_size: int, dataset_batches: int = 100,
                               forecast_trigger_bars: int = 3 * 4 * 4 * 4 * 1,
