@@ -14,7 +14,8 @@ from tensorflow.data import Dataset
 from Config import app_config
 from ai_modelling.base import setup_gpu, setup_tensorboard, CustomEpochLogger, pre_train_model, model_compile, \
     build_model, master_x_shape
-from ai_modelling.cnn_lstm_attention.cnn_lstm_attention_model import build_cnn_lstm_attention_model
+from ai_modelling.cnn_lstm_attention.cnn_lstm_attention_model import build_cnn_lstm_attention_model, \
+    MultiHeadAttentionLayer
 from ai_modelling.dataset_generator.npz_batch import build_npz_dataset
 from ai_modelling.dataset_generator.ram_batch import build_ram_dataset
 from helper.br_py.br_py.base import sync_br_lib_init
@@ -36,6 +37,8 @@ def train_cnn_lstm_attention_model(
         epochs,#=500,
         steps_per_epoch,#=20,
         validation_steps,#=4,
+        num_heads, #=3
+        key_dim, #=16
         rebuild_model: bool = False,
         save_freq=None,
 ):
@@ -52,6 +55,7 @@ def train_cnn_lstm_attention_model(
         if not rebuild_model and os.path.exists(model_path_keras):
             log_d("Loading existing keras model from disk...")
             model = tf_keras.models.load_model(model_path_keras,
+                                               custom_objects={'MultiHeadAttentionLayer': MultiHeadAttentionLayer,},
                                                # custom_objects={'CNNLSTMModel': CNNLSTMModel,
                                                #                 'CNNLSTMLayer': CNNLSTMLayer}
                                                )
@@ -61,7 +65,7 @@ def train_cnn_lstm_attention_model(
             log_d("Building new model...")
             model = build_cnn_lstm_attention_model(y_len=y_len, input_shapes=x_shape, cnn_filters=cnn_filters,
                                                     lstm_units=lstm_units_list, cnn_count=cnn_count,
-                                                    kernel_step=cnn_kernel_growing_steps, dropout_rate=dropout_rate)
+                                                    kernel_step=cnn_kernel_growing_steps, dropout_rate=dropout_rate, num_heads=num_heads, key_dim=key_dim)
 
             build_model(batch_size, model, x_shape)
         print("XLA Enabled:", tf_config.optimizer.get_jit())
@@ -176,12 +180,13 @@ def run_cnn_lstm_attention_trainer(round_counter: int):
     print(f'Round:{round_counter}')
     for i in range(100):
         model = train_cnn_lstm_attention_model(train_dataset, train_dataset, x_shape=master_x_shape, batch_size=batch_size, cnn_filters=64,
-                                               lstm_units_list=[512, 256], dense_units=128, cnn_count=4,
-                                               cnn_kernel_growing_steps=2,
+                                               lstm_units_list=[512, 256], dense_units=128, cnn_count=3,
+                                               cnn_kernel_growing_steps=1,
                                                dropout_rate=0.3, rebuild_model=False, epochs=10, model=model, y_len=2,
                                                steps_per_epoch=100,
                                                validation_steps=20,
                                                save_freq=1000,
+                                               num_heads=12, key_dim=32
                                                )
 
 
@@ -212,5 +217,6 @@ if __name__ == "__main__":
     except Exception as e:
         raise e
 # todo: check input_y data:
+# /home/brais/miniconda3/envs/tf/lib/python3.12/site-packages/keras/src/ops/nn.py:908: UserWarning: You are using a softmax over axis -1 of a tensor of shape (80, 4, 1, 1). This axis has size 1. The softmax operation will always return the value 1, which is likely not what you intended. Did you mean to use a sigmoid instead?
 #  + 1. Use tf.data.experimental.copy_to_device("/GPU:0")
 # To move data to GPU as early as possible in the pipeline:

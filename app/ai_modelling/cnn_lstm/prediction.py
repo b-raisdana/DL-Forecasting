@@ -19,13 +19,12 @@ import pandas as pd
 from tensorflow import keras as tf_keras
 
 from Config import app_config
-from ai_modelling.base import dataset_folder, model_compile, master_x_shape
-from ai_modelling.dataset_generator.zip_batch import load_validators_zip_pkl
-from ai_modelling.dataset_generator.batch_zip import load_single_batch_zip
-from ai_modelling.cnn_lstm.cnn_lstm_model import (
-    CNNLSTMModel,
-    CNNLSTMLayer,
-)
+from ai_modelling.base import dataset_folder, master_x_shape, overlapped_quarters
+from ai_modelling.cnn_lstm_attention.cnn_lstm_attention_model import MultiHeadAttentionLayer
+from ai_modelling.dataset_generator.training_datasets import train_data_of_mt_n_profit
+from ai_modelling.dataset_generator.zip_pkl_batch import load_validators_zip_pkl, load_single_batch_zip_pkl
+from data_processing.ohlcv import read_multi_timeframe_ohlcv
+from helper.functions import date_range_to_string
 
 
 def choose_dataset_files(x_shape: Dict[str, tuple[int, int]]) -> tuple[str, str, str]:
@@ -68,7 +67,7 @@ def predict_once(x_shape: Dict[str, tuple[int, int]]) -> None:
     from tensorflow import convert_to_tensor, float16 as tf_float16
     model_path = os.path.join(
         app_config.path_of_data,
-        "cnn_lstm.mt_pnl_n_ind.cnn_f64c4k2.lstm_u512-256.dense_u128.drop_r0.3 - Copy.keras",
+        "cnn_lstm_attention.mt_pnl_n_ind.cnn_f64c3k1.lstm_u512-256.dense_u128.drop_r0.3.keras",
         # "cnn_lstm.mt_pnl_n_ind.cnn_f64c4k2.lstm_u512-256.dense_u128.drop_r0.3.keras",
         # "cnn_lstm.mt_pnl_n_ind.cnn_f48c3k2.lstm_u256-128.dense_u128.drop_r0.3 - y_clipped_and_scaled.keras",
     )
@@ -77,14 +76,25 @@ def predict_once(x_shape: Dict[str, tuple[int, int]]) -> None:
 
     model: tf_keras.Model = tf_keras.models.load_model(
         model_path,
-        custom_objects={"CNNLSTMModel": CNNLSTMModel, "CNNLSTMLayer": CNNLSTMLayer},
+        custom_objects={'MultiHeadAttentionLayer': MultiHeadAttentionLayer, },
+        # custom_objects={"CNNLSTMModel": CNNLSTMModel, "CNNLSTMLayer": CNNLSTMLayer},
     )
     # model_compile(model)  # harmless even if only predicting
 
     # ---------------------------------------------------------------- dataset
-    folder, batch_zip, validator_zip = choose_dataset_files(x_shape)
-    Xs, ys = load_single_batch_zip(folder, batch_zip)
-    X_dfs, y_dfs, y_timeframe, y_tester_dfs = load_validators_zip_pkl(folder, validator_zip)
+    start = pd.to_datetime('03-01-24')
+    end = pd.to_datetime('09-01-24')
+    quarters = overlapped_quarters(date_range_to_string(start=start, end=end))
+    random.shuffle(quarters)
+    start, end = quarters[0]
+    app_config.processing_date_range = date_range_to_string(start=start, end=end)
+    symbol = 'BTCUSDT'
+    app_config.under_process_symbol = symbol
+    mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
+    Xs, ys, X_dfs, y_dfs, y_timeframe, y_debug_dfs = (
+        train_data_of_mt_n_profit(
+            structure_tf='4h', mt_ohlcv=mt_ohlcv, x_shape=x_shape, batch_size=10, dataset_batches=1,
+            forecast_trigger_bars=3 * 4 * 4 * 4 * 1, ))
 
     row = random.randrange(len(ys))
     Xs = {

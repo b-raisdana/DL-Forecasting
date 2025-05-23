@@ -2,7 +2,6 @@ import logging
 import multiprocessing as mp
 import multiprocessing.managers as mpm
 import os
-import queue
 import random
 import threading as th
 import time
@@ -12,13 +11,12 @@ from typing import Dict, Tuple
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 
 from Config import app_config
 from ai_modelling.base import overlapped_quarters, master_x_shape
 from ai_modelling.dataset_generator.training_datasets import train_data_of_mt_n_profit
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
-from helper.br_py.br_py.do_log import log_d
+from helper.br_py.br_py.do_log import log_d, log_e
 from helper.functions import date_range_to_string
 
 
@@ -82,6 +80,7 @@ def ram_dataset_consumer(meta_q: queues.Queue, batch_size: int):
     while True:
         # refill local cache until we have at least one full batch
         while cached_ys is None or len(cached_ys) < batch_size:
+            # check_queue(meta_q)
             xs_meta, ys_meta = meta_q.get()
             # attach shared-mem arrays, then immediately close & unlink *after* copy
             ys_arr, ys_shm = array_from_shm(*ys_meta)
@@ -108,8 +107,25 @@ def ram_dataset_consumer(meta_q: queues.Queue, batch_size: int):
         picked_ys, cached_ys = cached_ys[:batch_size], cached_ys[batch_size:]
         yield picked_xs, picked_ys
 
+def check_queue(meta_q):
+    try:
+        size = meta_q.qsize()  # remote call
+        log_d(f"meta_queue size = {size}")
+    except Exception as e:
+        log_e("Error while querying queue:", e)
+        mgr = MyManager(address=("127.0.0.1", 50055), authkey=b"secret123")
+        mgr.connect()  # dial the manager
+        meta_q = mgr.get_meta_queue()  # proxy object
+    return meta_q
 
-def build_ram_dataset(meta_q: queues.Queue, batch_size=80):
+def build_ram_dataset(batch_size=80):
+    import tensorflow as tf
+
+    mgr = MyManager(address=("127.0.0.1", 50055), authkey=b"secret123")
+    mgr.connect()  # dial the manager
+    meta_q = mgr.get_meta_queue()
+    check_queue(meta_q)
+
     def gen():
         yield from ram_dataset_consumer(meta_q, batch_size)
 
@@ -119,38 +135,34 @@ def build_ram_dataset(meta_q: queues.Queue, batch_size=80):
         tf.TensorSpec(shape=(batch_size, 2), dtype=tf.float32)
     )
     ds = tf.data.Dataset.from_generator(gen, output_signature=output_signature)
-    return ds.prefetch(tf.data.AUTOTUNE)
+    ds = ds.apply(tf.data.experimental.copy_to_device("/GPU:0"))
+    return ds.prefetch(4)
 
 
 # CACHE_PREFIX = "tf_input_cache"
 CACHE_THRESHOLD = 80  # Maintain up to 8 files in the cache
 
+meta_q = mp.Queue(maxsize=CACHE_THRESHOLD)
 
 class MyManager(mpm.SyncManager):
     pass
+MyManager.register("get_meta_queue", callable=lambda: meta_q)
 
-
-if __name__ == '__main__':
-    meta_q = queue.Queue()  # a normal Queue.Queue (thread-safe)
-
-    MyManager.register("get_meta_queue", callable=lambda: meta_q)
-
-    manager = mp.Manager()
-    meta_queue: queues.Queue = manager.Queue(maxsize=CACHE_THRESHOLD)
+def run_producer():
+    # Register the actual meta_q
 
     mgr = MyManager(address=("127.0.0.1", 50055), authkey=b"secret123")
-    mgr.start()  # launches the manager server
+    mgr.start()
 
     print("Server PID", os.getpid())
     print("Address", mgr.address)
 
     def prod_worker():
         ram_dataset_producer(
-            meta_q=meta_queue,
+            meta_q=meta_q,
             start=pd.to_datetime('2024-03-01'),
             end=pd.to_datetime('2024-09-01')
         )
-
 
     num_workers = 15
     processes = []
@@ -163,6 +175,10 @@ if __name__ == '__main__':
     for p in processes:
         p.join()
 
-    threads = [th.Thread(target=worker, daemon=True) for _ in range(num_workers)]
+    threads = [th.Thread(target=prod_worker, daemon=True) for _ in range(num_workers)]
     for t in threads: t.start()
     for t in threads: t.join()
+
+
+if __name__ == '__main__':
+    run_producer()

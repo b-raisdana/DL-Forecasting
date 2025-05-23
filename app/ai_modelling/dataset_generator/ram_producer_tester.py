@@ -33,6 +33,9 @@ def main():
             print(f"meta_queue size = {size}")
         except Exception as e:
             print("Error while querying queue:", e)
+            mgr = MyManager(address=("127.0.0.1", 50055), authkey=b"secret123")
+            mgr.connect()  # dial the manager
+            meta_q = mgr.get_meta_queue()  # proxy object
         time.sleep(1)
 
 
