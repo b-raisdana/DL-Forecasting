@@ -45,16 +45,15 @@ def ram_dataset_producer(meta_q: queues.Queue,
         for q_start, q_end in quarters:
             if verbose: log_d(f'quarter {q_start} → {q_end}')
             app_config.processing_date_range = date_range_to_string(start=q_start, end=q_end)
-            for symbol in ['BTCUSDT']:
+            for symbol in ['BNBUSDT','EOSUSDT','ETHUSDT','','BTCUSDT']:
                 if verbose: log_d(f'Symbol {symbol}')
                 app_config.under_process_symbol = symbol
                 mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
                 for _ in range(100):
-                    if meta_q.qsize() >= CACHE_THRESHOLD:
-                        print(
-                            f"RAM Cache is full ({meta_q.qsize()}>= {CACHE_THRESHOLD}), no new file needed right now. Sleep briefly.")
+                    while meta_q.qsize() >= CACHE_THRESHOLD:
+                        # log_d(
+                        #     f"RAM Cache is full ({meta_q.qsize()}>= {CACHE_THRESHOLD}), no new file needed right now. Sleep briefly.")
                         time.sleep(0.5)
-                        continue
                     Xs, ys, *_ = train_data_of_mt_n_profit(
                         structure_tf='4h',
                         mt_ohlcv=mt_ohlcv,
@@ -70,7 +69,7 @@ def ram_dataset_producer(meta_q: queues.Queue,
 
                     # put only metadata in the manager queue
                     meta_q.put((xs_meta, ys_meta))
-                    logging.info(f'put batch #{meta_q.qsize()} (size={len(ys)})')
+                    log_d(f'put {symbol} batch for {app_config.processing_date_range} #{meta_q.qsize()} (size={len(ys)})')
 
 
 def ram_dataset_consumer(meta_q: queues.Queue, batch_size: int):
