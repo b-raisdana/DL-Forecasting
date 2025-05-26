@@ -139,7 +139,7 @@ def build_ram_dataset(batch_size=80):
 
 
 # CACHE_PREFIX = "tf_input_cache"
-CACHE_THRESHOLD = 80  # Maintain up to 8 files in the cache
+CACHE_THRESHOLD = 200
 
 meta_q = mp.Queue(maxsize=CACHE_THRESHOLD)
 
