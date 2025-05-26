@@ -82,8 +82,8 @@ def predict_once(x_shape: Dict[str, tuple[int, int]]) -> None:
     # model_compile(model)  # harmless even if only predicting
 
     # ---------------------------------------------------------------- dataset
-    start = pd.to_datetime('03-01-24')
-    end = pd.to_datetime('09-01-24')
+    start = pd.to_datetime('1-01-25')
+    end = pd.to_datetime('04-23-25')
     quarters = overlapped_quarters(date_range_to_string(start=start, end=end))
     random.shuffle(quarters)
     start, end = quarters[0]
@@ -113,8 +113,9 @@ def predict_once(x_shape: Dict[str, tuple[int, int]]) -> None:
     )
     df["y_short_s"] = ys[:, 0]
     df["y_long_s"] = ys[:, 1]
-    df["ydf_short_s"] = [d["short_signal"] for d in y_dfs]
-    df["ydf_long_s"] = [d["long_signal"] for d in y_dfs]
+
+    df["ydf_short_s"] = pd.Series({d.index[0]: d["short_signal"].iloc[0] for d in y_dfs})
+    df["ydf_long_s"] = pd.Series({d.index[0]: d["long_signal"].iloc[0] for d in y_dfs})
     df['final'] = False
     df.loc[((df["ydf_long_s"] > df["ydf_short_s"]) & (df['p_long_s'] > df['p_short_s'])
             | (df["ydf_long_s"] < df["ydf_short_s"]) & (df['p_long_s'] < df['p_short_s'])), 'final'] = True
