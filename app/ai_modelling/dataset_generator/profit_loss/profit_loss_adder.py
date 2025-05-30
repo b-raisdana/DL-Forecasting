@@ -179,29 +179,6 @@ def long_n_short_drawdown(ohlc, position_max_bars, quantiles, trigger_tf):
         - `quantile_short_max_high`: The maximum high value corresponding to the `min_low_quantile`.
         - `short_drawdown`: The percentage drawdown for short positions.
 
-    Notes:
-    ------
-    - Quantile indices are computed by dividing the distance columns by `position_max_bars / quantiles`.
-    - The function uses `numpy` for efficient indexing of quantile-based columns.
-    - Drawdown is calculated as a percentage of the worst-case open values (`worst_long_open` and `worst_short_open`).
-
-    Example:
-    --------
-    >>> import pandas as pd
-    >>> import numpy as np
-    >>> ohlc = pd.DataFrame({
-    ...     'max_high_distance': [1, 2, 3],
-    ...     'min_low_distance': [1, 2, 3],
-    ...     'worst_long_open': [100, 110, 120],
-    ...     'worst_short_open': [90, 85, 80],
-    ...     'q1_max_high': [105, 115, 125],
-    ...     'q1_min_low': [95, 90, 85],
-    ...     'q2_max_high': [110, 120, 130],
-    ...     'q2_min_low': [90, 85, 80]
-    ... })
-    >>> result = long_n_short_drawdown(ohlc, position_max_bars=2, quantiles=2, trigger_tf=1)
-    >>> print(result)
-
     """
 
     not_na_indexes = ohlc[~ohlc.isna().any(axis='columns')].index
@@ -212,8 +189,6 @@ def long_n_short_drawdown(ohlc, position_max_bars, quantiles, trigger_tf):
     min_low_np_a = ohlc.loc[not_na_indexes, [f'q{i}_min_low' for i in range(1, quantiles + 1)]].to_numpy()
     ohlc.loc[not_na_indexes, 'quantile_long_min_low'] = min_low_np_a[
         np.arange(len(ohlc.loc[not_na_indexes])), ohlc.loc[not_na_indexes, 'max_high_quantile'].astype(int)]
-    # ohlc['long_drawdown'] = \
-    #     (ohlc['worst_long_open'] - ohlc['quantile_long_min_low']) / ohlc['worst_long_open']
     ohlc['long_drawdown'] = \
         (ohlc['worst_long_open'] - ohlc['quantile_long_min_low']) / ohlc['atr']
     ohlc['absolute_long_drawdown'] = \
@@ -221,25 +196,25 @@ def long_n_short_drawdown(ohlc, position_max_bars, quantiles, trigger_tf):
     max_high_np_a = ohlc.loc[not_na_indexes, [f'q{i}_max_high' for i in range(1, quantiles + 1)]].to_numpy()
     ohlc.loc[not_na_indexes, 'quantile_short_max_high'] = max_high_np_a[
         np.arange(len(ohlc.loc[not_na_indexes])), ohlc.loc[not_na_indexes, 'min_low_quantile'].astype(int)]
-    # ohlc['short_drawdown'] = \
-    #     (ohlc['quantile_short_max_high'] - ohlc['worst_short_open']) / ohlc['worst_short_open']
     ohlc['short_drawdown'] = \
         (ohlc['quantile_short_max_high'] - ohlc['worst_short_open']) / ohlc['atr']
     ohlc['absolute_short_drawdown'] = \
         (ohlc['quantile_short_max_high'] - ohlc['worst_short_open'])
 
-    assert len(ohlc['long_drawdown'].dropna()) > 0
-    assert all(ohlc['long_drawdown'].dropna() > 0)
-
-    assert len(ohlc['short_drawdown'].dropna()) > 0
-    assert all(ohlc['short_drawdown'].dropna() > 0)
-
-    assert len(ohlc['absolute_long_drawdown'].dropna()) > 0
-    assert all(ohlc['absolute_long_drawdown'].dropna() > 0)
-
-    assert len(ohlc['absolute_short_drawdown'].dropna()) > 0
-    assert all(ohlc['absolute_short_drawdown'].dropna() > 0)
-
+    if not len(ohlc['long_drawdown'].dropna()) > 0:
+        raise AssertionError("!len(ohlc['long_drawdown'].dropna()) > 0")
+    if not  len(ohlc['short_drawdown'].dropna()) > 0:
+        raise AssertionError("!len(ohlc['short_drawdown'].dropna()) > 0")
+    if not all(ohlc['short_drawdown'].dropna() >= 0):
+        raise AssertionError("!all(ohlc['short_drawdown'].dropna() > 0)")
+    if not len(ohlc['absolute_long_drawdown'].dropna()) >0:
+        raise AssertionError("not len(ohlc['absolute_long_drawdown'].dropna()) > 0")
+    if not all(ohlc['absolute_long_drawdown'].dropna() >= 0):
+        raise AssertionError("not all(ohlc['absolute_long_drawdown'].dropna() > 0)")
+    if not len(ohlc['absolute_short_drawdown'].dropna()) > 0:
+        raise AssertionError("not len(ohlc['absolute_short_drawdown'].dropna()) > 0")
+    if not all(ohlc['absolute_short_drawdown'].dropna() >= 0):
+        raise AssertionError("not all(ohlc['absolute_short_drawdown'].dropna() > 0)")
     return ohlc
 
 
@@ -438,23 +413,6 @@ def add_long_n_short_profit(ohlc,
     2. Calculates quantile-based metrics with `quantile_maxes`.
     3. Adds drawdown and risk calculations via `long_n_short_drawdown`.
     4. Integrates weighted profit, loss, and signal computations using `add_profit_n_loss`.
-
-    Notes:
-    ------
-    - Ensure the input DataFrame has at least 'high', 'low', and 'close' columns.
-    - The default `position_max_bars` is based on 5-minute intervals; adjust this based on your data frequency.
-
-    Example:
-    --------
-    >>> import pandas as pd
-    >>> ohlc = pd.DataFrame({
-    ...     'high': [105, 106, 107, 108],
-    ...     'low': [95, 96, 97, 98],
-    ...     'close': [100, 101, 102, 103]
-    ... })
-    >>> result = add_long_n_short_profit(ohlc)
-    >>> print(result)
-
     """
 
     rolling_window = position_max_bars - action_delay

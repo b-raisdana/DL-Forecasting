@@ -16,29 +16,9 @@ from ai_modelling.dataset_generator.classic_indicators import add_classic_indica
 from ai_modelling.dataset_generator.profit_loss.profit_loss_adder import \
     add_long_n_short_profit
 from helper.br_py.br_py.do_log import log_d
-from helper.br_py.br_py.profiling import profile_it
 from helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
 from helper.functions import date_range
 from helper.importer import pt
-
-
-# (tf) brais@Behrooz:/mnt/c/Code/DL-Forecasting$ PYTHONPATH=/mnt/c/Code/DL-Forecasting/app/ python /mnt/c/Code/DL-Forecasting/app/ai_modelling/cnn_lstm_mt_indicators_to_profit_loss/training_datasets.py
-
-# def slice_indicators(timeframes_df_dict: Dict[str, pd.DataFrame], end_time: datetime, length: int) \
-#         -> Dict[str, pd.DataFrame]:
-#     try:
-#         t_slice = {
-#             df_name: pd.DataFrame({
-#                 indicator_column: timeframe_df.loc[pd.IndexSlice[:end_time], indicator_column].iloc[-length:]
-#                 for indicator_column in classic_indicator_columns()
-#             })
-#             for df_name, timeframe_df in timeframes_df_dict.items()
-#         }
-#     except Exception as e:
-#         nop = 1
-#         raise e
-#
-#     return t_slice
 
 
 def single_timeframe_n_indicators(mt_ohlcv: pt.DataFrame[MultiTimeframe], timeframe: str) -> pd.DataFrame:

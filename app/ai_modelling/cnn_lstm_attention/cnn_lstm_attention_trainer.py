@@ -27,18 +27,18 @@ def train_cnn_lstm_attention_model(
         x_shape: Dict[str, Tuple[int, int]],
         y_len: int,
         batch_size,
-        model,#=None,
-        cnn_filters,#=64,
-        lstm_units_list: list,# = None,
-        dense_units,#=64,
-        cnn_count,#=3,
-        cnn_kernel_growing_steps,#=2,
-        dropout_rate,#=0.3,
-        epochs,#=500,
-        steps_per_epoch,#=20,
-        validation_steps,#=4,
-        num_heads, #=3
-        key_dim, #=16
+        model,  # =None,
+        cnn_filters,  # =64,
+        lstm_units_list: list,  # = None,
+        dense_units,  # =64,
+        cnn_count,  # =3,
+        cnn_kernel_growing_steps,  # =2,
+        dropout_rate,  # =0.3,
+        epochs,  # =500,
+        steps_per_epoch,  # =20,
+        validation_steps,  # =4,
+        num_heads,  # =3
+        key_dim,  # =16
         rebuild_model: bool = False,
         save_freq=None,
 ):
@@ -55,7 +55,7 @@ def train_cnn_lstm_attention_model(
         if not rebuild_model and os.path.exists(model_path_keras):
             log_d("Loading existing keras model from disk...")
             model = tf_keras.models.load_model(model_path_keras,
-                                               custom_objects={'MultiHeadAttentionLayer': MultiHeadAttentionLayer,},
+                                               custom_objects={'MultiHeadAttentionLayer': MultiHeadAttentionLayer, },
                                                # custom_objects={'CNNLSTMModel': CNNLSTMModel,
                                                #                 'CNNLSTMLayer': CNNLSTMLayer}
                                                )
@@ -64,8 +64,9 @@ def train_cnn_lstm_attention_model(
         else:
             log_d("Building new model...")
             model = build_cnn_lstm_attention_model(y_len=y_len, input_shapes=x_shape, cnn_filters=cnn_filters,
-                                                    lstm_units=lstm_units_list, cnn_count=cnn_count,
-                                                    kernel_step=cnn_kernel_growing_steps, dropout_rate=dropout_rate, num_heads=num_heads, key_dim=key_dim)
+                                                   lstm_units=lstm_units_list, cnn_count=cnn_count,
+                                                   kernel_step=cnn_kernel_growing_steps, dropout_rate=dropout_rate,
+                                                   num_heads=num_heads, key_dim=key_dim)
 
             build_model(batch_size, model, x_shape)
         print("XLA Enabled:", tf_config.optimizer.get_jit())
@@ -179,7 +180,8 @@ def run_cnn_lstm_attention_trainer(round_counter: int):
     #     val_dataset = dataset_generator(mode='val', batch_size=batch_size)
     print(f'Round:{round_counter}')
     for i in range(100):
-        model = train_cnn_lstm_attention_model(train_dataset, train_dataset, x_shape=master_x_shape, batch_size=batch_size, cnn_filters=64,
+        model = train_cnn_lstm_attention_model(train_dataset, train_dataset, x_shape=master_x_shape,
+                                               batch_size=batch_size, cnn_filters=64,
                                                lstm_units_list=[512, 256], dense_units=128, cnn_count=3,
                                                cnn_kernel_growing_steps=1,
                                                dropout_rate=0.3, rebuild_model=False, epochs=10, model=model, y_len=2,
@@ -191,7 +193,6 @@ def run_cnn_lstm_attention_trainer(round_counter: int):
 
 
 if __name__ == "__main__":
-
     mp.set_start_method("spawn", force=True)  # Linux defaults to fork; switch to spawn.
     training_round_counter = 0
 

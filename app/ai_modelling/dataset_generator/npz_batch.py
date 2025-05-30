@@ -13,7 +13,7 @@ from Config import app_config
 from ai_modelling.base import overlapped_quarters, master_x_shape
 from ai_modelling.dataset_generator.training_datasets import train_data_of_mt_n_profit
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
-from helper.br_py.br_py.do_log import log_d, log_w
+from helper.br_py.br_py.do_log import log_d, log_w, log_i
 from helper.functions import date_range_to_string
 
 
@@ -67,7 +67,7 @@ def npz_cache_files_clean_up():
         if fname.startswith(CACHE_PREFIX + ".") and fname.endswith(f".{CACHE_EXT}"):
             try:
                 os.remove(os.path.join(app_config.path_of_data, fname))
-                logging.info(f"Removed old cache file: {fname}")
+                log_i(f"Removed old cache file: {fname}")
             except Exception as e:
                 logging.warning(f"Could not remove file {fname}: {e}")
 
@@ -76,7 +76,7 @@ def npz_cache_generator(start: datetime, end: datetime, batch_size: int = 400,
                         forecast_trigger_bars: int = 3 * 4 * 4 * 4 * 1, verbose: bool = True):
     quarters = overlapped_quarters(date_range_to_string(start=start, end=end))
     # 2. Continuous generation loop
-    logging.info("Cache Generator started. Monitoring folder for cache refill...")
+    log_i("Cache Generator started. Monitoring folder for cache refill...")
     while True:
         while True:
             random.shuffle(quarters)
@@ -128,7 +128,7 @@ def npz_cache_generator(start: datetime, end: datetime, batch_size: int = 400,
                                     f.flush()
                                     os.fsync(f.fileno())
                                 os.replace(tmp_path, final_path)  # atomic move to final name
-                                logging.info(
+                                log_i(
                                     f"Generated cache file: {os.path.basename(final_path)} (batch size={len(ys)})")
                             except Exception as e:
                                 logging.error(f"Failed to write cache file {final_path}: {e}")
@@ -215,7 +215,7 @@ def npz_dataset_generator(batch_size: int):
             try:
                 data.close()
                 os.remove(file_path)
-                logging.info(f"Consumed and removed file: {oldest_file}")
+                log_i(f"Consumed and removed file: {oldest_file}")
             except Exception as e:
                 logging.warning(f"Could not delete file {oldest_file}: {e}")
         while len(cached_ys) >= batch_size:

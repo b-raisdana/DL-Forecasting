@@ -16,7 +16,7 @@ from Config import app_config
 from ai_modelling.base import overlapped_quarters, master_x_shape
 from ai_modelling.dataset_generator.training_datasets import train_data_of_mt_n_profit
 from data_processing.ohlcv import read_multi_timeframe_ohlcv
-from helper.br_py.br_py.do_log import log_d, log_e
+from helper.br_py.br_py.do_log import log_d, log_e, log_i
 from helper.functions import date_range_to_string
 
 
@@ -39,17 +39,25 @@ def ram_dataset_producer(meta_q: queues.Queue,
                          forecast_trigger_bars: int = 3 * 4 * 4 * 4 * 1,
                          verbose: bool = True):
     quarters = overlapped_quarters(date_range_to_string(start=start, end=end))
-    logging.info("Producer started")
+    log_i("Producer started")
     while True:
         random.shuffle(quarters)
         for q_start, q_end in quarters:
             if verbose: log_d(f'quarter {q_start} → {q_end}')
             app_config.processing_date_range = date_range_to_string(start=q_start, end=q_end)
-            for symbol in ['BNBUSDT','EOSUSDT','ETHUSDT','','BTCUSDT']:
+            symbol_list = [
+                'BNBUSDT',
+                'BTCUSDT',
+                'EOSUSDT',
+                'ETHUSDT',
+                'SOLUSDT',
+                'TRXUSDT']
+            random.shuffle(symbol_list)
+            for symbol in symbol_list:
                 if verbose: log_d(f'Symbol {symbol}')
                 app_config.under_process_symbol = symbol
                 mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
-                for _ in range(100):
+                for _ in range(int(100 / NUM_WORKERS)):
                     while meta_q.qsize() >= CACHE_THRESHOLD:
                         # log_d(
                         #     f"RAM Cache is full ({meta_q.qsize()}>= {CACHE_THRESHOLD}), no new file needed right now. Sleep briefly.")
@@ -69,42 +77,58 @@ def ram_dataset_producer(meta_q: queues.Queue,
 
                     # put only metadata in the manager queue
                     meta_q.put((xs_meta, ys_meta))
-                    log_d(f'put {symbol} batch for {app_config.processing_date_range} #{meta_q.qsize()} (size={len(ys)})')
+                    log_d(
+                        f'put {symbol} batch for {app_config.processing_date_range} #{meta_q.qsize()} (size={len(ys)})')
 
 
 def ram_dataset_consumer(meta_q: queues.Queue, batch_size: int):
-    cached_xs: Dict[str, np.ndarray] = {}
-    cached_ys: np.ndarray | None = None
-
     while True:
-        # refill local cache until we have at least one full batch
-        while cached_ys is None or len(cached_ys) < batch_size:
-            # check_queue(meta_q)
-            xs_meta, ys_meta = meta_q.get()
-            # attach shared-mem arrays, then immediately close & unlink *after* copy
-            ys_arr, ys_shm = array_from_shm(*ys_meta)
-            if cached_ys is None:
-                cached_ys = ys_arr.copy()
-            else:
-                cached_ys = np.concatenate([cached_ys, ys_arr], axis=0)
-            ys_shm.close();
-            ys_shm.unlink()
+        try:
+            mgr = MyManager(address=("127.0.0.1", 50055), authkey=b"secret123")
+            mgr.connect()  # dial the manager
+            meta_q = mgr.get_meta_queue()
+            check_queue(meta_q)
 
-            for k, meta in xs_meta.items():
-                arr, shm = array_from_shm(*meta)
-                if k in cached_xs:
-                    cached_xs[k] = np.concatenate([cached_xs[k], arr], axis=0)
-                else:
-                    cached_xs[k] = arr.copy()
-                shm.close();
-                shm.unlink()
+            cached_xs: Dict[str, np.ndarray] = {}
+            cached_ys: np.ndarray | None = None
+            while True:
+                # refill local cache until we have at least one full batch
+                while cached_ys is None or len(cached_ys) < batch_size:
+                    # check_queue(meta_q)
+                    while meta_q.qsize() == 0:
+                        log_d("Queue is empty!")
+                        time.sleep(3)
+                    xs_meta, ys_meta = meta_q.get()
+                    # attach shared-mem arrays, then immediately close & unlink *after* copy
+                    ys_arr, ys_shm = array_from_shm(*ys_meta)
+                    if cached_ys is None:
+                        cached_ys = ys_arr.copy()
+                    else:
+                        cached_ys = np.concatenate([cached_ys, ys_arr], axis=0)
+                    ys_shm.close();
+                    ys_shm.unlink()
 
-        # yield one batch
-        picked_xs = {k: v[:batch_size] for k, v in cached_xs.items()}
-        cached_xs = {k: v[batch_size:] for k, v in cached_xs.items()}
+                    for k, meta in xs_meta.items():
+                        arr, shm = array_from_shm(*meta)
+                        if k in cached_xs:
+                            cached_xs[k] = np.concatenate([cached_xs[k], arr], axis=0)
+                        else:
+                            cached_xs[k] = arr.copy()
+                        shm.close()
+                        shm.unlink()
 
-        picked_ys, cached_ys = cached_ys[:batch_size], cached_ys[batch_size:]
-        yield picked_xs, picked_ys
+                # yield one batch
+                picked_xs = {k: v[:batch_size] for k, v in cached_xs.items()}
+                cached_xs = {k: v[batch_size:] for k, v in cached_xs.items()}
+
+                picked_ys, cached_ys = cached_ys[:batch_size], cached_ys[batch_size:]
+                yield picked_xs, picked_ys
+        except (ConnectionRefusedError, ConnectionAbortedError, ConnectionResetError,
+                ConnectionError, FileNotFoundError, EOFError) as e:
+            log_d(f"Queue {type(e).__name__}!")
+            time.sleep(3)
+            continue
+
 
 def check_queue(meta_q):
     try:
@@ -117,13 +141,9 @@ def check_queue(meta_q):
         meta_q = mgr.get_meta_queue()  # proxy object
     return meta_q
 
+
 def build_ram_dataset(batch_size=80):
     import tensorflow as tf
-
-    mgr = MyManager(address=("127.0.0.1", 50055), authkey=b"secret123")
-    mgr.connect()  # dial the manager
-    meta_q = mgr.get_meta_queue()
-    check_queue(meta_q)
 
     def gen():
         yield from ram_dataset_consumer(meta_q, batch_size)
@@ -138,14 +158,19 @@ def build_ram_dataset(batch_size=80):
     return ds.prefetch(4)
 
 
+NUM_WORKERS = 15
 # CACHE_PREFIX = "tf_input_cache"
 CACHE_THRESHOLD = 200
 
 meta_q = mp.Queue(maxsize=CACHE_THRESHOLD)
 
+
 class MyManager(mpm.SyncManager):
     pass
+
+
 MyManager.register("get_meta_queue", callable=lambda: meta_q)
+
 
 def run_producer():
     # Register the actual meta_q
@@ -163,10 +188,9 @@ def run_producer():
             end=pd.to_datetime('2024-09-01')
         )
 
-    num_workers = 15
     processes = []
 
-    for i in range(num_workers):
+    for i in range(NUM_WORKERS):
         p = mp.Process(target=prod_worker)
         p.start()
         processes.append(p)
@@ -174,7 +198,7 @@ def run_producer():
     for p in processes:
         p.join()
 
-    threads = [th.Thread(target=prod_worker, daemon=True) for _ in range(num_workers)]
+    threads = [th.Thread(target=prod_worker, daemon=True) for _ in range(NUM_WORKERS)]
     for t in threads: t.start()
     for t in threads: t.join()
 
