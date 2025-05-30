@@ -167,12 +167,12 @@ def pairs_stat_compare(
                 else:
                     X_df = pd.concat([X_df, x_dfs])
                     y_df = pd.concat([y_df, y_dfs])
-                log_d(
+                if verbose: log_d(
                     f'put {symbol} batch for {app_config.processing_date_range} (size={len(y_df)})')
-    print("X_df.describe():", X_df.describe())
-    print("\ny_df.describe():", y_df.describe())
-    comparison = compare_columns_similarity(X_df)
     with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None, 'display.precision', 3, 'display.float_format', '{:.3f}'.format):
+        print("X_df.describe():", X_df.describe())
+        print("\ny_df.describe():", y_df.describe())
+        comparison = compare_columns_similarity(X_df)
         pd.set_option('display.precision', 3)
         print("Comparison:", comparison)
     summarize_symbol_similarity(comparison)
@@ -180,10 +180,11 @@ def pairs_stat_compare(
 
 
 if __name__ == '__main__':
-    for i in range(10):
+    for i in range(5):
         pairs_stat_compare(
             start=pd.to_datetime('2024-03-01'),
             end=pd.to_datetime('2024-09-01'),
-            batch_size=1,
-            number_of_batches=1
+            batch_size=10,
+            number_of_batches=10,
+            verbose=False
         )

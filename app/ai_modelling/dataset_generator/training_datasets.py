@@ -265,7 +265,7 @@ def get_shape(obj):
         return None  # Base case for non-iterables
 
 
-def scale_slice(slc: pd.DataFrame, price_shift, price_scale, volume_scale,
+def scale_slice(slc: pd.DataFrame, price_shift, price_scale, volume_scale, mt_scale_adjuster = 1/20
                 # obv_shift, obv_scale, cci_scale, cci_shift,
                 ) -> pd.DataFrame:
     t = slc.copy()
@@ -276,10 +276,10 @@ def scale_slice(slc: pd.DataFrame, price_shift, price_scale, volume_scale,
     atr_based_columns = [col for col in slc.columns if '_profit' in col or '_drawdown' in col]
     for column in slc.columns:
         if column in price_base_columns:
-            t[column] = (t[column] + price_shift) * price_scale
+            t[column] = (t[column] + price_shift) * price_scale * mt_scale_adjuster
             continue
         if column in atr_based_columns:
-            t[column] = t[column] * price_scale
+            t[column] = t[column] * price_scale * mt_scale_adjuster
             continue
 
     if 'volume' in slc.columns:
