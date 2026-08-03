@@ -1,8 +1,39 @@
-/venv/
+# IDE
 .idea/
-../.idea
+.vscode/
+
+# Python virtual envs
+/venv/
+/venv_3_12_6/
+/venv3124/
+/venv3912/
+/venv312/
+
+# Python bytecode / cache
+**/__pycache__/
+*.py[cod]
+*$py.class
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ipynb_checkpoints/
+*.egg-info/
+.coverage
+
+# Secrets / local config
+.env
+
+# Logs
+*.log
+/logs/
+
+# Data (whole tree ignored; plots/archive are subfolders of it)
+/data/
+
+# Misc
 /ta-lib/
-/.pytest_cache/
+/docker_volume/
+
+# MetaTrader5
 /MetaTrader5/logs/
 /MetaTrader5/Terminal.ico
 /MetaTrader5/uninstall.exe
@@ -17,16 +48,3 @@
 /MetaTrader5/Bases/
 /MetaTrader5/temp/
 /MetaTrader5/MQL5/Logs/
-/data/plots/
-/data/archive/
-/data/
-*.log
-/logs/
-/venv_3_12_6/
-/logs/
-/venv3124/
-/venv3912/
-/venv312/
-/logs/
-/docker_volume/
-**/__pycache__/
