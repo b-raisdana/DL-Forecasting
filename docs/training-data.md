@@ -1,5 +1,13 @@
 # training data preparation
 
+- [training data preparation](#training-data-preparation)
+  - [where can be a position?](#where-can-be-a-position)
+  - [trading overhead](#trading-overhead)
+  - [naming candles](#naming-candles)
+  - [targetting bid price](#targetting-bid-price)
+  - [risk factors](#risk-factors)
+  - [TP / MAE label](#tp--mae-label)
+
 ## where can be a position?
 
 - for each NOW candle, use 4hours FUTURE knowledge (training-time only, not
@@ -59,7 +67,7 @@
 
 - stop loss (SL) = `max(1 ATR, MAE-to-TP)` — matches the implemented
   `stop_loss()`; see [current-code.md](current-code.md#sl-detection)
-- MAE (maximum adverse excursion) = worst move *against* the position,
+- MAE (maximum adverse excursion) = worst move _against_ the position,
   measured from the entry price, along the path to TP — not a pullback from
   an interim peak (that's a different metric, "retracement", not computed
   here). See [MAE section](current-code.md#what-drawdown-actually-measures-mae-not-peak-retracement)

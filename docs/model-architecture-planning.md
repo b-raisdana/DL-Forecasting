@@ -2,6 +2,36 @@
 
 Goal: best AI method to predict price moves → optimal trade positions, max profit / min risk.
 
+- [AI Trading System — Planning Notes](#ai-trading-system--planning-notes)
+  - [definitions](#definitions)
+    - [natural price distance](#natural-price-distance)
+    - [normal price distance](#normal-price-distance)
+    - [volume strength of tops](#volume-strength-of-tops)
+  - [key questions](#key-questions)
+    - [data feed design](#data-feed-design)
+      - [candle feature schema](#candle-feature-schema)
+      - [feature-set completeness — testing](#feature-set-completeness--testing)
+        - [non-contributing-channel detection — method](#non-contributing-channel-detection--method)
+        - [new-fature addition — workflow](#new-fature-addition--workflow)
+        - [candidate feature pool](#candidate-feature-pool)
+        - [candidate-feature screening — method](#candidate-feature-screening--method)
+    - [normalization strategy](#normalization-strategy)
+    - [model architecture \& selection](#model-architecture--selection)
+  - [hardware constraints](#hardware-constraints)
+  - [multi-timeframe fusion](#multi-timeframe-fusion)
+  - [validation \& train/test splitting](#validation--traintest-splitting)
+  - [model outputs \& targets](#model-outputs--targets)
+    - [how TP1-4 / drawdown labels are built for training](#how-tp1-4--drawdown-labels-are-built-for-training)
+    - [normalization](#normalization)
+  - [optimization strategy](#optimization-strategy)
+  - [evaluation \& error metrics](#evaluation--error-metrics)
+    - [error metric vs. trading objective](#error-metric-vs-trading-objective)
+  - [class imbalance handling](#class-imbalance-handling)
+  - [experiment tracking (current priority)](#experiment-tracking-current-priority)
+  - [deferred topics (not current concerns, placeholders)](#deferred-topics-not-current-concerns-placeholders)
+  - [glossary](#glossary)
+
+
 ## definitions
 
 ATR = pandas-ta.ATR(256)

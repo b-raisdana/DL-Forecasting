@@ -1,5 +1,16 @@
 # current code — TP / SL / position-detection mechanisms
 
+- [current code — TP / SL / position-detection mechanisms](#current-code--tp--sl--position-detection-mechanisms)
+  - [anchor candle, in code terms](#anchor-candle-in-code-terms)
+  - [best entry price near the anchor ("targeting bid price")](#best-entry-price-near-the-anchor-targeting-bid-price)
+  - [TP / profit-target detection](#tp--profit-target-detection)
+  - [what "drawdown" actually measures: MAE, not peak retracement](#what-drawdown-actually-measures-mae-not-peak-retracement)
+  - [SL detection](#sl-detection)
+  - [strength of the anchor-suggested position](#strength-of-the-anchor-suggested-position)
+  - [other position-related metrics (all in `profit_loss_adder.py`)](#other-position-related-metrics-all-in-profit_loss_adderpy)
+  - [secondary mechanism: live/backtest bracket orders (`BasePatternStrategy`)](#secondary-mechanism-livebacktest-bracket-orders-basepatternstrategy)
+  - [gaps vs. the plan (`planing.md` / `training-data.md`)](#gaps-vs-the-plan-planingmd--training-datamd)
+
 Scope: what is **actually implemented in code today**, not the design in
 [planing.md](planing.md) / [training-data.md](training-data.md). The planning
 docs describe a discrete TP1-4 + drawdown-curve label spec; that spec is
@@ -25,7 +36,7 @@ There are two independent, unrelated mechanisms in the repo:
 `training_datasets.py:train_data_of_mt_n_profit` calls `batch_ends(...)` to
 pick `double_end` — the timestamp separating known history (`double`/`trigger`/
 `pattern`/`structure` slices, the model's X) from the unseen future. `double_end`
-*is* the anchor candle from the planning docs. The label window starts there:
+_is_ the anchor candle from the planning docs. The label window starts there:
 
 ```python
 future_slice = dfs['future'].loc[pd.IndexSlice[double_end:], :].iloc[:forecast_trigger_bars]
@@ -60,13 +71,13 @@ scaffolding used only to compute drawdown (not exposed as separate TP labels):
 
 - `max_profit_n_loss()` computes `max_high` / `min_low`: the best exit price
   reachable within the forward window (`rolling_window = position_max_bars -
-  action_delay`), each shifted back `position_max_bars`, plus `max_high_distance`
+action_delay`), each shifted back `position_max_bars`, plus `max_high_distance`
   / `min_low_distance` (bar-count to that best point, via `argmax`/`argmin`).
 - `quantile_maxes()` ([profit_loss_adder.py:81-141](../app/ai_modelling/dataset_generator/profit_loss/profit_loss_adder.py#L81-L141))
   slices the forward window into `quantiles` (default 50) sub-windows and
   computes `q{i}_max_high` / `q{i}_min_low` (+ their distances) for each. This
-  is *not* TP1-4 — it's a fine-grained lookup table consumed only by
-  `long_n_short_drawdown()` to find the worst adverse move *from entry*
+  is _not_ TP1-4 — it's a fine-grained lookup table consumed only by
+  `long_n_short_drawdown()` to find the worst adverse move _from entry_
   before the best-case point was reached (MAE — see next section, not a
   pullback from an interim peak), then dropped from the final frame by
   `drop_quantile_data()` before it's returned.
@@ -151,20 +162,20 @@ in `planing.md`.
 
 ## other position-related metrics (all in `profit_loss_adder.py`)
 
-| column | producer | meaning |
-| --- | --- | --- |
-| `worst_long_open` / `worst_short_open` | `max_profit_n_loss` | pessimistic realistic fill price, `action_delay` bars after anchor |
-| `max_high` / `min_low` | `max_profit_n_loss` | best-case exit price within the forward window |
-| `max_high_distance` / `min_low_distance` | `max_profit_n_loss` | bars to that best-case point |
-| `long_distance_time` / `short_distance_time` | `add_long_n_short_profit` | same distance, converted to a `timedelta` via `trigger_tf` |
-| `quantile_long_min_low` / `quantile_short_max_high` | `long_n_short_drawdown` | lowest/highest price reached before the best-case point, looked up from the quantile table (used to compute MAE below) |
-| `long_drawdown` / `short_drawdown` | `long_n_short_drawdown` | MAE (maximum adverse excursion) from entry to that point, in ATR units — see [MAE section](#what-drawdown-actually-measures-mae-not-peak-retracement) |
-| `absolute_long_drawdown` / `absolute_short_drawdown` | `long_n_short_drawdown` | same MAE, in raw price units |
-| `long_profit` / `short_profit` | `profit_n_loss` | raw price distance from worst-open to best-case exit |
-| `weighted_long_profit` / `weighted_short_profit` | `profit_n_loss` | profit in ATR units, minus time-decayed risk-free cost and `order_fee` |
-| `long_risk` / `short_risk` | `profit_n_loss` | drawdown / weighted-profit; forced to `1` (max) for unprofitable/over-`max_risk` positions |
-| `long_sl_distance` / `short_sl_distance` | `stop_loss` | SL distance in ATR units, `max(1, drawdown)` |
-| `long_signal` / `short_signal` | `profit_n_loss` | final position-strength score (see above); the actual model target |
+| column                                               | producer                  | meaning                                                                                                                                               |
+| ---------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `worst_long_open` / `worst_short_open`               | `max_profit_n_loss`       | pessimistic realistic fill price, `action_delay` bars after anchor                                                                                    |
+| `max_high` / `min_low`                               | `max_profit_n_loss`       | best-case exit price within the forward window                                                                                                        |
+| `max_high_distance` / `min_low_distance`             | `max_profit_n_loss`       | bars to that best-case point                                                                                                                          |
+| `long_distance_time` / `short_distance_time`         | `add_long_n_short_profit` | same distance, converted to a `timedelta` via `trigger_tf`                                                                                            |
+| `quantile_long_min_low` / `quantile_short_max_high`  | `long_n_short_drawdown`   | lowest/highest price reached before the best-case point, looked up from the quantile table (used to compute MAE below)                                |
+| `long_drawdown` / `short_drawdown`                   | `long_n_short_drawdown`   | MAE (maximum adverse excursion) from entry to that point, in ATR units — see [MAE section](#what-drawdown-actually-measures-mae-not-peak-retracement) |
+| `absolute_long_drawdown` / `absolute_short_drawdown` | `long_n_short_drawdown`   | same MAE, in raw price units                                                                                                                          |
+| `long_profit` / `short_profit`                       | `profit_n_loss`           | raw price distance from worst-open to best-case exit                                                                                                  |
+| `weighted_long_profit` / `weighted_short_profit`     | `profit_n_loss`           | profit in ATR units, minus time-decayed risk-free cost and `order_fee`                                                                                |
+| `long_risk` / `short_risk`                           | `profit_n_loss`           | drawdown / weighted-profit; forced to `1` (max) for unprofitable/over-`max_risk` positions                                                            |
+| `long_sl_distance` / `short_sl_distance`             | `stop_loss`               | SL distance in ATR units, `max(1, drawdown)`                                                                                                          |
+| `long_signal` / `short_signal`                       | `profit_n_loss`           | final position-strength score (see above); the actual model target                                                                                    |
 
 All of the above are produced for every row of the trigger-timeframe frame by
 `add_long_n_short_profit()` ([profit_loss_adder.py:361-433](../app/ai_modelling/dataset_generator/profit_loss/profit_loss_adder.py#L361-L433)),
@@ -181,7 +192,7 @@ consolidation range), not off the anchor-candle ML labels:
 - entry (`limit_price`) = pattern's breakout edge (`internal_high` for a Buy,
   `internal_low` for a Sell) offset by `atr * base_pattern_order_limit_price_margin_percentage`
   (`Config.py`, currently `0.05` = 5%).
-- SL (`stop_loss`) = the *opposite* edge of the pattern (`internal_low` for a
+- SL (`stop_loss`) = the _opposite_ edge of the pattern (`internal_low` for a
   Buy, `internal_high` for a Sell) — i.e. SL = the far side of the
   consolidation range, one level, no ATR/quantile logic.
 - TP (`take_profit`) = entry edge + `base_length * base_pattern_risk_reward_rate`,
@@ -204,7 +215,7 @@ Not implemented yet — still spec only:
 - the drawdown/pivot polyline ("acceleration curve", RDP-style segment
   splitting) and the `potential` metric built from it.
 - the 3-way SL-hit / Timeout / TP-tier categorical outcome label.
-- trading-overhead double-secure (fees added to SL risk *and* deducted from
+- trading-overhead double-secure (fees added to SL risk _and_ deducted from
   TP gain individually) — current code only subtracts a flat `order_fee` from
   profit, doesn't add it to the SL side.
 - SL = `max(true negative movement, 1 ATR of next-higher timeframe)` — current
