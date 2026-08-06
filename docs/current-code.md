@@ -66,8 +66,9 @@ scaffolding used only to compute drawdown (not exposed as separate TP labels):
   slices the forward window into `quantiles` (default 50) sub-windows and
   computes `q{i}_max_high` / `q{i}_min_low` (+ their distances) for each. This
   is *not* TP1-4 — it's a fine-grained lookup table consumed only by
-  `long_n_short_drawdown()` to find "what was the worst pullback before the
-  best-case point was reached," then dropped from the final frame by
+  `long_n_short_drawdown()` to find the worst adverse move *from entry*
+  before the best-case point was reached (MAE — see next section, not a
+  pullback from an interim peak), then dropped from the final frame by
   `drop_quantile_data()` before it's returned.
 - `profit_n_loss()` turns the best-case target into `long_profit` /
   `short_profit` (absolute price distance to `max_high`/`min_low`) and
@@ -78,6 +79,33 @@ So today's "TP" is effectively a single TP4-equivalent (max gainable profit in
 the window) — the TP1 (breakeven)/TP2/TP3 (intermediate local-maxima before a
 drawdown pullback) tiering described in `training-data.md` is spec only.
 
+## what "drawdown" actually measures: MAE, not peak retracement
+
+The `*_drawdown` columns are ambiguous by name. Two different things could be
+meant:
+
+1. **MAE (Maximum Adverse Excursion) — what's implemented**: distance from
+   the entry price (`worst_long_open`/`worst_short_open`) down to the lowest
+   point reached anywhere along the path to TP. "How far did price move
+   against me, measured from where I got in?" Can be zero if price never
+   dips below entry on the way to TP.
+2. **Peak retracement — NOT implemented**: distance from an interim peak
+   reached after some gain, back down to a later pullback low, even if price
+   never goes below the entry price at all. Nothing in this pipeline computes
+   this.
+
+`long_n_short_drawdown()` computes (1): `max_high_quantile` picks the
+quantile bucket matching how many bars it took to reach TP, then
+`quantile_long_min_low` = the lowest low reached within a window of
+approximately that same length — i.e. roughly "entry → TP," not "peak → TP."
+`long_drawdown = (worst_long_open - quantile_long_min_low) / atr` is the MAE
+in ATR units — a quantile-bucketed approximation, not an exact bar-by-bar
+minimum.
+
+The code and this doc keep the existing `*_drawdown` column/variable names
+(no rename applied), but everywhere "drawdown" appears below, read it as
+**MAE from entry**, not "retracement from a peak."
+
 ## SL detection
 
 Two implementations exist, one active:
@@ -85,7 +113,7 @@ Two implementations exist, one active:
 - **`stop_loss()`** ([profit_loss_adder.py:346-351](../app/ai_modelling/dataset_generator/profit_loss/profit_loss_adder.py#L346-L351))
   — the one actually wired into `add_long_n_short_profit()`. Sets
   `long_sl_distance` / `short_sl_distance` = `max(1, long_drawdown|short_drawdown)`,
-  i.e. the SL distance in ATR units is just the drawdown-to-the-best-case-point,
+  i.e. the SL distance in ATR units is just the MAE-to-the-best-case-point,
   floored at 1 ATR. No explicit price level is stored — only the distance,
   used as the denominator of the signal-strength calc below.
 - **`zz_stop_loss()`** is old ignore it.
@@ -129,9 +157,9 @@ in `planing.md`.
 | `max_high` / `min_low` | `max_profit_n_loss` | best-case exit price within the forward window |
 | `max_high_distance` / `min_low_distance` | `max_profit_n_loss` | bars to that best-case point |
 | `long_distance_time` / `short_distance_time` | `add_long_n_short_profit` | same distance, converted to a `timedelta` via `trigger_tf` |
-| `quantile_long_min_low` / `quantile_short_max_high` | `long_n_short_drawdown` | worst pullback price reached before the best-case point, looked up from the quantile table |
-| `long_drawdown` / `short_drawdown` | `long_n_short_drawdown` | that pullback distance, in ATR units |
-| `absolute_long_drawdown` / `absolute_short_drawdown` | `long_n_short_drawdown` | same, in raw price units |
+| `quantile_long_min_low` / `quantile_short_max_high` | `long_n_short_drawdown` | lowest/highest price reached before the best-case point, looked up from the quantile table (used to compute MAE below) |
+| `long_drawdown` / `short_drawdown` | `long_n_short_drawdown` | MAE (maximum adverse excursion) from entry to that point, in ATR units — see [MAE section](#what-drawdown-actually-measures-mae-not-peak-retracement) |
+| `absolute_long_drawdown` / `absolute_short_drawdown` | `long_n_short_drawdown` | same MAE, in raw price units |
 | `long_profit` / `short_profit` | `profit_n_loss` | raw price distance from worst-open to best-case exit |
 | `weighted_long_profit` / `weighted_short_profit` | `profit_n_loss` | profit in ATR units, minus time-decayed risk-free cost and `order_fee` |
 | `long_risk` / `short_risk` | `profit_n_loss` | drawdown / weighted-profit; forced to `1` (max) for unprofitable/over-`max_risk` positions |
@@ -180,4 +208,4 @@ Not implemented yet — still spec only:
   TP gain individually) — current code only subtracts a flat `order_fee` from
   profit, doesn't add it to the SL side.
 - SL = `max(true negative movement, 1 ATR of next-higher timeframe)` — current
-  `stop_loss()` uses same-timeframe drawdown only, no higher-timeframe ATR term.
+  `stop_loss()` uses same-timeframe MAE only, no higher-timeframe ATR term.

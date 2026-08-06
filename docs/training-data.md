@@ -21,11 +21,10 @@
   - Short is a valid label if the walk-forward hits a qualifying TP before SL
   - if neither direction hits a qualifying TP before SL within the 4H
     boundary, the candle is labelled None
-- TP2 quality filter — a TP hit only qualifies as a valid label if TP2 true
+- TP quality filter — a TP hit only qualifies as a valid label if its true
   gain is both:
   - at least 5x the trading fee
   - at least 3x the SL true risk
-- TP close rate: 1->40%, 2->30%, 3->20%, 4->10%
 - tie-break when both Long and Short would independently qualify: pick
   whichever direction's qualifying TP is hit sooner (fewer candles) — the
   other direction's later success is counterfactual, since only one position
@@ -39,11 +38,11 @@
 - spread: 0.001%
 - trading fee 0.1%
 - double secure on each position: trading fees are added to the SL risk and
-  deducted from the TP gains (SL/TPn are distances from entry, so this
+  deducted from the TP gain (SL/TP are distances from entry, so this
   applies the same way for both long and short positions)
   - SL true loss = SL distance + trading fees: fees are charged on top of
     the risked money when SL is hit
-  - TPn true gain = TPn distance - trading fees: TP must be placed farther
+  - TP true gain = TP distance - trading fees: TP must be placed farther
     out so that the fee-adjusted gain still covers the SL risk
 
 ## naming candles
@@ -58,60 +57,31 @@
 
 ## risk factors
 
-- stop loss (SL): max of followings
-  - maximum true negative movement
-  - 1 ATR of 1higher timeframe (1H)
-- win drawdown (WD): area under drawdown acceleration curve
+- stop loss (SL) = `max(1 ATR, MAE-to-TP)` — matches the implemented
+  `stop_loss()`; see [current-code.md](current-code.md#sl-detection)
+- MAE (maximum adverse excursion) = worst move *against* the position,
+  measured from the entry price, along the path to TP — not a pullback from
+  an interim peak (that's a different metric, "retracement", not computed
+  here). See [MAE section](current-code.md#what-drawdown-actually-measures-mae-not-peak-retracement)
+  for the exact definition. The code still names this `long_drawdown`/
+  `short_drawdown` — read "drawdown" in this codebase as MAE-from-entry.
 
-## TP1-4 / drawdown labels
+## TP / MAE label
 
-Within 4H timeout, labels built with hindsight (label-construction only, not a live feature):
+Single TP per direction:
 
-- TP1 = break-even point (partial close → zero-loss + banked profit on remainder)
-- TP4 = max gainable profit in 4H window (hindsight)
-- TP2/TP3 = intermediate levels, local max-gainable-profit points before a max-drawdown pullback
-- SL optimized per trade; TP1 defined relative to SL, so SL definition must come first
-- TP2/TP3 selection: walk forward chronologically from TP1, take local maxima in
-  time order (not size-sorted), each qualifying if followed by a drawdown
-  pullback > threshold (e.g. fraction of ATR) before the next higher max. TP2
-  = first qualifying max after TP1, TP3 = next after TP2, TP4 = global max
-  (may coincide w/ TP3's successor). Fallback if <2 qualifying maxima:
-  collapse/duplicate TP2/3 toward TP4 rather than leaving undefined (every
-  example gets a complete label).
+- TP = best-case exit price reachable within the 4H window (max `high` for
+  Long, min `low` for Short) — the max-gainable-profit point, found via a
+  rolling max/min over the lookahead window (hindsight, label-construction
+  only, not a live feature).
+- MAE = worst adverse move from entry before that point is reached, found by
+  bucketing the lookahead window into quantiles and looking up which bucket
+  the TP falls in — a cheap approximation, not a reversal-point polyline.
+- SL = per risk factors above (MAE-derived, so SL is computed after TP).
+- position strength = `(1 - risk) * (weighted_profit / sl_distance)`, zeroed
+  for any position that's unprofitable or over the max-risk threshold — the
+  value actually used as the model's training target.
 - no-breakeven edge case: three-way outcome space, not forced TP/SL binary —
   (a) SL literally hit → SL/loss; (b) neither breakeven nor SL hit by
-  timeout → distinct Timeout label (no stop was actually triggered); (c)
-  TP1+ reached → TP-tier labels.
-
-## position potential
-
-potential = total true gain at TP4 / SL true risk - DD-area
-
-## DD-area
-
-drawdown area = sum(distance of farest point of each candle from drawdown acceleration curve / ATR)
-
-### drawdown/pivots acceleration curve
-
-- drawdown: curve for calculating drawdowns
-- pivots: curve for placing TPs
-- polyline; segments have varying slope
-- drawdown segments only increase in slope; pivot segments only decrease
-
-**pivots path:** first candle's High → most significant Peaks → High of max-TP (Long)
-first candle's Low → most significant Valleys → Low of max-TP (Short)
-**drawdown path:** inverse of pivots
-
-#### building the curve (drawdown; pivots = inverse)
-
-Directional line-simplification (RDP-like), splitting only on adverse moves, not max distance either way.
-
-1. Start with one segment: open → max-TP.
-2. For each candle in a segment, measure distance to the segment line using the adverse side (low for Long, high for Short). Negative = pullback against trade direction, positive = favorable.
-3. Split at the candle with the largest negative distance (worst pullback), if any:
-   - segment → (prev point → candle) + (candle → next point)
-   - candle becomes a new path point
-4. Recurse into both new segments.
-5. Stop splitting a segment once no candle in it has negative distance.
-
-Result: path through reversal points from open to max-TP, per the endpoints/slope rules above.
+  timeout → distinct Timeout label (no stop was actually triggered); (c) TP
+  reached → TP label.
