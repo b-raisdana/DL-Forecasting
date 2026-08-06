@@ -9,7 +9,7 @@ pyarrow
 numpy<2.0
 # matplotlib
 scipy
-deap
+optuna
 scikit-learn
 # psutil
 pytz

@@ -1,136 +1,326 @@
-# planing documentation
+# AI Trading System — Planning Notes
 
-I awant to find best AI way to predict price movemtns to find best trading posiions to gain maximum profit with least risk.
+Goal: best AI method to predict price moves → optimal trade positions, max profit / min risk.
 
-## what am i lookng for?
+## definitions
 
-### how to feed data?
+ATR = pandas-ta.ATR(256)
 
-- is my propsed data feed perfect?
-- how to determine if any of supplied channels are not useful
-- how to determine if i need to add new columns?
-- what are alternative/candidates to test as new columns?
+### natural price distance
 
-### how to normalize data?
++/- ~ price is higher/lower than top
 
-- is the normalization suggested perfect?
-- what are alternative/candidate normalization options to test?
-- how to detrmine if modification of normalization improves my accuracy and perfomance?
+### normal price distance
 
-### what is the best model implementation?
++/- : price is [higher-for-peaks or lower-for-valley]/[vice-versa]
 
-- what are alternative model candidate?
-- what are the range of parameters feasible to test for parameter optimization?
+### volume strength of tops
 
-## hardware
+- example for a 4H top:
+  - some volume of 2 times lower (15min):
+    - time: +/-256 original time candles
+    - peak: L < H + original ATR
 
-- NVIDIA Geforce RTX 4060 \*GB
-- 64GB Ram
-- 2 SSD HDD
+## key questions
 
-## data feed
+### data feed design
 
-each canlde includes:
+#### candle feature schema
 
-- OHLC prices / ATR
-- candle height / pandas-ta.ATR(256)
-- is candle a peak/valley? which timeframe
-  - representing number (number of minutes) for highest timeframe in which this candle is a peak/valley
-  - (+) for peak and (-) for valley
-  - **resolved (causality):** no lookahead is used. A candle's confirmed peak/valley timeframe is capped by how much time has actually elapsed between it and the sequence's reference "now" candle — e.g. a candle from 4 months ago can be confirmed as a 4M peak (it was the max in the 4M before it and has stayed the max up to now), while a candle from 1 week ago can be at most a 1W peak/valley, since what happens after it isn't known yet. This is causal by construction.
-    - OPEN QUESTION: when many overlapping training windows are generated across the ~1 year of history, is "now" for this confirmation always pinned to that specific window's own last candle (not to the actual present date the dataset was generated on)? If any window's peak/valley labels use information beyond that window's own "now", leakage is reintroduced. Worth double-checking directly in the feature-generation code.
-  - see also the multi-horizon ATR-distance feature under "class imbalance" below, which extends this single "highest confirmed timeframe" number into several continuous per-horizon distances.
-- timeframe in minutes
-- size of the base sequence if the candle is in a base
-- distance from now in minutes
+each candle includes:
 
-### multi-timframe series
+- HLC:
+  - C / ATR
+  - (H - C) / ATR
+  - (C - L) / ATR
+- gap from last close (O - last-C) / ATR
+- candle height / ATR
+- volume / ATR(volume) — assumes the data source provides per-candle volume; confirm before relying on this field.
+- is a top? which tf (minutes of highest confirmed tf; + peak / − valley)
+  - no lookahead — confirmed peak/valley tf capped by elapsed time to **anchor candle** (last candle of window, the "as of" point; distinct from real "now" since each training window has its own anchor). E.g. candle 4mo before anchor can confirm as 4M peak if it stayed max to anchor; candle 1wk before anchor capped at 1W. Causal by construction.
+  - if not = 0
+- timeframe in minutes — only for multi-tf shared architectures; omitted for per-timeframe-branch architectures (branch identity already encodes tf, field would be constant/redundant there). See "multi-timeframe fusion."
+- 2 and 3 higher tfs tops time and price distances
+  - tf ordered list: 5min, 15min, 1H, 4H, 1D, 1W, 1M, 4M, 1Y — note: this list is only used for peak/valley timeframe confirmation and the fields below; only the first 6 (5min–1W) are actual input series, per "multi-timeframe fusion."
+    - eg. for 15mins, it is 4H and 1D
+  - dont overlook future but we know about input duration
+  - time: +/- ~ number of candles before/after the top
+  - top volume strength
+  - abs-time
+  - natural-price-distance
+  - normal-price-distance
+  - abs-price
+- distance from anchor candle (minutes)
+- price distance / ATR from nearest previous top
+  - nearest_top_distance = min(distance / ATR(in the tf of the peak) for tfs)
+    - abs
+    - natural price distance
+    - normal price distance
+  - nearest_top_tf = tf number of minutes of nearest peak
+  - nearest top volume strength
+  - the same for nearest_valley_distance, and nearest_valley_tf
+
+#### feature-set completeness — testing
+
+1. ablation pass: permutation importance against the current set — flags features pulling no weight.
+2. candidate screen: MI / GBM screen against the candidate pool — flags missing signal not yet captured.
+3. set is provisional until both 2 and 3 have actually run at least once; re-run 2 whenever a new feature is promoted out of 3.
+
+- priority order for step 2, ranked by suspicion (unverified guess, just for sequencing the ablation queue):
+  1. candle height/ATR — deterministic fn of existing OHLC (high−low), redundant info though may speed small-model training.
+  - OHLC/ATR, peak/valley signal, dist-from-anchor = load-bearing, not suspect.
+- timeframe-in-minutes was also on this queue (near-zero-info under per-tf-branch archs, since branch id already encodes tf) — out of the ablation queue entirely instead: made a config option gated on architecture — included for flat/shared-encoder archs (disambiguates mixed timeframes, so _not_ low-info there), excluded for per-tf-branch archs (would be constant/redundant), per the feature schema above / "multi-timeframe fusion" below.
+  Alt:
+  - certify completeness by reasoning alone, no ablation — rejected, too easy to fool self
+  - start with large feature set + prune — rejected, costlier than minimal+screened-additions
+
+##### non-contributing-channel detection — method
+
+- permutation importance on trained model — shuffle feature in val set, measure KPI drop (cheaper, no retrain).
+  Alt (will not be used unless permutation insufitiency be proved):
+  - SHAP — more informative, expensive for seq models; deferred til shortlist exists
+  - exhaustive 2^n subset search — infeasible
+  - gradient saliency/integrated gradients — viable, deferred; better for "where in time" than "whether"
+
+##### new-fature addition — workflow
+
+hypothesis-driven, not "more=better." Flow: state hypothesis → cheap MI screen (below) → full run only if signal → keep only if backtested KPI improves enough to justify cost.
+Alt:
+
+- speculative additions w/o hypothesis — rejected, causes redundant-channel risk
+- fixed periodic review cadence — deferred, hypothesis-driven preferred while system small
+
+##### candidate feature pool
+
+- OBV (volume / accumulation-distribution)
+- ICHIMUKU (trend, support/resistance, momentum — all-in-one)
+- MACD (keep as the momentum read; drop RSI as redundant with it)
+- ADX (trend strength — distinguishes trending vs. ranging, which RSI/MACD/Ichimoku don't measure directly)
+- VWAP (volume-weighted price benchmark — different volume angle than OBV; intraday fair-value reference)
+- volatility/regime: realized-vol ratio across timeframes, Bollinger-width squeeze, ATR-of-ATR.
+- session/time: hour/day cyclical (sin/cos), session-open/overlap flags (Asia/EU/US).
+- cross-symbol (once multi-symbol): BTC-dominance/BTC price as market-beta, rolling correlation/beta to BTC.
+- structural: time-since-last-peak/valley per horizon, consecutive-same-direction-candle count.
+- distance from other tf tops.
+
+##### candidate-feature screening — method
+
+mutual information (`sklearn.mutual_info_classif/regression`) between candidate + each label head, vs current top features — no GPU needed. Near-zero MI → deprioritize. If ambiguous: small LightGBM/XGBoost w/ vs w/o candidate. Full DL run reserved for candidates passing both.
+Alt:
+
+- Pearson/Spearman alone — rejected, misses nonlinear; kept as even-cheaper pre-check
+- full training run per candidate — rejected, the expensive default this avoids
+- Boruta/RFE around GBM screen — deferred, useful once larger candidate pool exists
+
+### normalization strategy
+
+- for all price based inputs use rolling /ATR scheme.
+- **alternative schemes to test:** (a) log-return norm (scale-free); (b) rolling z-score; (c) min-max per window (cheap, likely worse — loses cross-window vol comparability); (d) hybrid — ATR-norm price + separate raw log-return channel (position + velocity).
+  Alt:
+  - no normalization — rejected, non-stationary
+  - min-max as primary — rejected, loses vol-regime comparability; kept only as test candidate
+- **testing protocol** for a normalization change: same discipline as the seed-count workflow below — ≥3 seeds/scheme, compare backtested-KPI distributions (not train loss), same train/validate split scheme (see "validation & train/test splitting").
+  Alt: single-run train-loss comparison (rejected — exactly the noise risk flagged).
+
+### model architecture & selection
+
+- **architecture candidates:** (a) Transformer w/ per-tf embedding + cross-tf attention; (b) TCN — cheaper, dilated convs for multi-scale, good single-GPU baseline; (c) hybrid CNN→Transformer; (d) state-space (Mamba/S4) — cheap long-seq alt to attention; (e) LSTM/GRU — sanity-check floor.
+  Alt:
+  - pure MLP on flattened features — rejected as serious candidate, discards seq structure; trivial baseline only
+  - 4 separate per-tf models + late ensembling — kept as cheap baseline, see fusion section
+  - GNN over tf/symbol nodes — deferred, no evidence needed yet
+- **hyperparam search-space bounds:** not fixed a priori — `profile_trial_cost()` measures real wall-clock/VRAM per arch+hparam combo on this card; `max_trials_for_budget()` derives trial cap. Search-space priors: seq len capped 256/tf; batch size s.t. largest arch/seq combo fits VRAM at batch≥8; hidden-dim/depth kept modest vs ~1yr data (small vs NLP-scale). Concrete bounds from profiler's first pass, not hand-picked.
+  Alt:
+  - fixed ranges from DL-literature defaults w/o profiling — rejected, wrong hardware/dataset scale
+  - very wide ranges relying only on Hyperband — rejected as primary, wastes trials in OOM regions
+
+- **cross-architecture fairness**
+  - architecture = categorical param in one Optuna study (not N sweeps) → fairness enforced at study level:
+    - (1) same train-pairs/BTC-USDT split every trial (see "validation & train/test splitting");
+    - (2) one shared GPU-hour budget via `estimate_total_budget()`, not per-arch;
+    - (3) Hyperband pruning arch-agnostic;
+    - (4) min grace-period epochs before pruning (protects slow-converging archs); post-study sanity-check trial counts per arch, top-up budget if one is starved.
+  - Alt:
+    - separate sweeps w/ equalized budgets — rejected, old approach, wastes compute
+    - fixed wall-clock per arch — rejected, same waste, time-boxed
+    - compare only best trial per arch — rejected, too seed-sensitive
+
+## hardware constraints
+
+- RTX 4060 Laptop GPU, 8GB VRAM (8188 MiB per `nvidia-smi`), 64GB RAM, 2 SSD/HDD.
+
+- **max feasible model size**
+  - don't hand-calculate — `profile_trial_cost()`/`estimate_total_budget()`/`max_trials_for_budget()`
+  - measure real wall-clock+VRAM on this exact card.
+    - Rough prior only: 4tf×256candles×few scalars is a modest seq length; 8GB should fit small/med Transformer/TCN at batch 16–64 w/ mixed precision; VRAM more likely bound by hidden-dim/full-attention-over-concat-seq than seq length itself. If full cross-attention doesn't fit, caps toward cheaper fusion alternatives (per-tf encoders + light fusion) below.
+  - Alt:
+    - gradient checkpointing — fallback if needed, slows training
+    - mixed precision AMP — near-free win, enable by default, not as fallback
+    - gradient accumulation — fallback if batch-size-bound
+    - cloud/rented GPU — rejected, conflicts w/ local-only decision; revisit only if hard-bottlenecked
+    - model parallelism — n/a, single GPU
+
+## multi-timeframe fusion
 
 - each series 256 candles
-- 15min, 1H, 4H, 1D timeframes
-- on overlap: at-most 1 candle of higher tf allowed to overlap with lower tf series
-- there is an assumtion about price mobments characterisitc: the patterns have near meaning in different time . if a pattern in 15min timeframe shows a long position the same pattern in 1H timeframe will show the same meaning.
-- combination of pattern in different timeframes will give a detail view about price movement: the real truce behind a pattern in a 1D timeframe will be cleared by investigating the patterns of 4H, 1H and 15min timeframes of the same chart.
-- how could i combine multiple models or distiribute data feed to best implement this nature with least effort and maximum efficiency?
-- we are feeding data of more than 1 year to give maximum perpective to the model, but patterns we are looking for happen usaly in a day or a week. these patterns might be visible in last few candles of chart or might be in 2/3 candles of the chart or 50% of last candles? how to optimize where to foucous? can special attention mechanisms help?
-- a pattern and be slowed-down or speeded-up with keeping it's nature, a compress-price or trend revesal might happen in different speed:
-  - - what is the best of normalizing the spped?
-  - - which model might transalte these different speed pattern the same better?
-- where to focous? always on the now time(last candle) to determine go in long/short position or might it be helpful to detect it's too soon or too late to go in the position and expaculate the best time to open the position?
+- from anchor backards: 5min/15min/1H/4H/1D/1W tfs
+- overlap: ≤1 higher-tf candle may overlap a lower-tf series.
+- domain assumption: pattern meaning is scale-invariant across tf (15min long-pattern ≈ 1H long-pattern); combining tfs clarifies the "real truth" behind any one tf's pattern.
+- **multi-tf combination approach:** per-tf encoders (small TCN/Transformer per series) → concat/pool → shared cross-tf fusion block (small Transformer over pooled reps, or concat+MLP as cheaper baseline). Lower effort than full cross-attention over the concatenated sequence; natural first arch to profile before the pricier full-attention option. Per the timeframe-in-minutes resolution above, this per-tf-branch design drops that field entirely (branch identity already tells the encoder the tf); it's only added back if the arch choice switches to the flat/shared-encoder option below.
+  Alt:
+  - 4 separate models + late ensemble — rejected as primary, loses cross-tf interaction; cheap baseline only
+  - flat Transformer full self-attn over concat seq, no per-tf stage — most expensive, candidate only if profiling allows
+  - hierarchical/wavelet decomposition — deferred, more complex, no evidence needed
+- **long-window focus:** attention/state-space over fixed pooling is the standard approach, since 1yr+ of data is fed but target patterns can live anywhere from the last few candles to half the sequence, and the relevant window shifts case-to-case. Include as an arch candidate; compare vs recency-weighted-pooling baseline to confirm it earns its cost.
+  Alt:
+  - fixed recency weighting w/o learned attention — rejected as sole approach, can't adapt; kept as cheap baseline
+  - manual windowing/hand-picked N — rejected, reintroduces the problem attention solves
+- **pattern speed-invariance** (same pattern over 3 vs 30 candles) — a time-warping problem: (a) TCN multi-dilation captures multi-scale shape w/o explicit warp; (b) attention has no fixed receptive field either — test directly. Explicit DTW preprocessing kept as fallback/diagnostic if the architectural approach fails empirically (test: does model score known same-pattern-diff-speed examples similarly?).
+  Alt:
+  - DTW preprocessing as default — rejected, heavier engineering, hurts real-time variable-length inference; diagnostic/fallback only
+  - volatility-based logical-candle resampling — deferred, hard to reconcile w/ existing windowing/multi-tf design
+- **pattern scale-invariance** (same pattern, different price magnitude): largely already handled by the resolved ATR-relative normalization (scale expressed relative to volatility by construction). Open part is architectural: conv layers naturally somewhat scale-robust; attention has no strong scale bias — evaluate empirically. Treat as validated by construction; architecture comparison is the remaining lever, not a new normalization step.
+  Alt: separate explicit "scale normalization" beyond ATR-relative (rejected — double-normalizes, unnecessary).
+- **decision-anchor point** keep the primary Long/Short/No-Trade decision anchored at the anchor candle for now (simplest, matches current label design). Treat entry-timing (too-soon/too-late detection) as a secondary/future output — changes label design non-trivially, wait for anchor-based baseline first.
+  Alt:
+  - build entry-timing into v1 — rejected for now, adds complexity before baseline validated
+  - separate downstream "timing" model post-Long/Short — viable future step, deferred
+- **higher-tf "in progress" candles — decision:** use only completed candles — lowest tf 15min; 1H candles = 256×15min prior so most-recent is fully closed; same for higher tfs. Sidesteps partial-candle state and cross-tf boundary-alignment leakage by construction.
 
-## validation / data splitting
+## validation & train/test splitting
 
-- **resolved:** all 256-candle windows are built from contiguous, complete data — any time range with missing candles is filtered out and discarded entirely, so no window contains gaps.
-- OPEN QUESTION: window completeness alone doesn't prevent leakage _between_ train and validation sets. Consecutive windows (e.g. one ending "now" and the next ending 15 minutes later) overlap heavily and are highly correlated. If windows are split into train/val randomly rather than by contiguous time blocks, near-duplicate information can leak across the split and inflate validation performance. Needs an explicit decision: chronological holdout (train on earlier dates, validate/test on strictly later dates) vs. some other scheme — and if chronological, how much gap/embargo to leave between the train and validation date ranges.
+- windows built only from contiguous complete data; any gap-containing range discarded entirely.
 
-## required ouput
+- **split scheme — resolved (simplified):** train on all other trading pairs, validate on BTC/USDT. This is a cross-symbol (leave-one-symbol-out) split, not a temporal one — since train and validation are entirely different assets, there's no same-symbol window overlap to leak across, so the walk-forward-vs-embargo machinery isn't needed. Use the full BTC/USDT history as the validation set.
+  Alt:
+  - walk-forward / random-split-with-embargo within a single symbol's own history — previous approach, dropped as unnecessary complexity now that validation is cross-symbol
+  - rotating leave-one-symbol-out across all pairs rather than always BTC/USDT — viable generalization check, deferred; BTC/USDT fixed as the validation symbol since it's the primary target market
+- **final holdout — resolved:** reserve the most-recent contiguous block of BTC/USDT (≥ several weeks, enough trade outcomes at 4H scale); never touches training-pair selection or any tuning decision; used exactly once, after arch/hparams/normalization/threshold are locked in from the BTC/USDT validation split, for final reported KPIs. Materially worse holdout result than validation = overfitting-to-tuning signal → investigate, don't re-tune against it (would require a fresh holdout).
+  Alt: no separate final holdout, reporting the BTC/USDT validation KPIs directly as final (rejected — still risks overfitting through repeated validation-set tuning).
 
-- current best action: Long / Short / No Trade
-- how much are the targeted prices? TP1, 2, 3, 4
-- how much is expected drawdown before TPs = SL
-- how probable might be our forcasted TPs? meeting TPn before SL and before Timeout = 4H
-- how probable is the drawdown breakout = SL hit?
-- we are looking for escalping / same day positions to be closed in less than 4 hours.
+## model outputs & targets
+
+- action: Long/Short/No-Trade
+- SL-distance = drawdown-before-TP. TP1 will be calculated based on this to.
+- TP4-distance = max forcasted profit.
+- TP2-ratio = 0 to 1 scale between TP1 and TP4
+- TP3-ratio = 0 to 1 scale between TP2 and TP4
+- confidence factors
+  - I need to deploy a model architecture which give me a configdenc metric aside with forcasted values.
+  - I do not have input data for confidence.
 
 ### how TP1-4 / drawdown labels are built for training
 
-Within the fixed 4H timeout, training labels are built with full knowledge of what happened next (valid only for constructing targets, not as a live/inference-time feature):
+Resolved spec moved to [training-data.md](training-data.md#tp1-4--drawdown-labels); rationale/alternatives kept here.
 
-- **TP1** = the break-even point: the price level where, given SL, closing part of the position makes the trade zero-loss while banking some profit on the remaining share.
-- **TP4** = the maximum gainable profit within the 4H window, known in hindsight.
-- **TP2 / TP3** = intermediate levels between TP1 and TP4, chosen at local maximum-gainable-profit points that occur before a maximum-drawdown pullback.
+Within 4H timeout, labels built with hindsight (label-construction only, not a live feature):
 
-OPEN QUESTIONS:
-
-- Is SL fixed (e.g. a constant ATR multiple) before TP1 is computed, or is SL itself optimized per trade? TP1 is defined relative to SL, so SL's own definition needs to be pinned down first.
-- What's the precise rule for picking TP2/TP3 when there are several candidate local maxima before drawdowns — e.g. the two largest, or the two most persistent (longest held before reversal)?
-- The required output also asks for _probabilities_ of hitting each TP and of the drawdown, but the labels above are single deterministic outcomes per training example (what actually happened). Turning that into a probabilistic forecast is a separate modeling decision — e.g. quantile regression, a calibrated classifier per TP level, or an ensemble/Monte-Carlo spread over repeated runs — to be decided as part of "best model implementation."
+- TP1 = break-even point (partial close → zero-loss + banked profit on remainder)
+- TP4 = max gainable profit in 4H window (hindsight)
+- TP2/TP3 = intermediate levels, local max-gainable-profit points before a max-drawdown pullback
+- SL optimized per trade; TP1 defined relative to SL, so SL definition must come first
+- **TP2/TP3 selection rule — resolved:** walk forward chronologically from TP1, take local maxima in time order (not size-sorted), each qualifying if followed by a drawdown pullback > threshold (e.g. fraction of ATR) before the next higher max. TP2 = first qualifying max after TP1, TP3 = next after TP2, TP4 = global max (may coincide w/ TP3's successor). Chronological order preferred over "two largest" so TP2<TP3<TP4 in time too, matching real sequential partial-exit execution. Fallback if <2 qualifying maxima: collapse/duplicate TP2/3 toward TP4 rather than leaving undefined (every example gets a complete label).
+  Alt:
+  - "two largest" regardless of time order — rejected as primary, could put TP3 before TP2 in time; kept as alt rule to test
+  - "two most persistent" — viable, not default; harder to define precisely, test if primary rule unstable
+  - null/masked TP2-3 when <2 maxima — rejected as default, extra loss-masking complexity vs simpler duplicate fallback
+- required probabilistic outputs (P(TPn), P(drawdown)) vs the deterministic hindsight labels above are a separate modeling decision (quantile regression / calibrated per-level classifier / ensemble-MC spread) — belongs under "model architecture & selection."
+- **no-breakeven edge case — resolved:** three-way outcome space, not forced TP/SL binary, covers the case where price never returns to breakeven before timeout: (a) SL literally hit → SL/loss; (b) neither breakeven nor SL hit by timeout → distinct **Timeout** label (no stop was actually triggered); (c) TP1+ reached → TP-tier labels. Keeps "stopped at defined max loss" distinguishable from "closed flat/small-loss at timeout untouched by SL."
+  Alt:
+  - force-label as SL anyway — rejected, conflates severities, distorts distribution
+  - drop such examples — rejected, survivorship bias, loses legit hard examples
+  - mark-to-market P&L as extra continuous regression target — deferred, second head before categorical version validated
 
 ### normalization
 
-- (OHLC - close of now (latest candle) )/ devids by ATR of the same candle
-- the current price (or close of last candle) equals to zero
-- **resolved:** each candle is normalized by its _own_ rolling ATR (not by "ATR at now"). This is intentional and correct — standard volatility-normalization — since it expresses a move in "how many ATRs of that period's own volatility regime" rather than in raw price, which is exactly what makes moves from a calm period and a volatile period comparable.
+- (OHLC − anchor close) / ATR of same candle; anchor close = 0.
+- each candle normalized by its _own_ rolling ATR (not anchor's ATR) in it's _own_ tf — standard vol-normalization, expresses move in "ATRs of that period's own regime," making calm- and volatile-period moves comparable.
 
-## optimization
+## optimization strategy
 
-- chich optimization techniques to test?
-- what KPIs to mintor for selecting best optimization?
+- optimization = **one search** across (1) arch/model-combo choice + (2) each arch's hparams, not two disjoint phases.
+- architecture = single categorical param inside same Optuna study as hparams (conditional sub-params per arch), not exhaustive — bad archs pruned early instead of full independent sweeps each. Impl: `app/ai_modelling/parameter_optimizser/optuna_optimizer.py`.
+- Optuna TPE (sample-efficient, single-GPU budget) + Hyperband pruning.
+- GA/NSGA-II for optional 2nd refinement stage.
+- Pareto front across competing KPIs (e.g. Sortino vs max-DD).
+- per-trial time measured not assumed.
+  - runs real training steps per arch, measures wall-clock+peak-VRAM;
+  - `estimate_total_budget()`/`max_trials_for_budget()` → projected total + trial-count cap before full study.
+- `OptunaPruningCallback` reports val_loss/epoch, prunes Hyperband-unpromising or NaN/Inf trials.
+- best-run selection KPI:
+  - under "evaluation & error metrics" below — primary=expectancy, guardrail=max-DD, secondary=Sortino, once the backtest module is built. Until then `val_loss` remains the training-time proxy (`compute_fitness()`), explicitly interim not final.
+    Alt: see full list under "evaluation & error metrics" (Sharpe/Calmar/profit-factor/win-rate/NSGA-II-Pareto) — not repeated here.
 
-## error calculation method
+## evaluation & error metrics
 
-- how to measure the error rate?
-- what are candidates to test?
-- how to compare result and how to choose the best one?
+- **error-rate measurement** no single one — measured per-head instead (quantile-loss/MAE for price levels, Brier/log-loss for probabilities, precision/recall/F1 for action). Final selection uses backtested trading KPIs, not these directly.
+- **per-head loss candidates to test:** quantile/pinball vs MAE/MSE (price levels); Brier vs log-loss (calibration); cross-entropy vs focal vs class-weighted-CE (action, ties to imbalance section).
+- **model-selection method:** per-head metrics = dev diagnostics only; final selection = backtested KPIs (expectancy primary, max-DD guardrail, Sortino secondary) on the BTC/USDT validation split, then the untouched final holdout.
 
 ### error metric vs. trading objective
 
-- a low statistical loss (MSE/MAE/quantile loss on TP/drawdown predictions) does not guarantee profitability — it should be treated as a training-time signal, not the final selection criterion.
-- final model/config selection should be based on backtested trading KPIs: win rate, profit factor, expectancy per trade, Sharpe/Sortino, max drawdown, Calmar ratio — computed by actually simulating trades from the model's TP/SL predictions.
+- low statistical loss ≠ profitability — training-time signal only, not selection criterion.
+- final selection = backtested KPIs: win rate, profit factor, expectancy/trade, Sharpe/Sortino, max-DD, Calmar — via actual simulated trades from TP/SL predictions.
 
-OPEN QUESTION: which of these KPIs is primary (what you optimize/rank configs by), and which are just guardrails (e.g. "reject any config with max drawdown above X even if profit factor is best")?
+- **primary KPI vs guardrails** primary = expectancy/trade (R-multiples or %) — reflects real profitability per opportunity, less sensitive to trade frequency than profit factor. Guardrail = max-DD (reject any config over acceptable DD/risk tolerance regardless of other numbers). Secondary ranking (among guardrail-passers) = Sortino (vs Sharpe — doesn't penalize upside vol, fits asymmetric TP strategy). Win rate/profit factor = diagnostics only (each gameable alone).
+  Alt:
+  - Sharpe as primary — rejected, penalizes wanted upside vol
+  - Calmar as primary — viable, not chosen; kept adjacent to max-DD guardrail
+  - profit factor as primary — rejected, ignores trade frequency/opportunity cost
+  - NSGA-II multi-objective Pareto — the actual longer-term plan via `run_kpi_refinement()`, pending the backtest module; single-primary-KPI is the interim until then
+- **per-head metric list** (regression + calibration + classification heads, not one blended number):
+  - price levels (TP1-4, SL): quantile/pinball loss + MAE companion.
+  - probabilities: Brier + log-loss + calibration curve/ECE.
+  - action: precision/recall/F1 per class (macro-F1, imbalance-aware) + confusion matrix.
+  - per-head metrics feed Optuna's scalar objective only as a weighted-sum interim proxy (matches existing val_loss use); real selection stays the backtested-KPI stage.
+    Alt:
+    - single blended loss only — rejected, already flagged insufficient
+    - per-head multi-objective Optuna — more complex, deferred; single-GPU budget
+    - AUC-ROC instead of F1 — viable companion/secondary diagnostic, not primary
+- **seed-count workflow** min 3 seeds/config, 5 preferred if budget allows; paired stat test across matched folds (paired t-test / Wilcoxon) — require CI excluding zero, not eyeballed means. Reserve multi-seed re-run budget for top finalists post-search only (too expensive per-trial during search) — factor into `estimate_total_budget()`/`max_trials_for_budget()`.
+  Alt:
+  - single seed — rejected, can't separate signal/noise
+  - bootstrap resampling of val set — cheaper, complementary, combinable w/ 3-seed approach
+  - 10+ seeds per candidate during search — rejected, too expensive; finalists-only instead
 
-## class imbalance
+## class imbalance handling
 
-- test class-weighted loss vs. focal loss for any classification-style targets (e.g. peak/valley class, TP-hit-before-SL class) and compare.
-- for each candle, provide (fractional) ATR-distance to the nearest peak/valley at each of several fixed horizons: 4H, 1D, 1W, 1M, 4M, 1Y. This turns the single categorical "highest confirmed timeframe" peak/valley feature into several continuous features, which sidesteps the imbalance problem for that feature.
+- test class-weighted vs focal loss for classification-style targets (peak/valley class, TP-hit-before-SL class), compare.
+- multi-horizon ATR-distance to nearest peak/valley at fixed horizons (4H/1D/1W/1M/4M/1Y) — turns single categorical "highest confirmed tf" feature into continuous features, sidesteps imbalance for that feature.
 
-OPEN QUESTION: does this multi-horizon ATR-distance feature replace the original single "highest timeframe" peak/valley feature entirely, or do both get fed in? And does the class-weight-vs-focal-loss test also apply to the TP-hit/drawdown side of the output (which can also be rare-event-like, e.g. TP4 being hit at all within 4H), or is this scoped only to the peak/valley input feature?
+- **multi-horizon vs categorical peak/valley feature** feed both. Continuous ATR-distance features = primary (solve imbalance); keep categorical "highest confirmed tf" too as a cheap compact discrete summary — may capture something continuous version doesn't, esp. at low data volume. Confirm via ablation, don't assume; drop categorical only if ablation shows zero marginal contribution.
+  Alt:
+  - continuous-only, drop categorical now — rejected/deferred, no ablation evidence yet it's safe
+  - categorical-only, skip multi-horizon — rejected, reintroduces the imbalance problem it solves
+  - replace w/o ever testing — rejected, riskier than testing first, no evidence
+- **class-weight-vs-focal test scope** applies to both peak/valley and TP-hit/drawdown targets, as two separate experiments (not one shared decision): (a) peak/valley target if kept as aux output; (b) TP-hit/SL-hit/Timeout target (see 3-way label above), likely differently-shaped rarity (TP4 probably rarer than generic peak/valley). Tune class weights/focal-gamma per target, not globally.
+  Alt:
+  - scope to peak/valley only — rejected, leaves TP/SL imbalance, likely worse, unaddressed
+  - one blanket loss choice untested per-target — rejected, no evidence of transfer, gamma likely needs per-target tuning
+  - resampling alternatives:
+    - SMOTE-style — awkward for sequential windows, likely rejected
+    - class-balanced batch sampling — deferred, complementary
+    - inference-time cost-sensitive thresholding — relates to No-Trade threshold answer; complementary lever, not replacement
+- **prevalence measurement — next action, not yet run:** actual prevalence (% candles peak/valley per horizon, % trades reaching each TP vs SL-hit vs Timeout) isn't known — measure empirically once the labeling pipeline exists, via a data-profiling script, before finalizing the class-weight/focal choice above.
+  Alt: assume prevalence from market-structure intuition, no measurement (rejected — exactly what this step avoids).
 
 ## experiment tracking (current priority)
 
-- needed now, not deferred: with multiple normalization/model/optimization combinations planned, an ad hoc file-naming convention (as currently seen in /data, e.g. "- Copy (2).keras", ".bak", ".nan" suffixes) won't scale and makes it hard to know which run produced which result.
-- decide on a lightweight tracking approach: at minimum a consistent naming/logging convention (config hash + date + key hyperparams); ideally a tool (MLflow, Weights & Biases, or a simple CSV/SQLite run log) recording config, dataset version, metrics (both loss and the trading KPIs above), and artifact path together.
+- needed now: ad hoc file-naming (`- Copy (2).keras`, `.bak`, `.nan` in /data) won't scale, can't trace which run→which result.
+- decide lightweight tracking: min = consistent naming/logging convention (config hash+date+key hparams); ideally a tool (MLflow/W&B/CSV-SQLite) logging config+dataset-version+metrics(loss+trading KPIs)+artifact path together.
+- local-only (e.g. MLflow w/ local file backend).
+  Alt:
+  - W&B/cloud-hosted — rejected for now, conflicts w/ local-only; revisit if collaboration/remote-dashboard becomes a real need
+  - bare CSV/SQLite log, no dedicated tool — viable fallback if MLflow local-server overhead isn't worth it
+  - no formal tracking — rejected, explicitly doesn't scale, see above
 
-OPEN QUESTION: local-only (e.g. MLflow with a local file backend) or does this need to be shared/remote given the single-machine hardware setup described above?
+## deferred topics (not current concerns, placeholders)
 
-## deferred topics (not current concerns, kept as placeholders)
+- **transaction costs/spread/slippage/latency**: matters for sub-4H scalping, not addressed now. Revisit before live/paper trading — cost-free backtest overstates real perf.
+- **risk/position sizing beyond TP targets**: handled manually via existing procedure, not by model. No AI work needed now.
+- **market regime robustness/retraining cadence**: not addressed now. Revisit once live a while — crypto regime shifts (trend/range/vol), untouched model can decay silently.
 
-- **transaction costs / spread / slippage / execution latency**: fees and slippage can matter a lot for sub-4H scalping, but not addressed now. Revisit before any live/paper trading — backtest P&L without cost assumptions will overstate real performance.
-- **risk / position sizing beyond TP targets**: stop-loss placement and position sizing are handled manually through existing procedures, not by the model. No AI work needed here for now.
-- **market regime robustness / retraining cadence**: not addressed now. Revisit once a model is live for a while — crypto market character shifts (trend vs range, volatility regime) and an untouched model can decay silently.
-
-## etc
+## glossary
 
 - ATR = pandas-ta.ATR(256)
-- base = sequence of 2
+- anchor candle = last candle of a 256-candle window; the "as of" point for a prediction (training or live)
