@@ -220,3 +220,18 @@ Not implemented yet — still spec only:
   profit, doesn't add it to the SL side.
 - SL = `max(true negative movement, 1 ATR of next-higher timeframe)` — current
   `stop_loss()` uses same-timeframe MAE only, no higher-timeframe ATR term.
+- **TODO**: entry price mechanism — `max_profit_n_loss()`'s `worst_long_open`
+  / `worst_short_open` implements a worst-case _market-order_ fill (rolling
+  max/min of high/low). The spec ([training-data.md § targeting bid
+  price](training-data.md#targeting-bid-price)) now calls for a best-case
+  _limit-order_ training target instead: best price reachable in the
+  5-minute candle immediately following NOW's close, which the model's own
+  predicted entry-price output is trained against. The spec is correct as
+  written; the code has not been updated to match yet.
+- **TODO**: single-label collapse — `profit_n_loss()` keeps `long_signal`
+  and `short_signal` as two independent continuous targets, with nothing
+  zeroing one when both are nonzero. The spec ([training-data.md § where
+  can be a position?](training-data.md#where-can-be-a-position)) now calls
+  for a single label: when both directions qualify at once, keep whichever
+  reaches TP sooner and zero the other's signal. The spec is correct as
+  written; the code has not been updated to match yet.
