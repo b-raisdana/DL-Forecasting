@@ -1,3 +1,5 @@
+# Experimentation, Evaluation & Optimization
+
 ## Alternative Design & Comparison
 
 Identify candidate alternatives
@@ -28,11 +30,11 @@ Low statistical loss does not imply profitability. Per-head statistical metrics 
 
 No single blended loss — measured per output head, since each has a different error shape:
 
-| head                                      | candidates to test                                  | notes                                                                                                                                            |
-| ----------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| price levels (TP, SL / MAE, OM, aux MFE)  | quantile/pinball loss (primary) + MAE/MSE companion | quantile loss reused by [uncertainty-native GBM variants](03-Model n Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap) |
-| probabilities / confidence                | Brier vs log-loss                                   | see [confidence & calibration metrics](#confidence--calibration-metrics)                                                                         |
-| action (Long/Short/None)                  | cross-entropy vs focal vs class-weighted-CE         | tuning scope (which loss, per-target gamma) lives in [class imbalance handling](02-Data, Label & Feature Engineering.md#class-imbalance-handling)         |
+| head                                     | candidates to test                                  | notes                                                                                                                                                    |
+| ---------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| price levels (TP, SL / MAE, OM, aux MFE) | quantile/pinball loss (primary) + MAE/MSE companion | quantile loss reused by [uncertainty-native GBM variants](03-Model n Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap) |
+| probabilities / confidence               | Brier vs log-loss                                   | see [confidence & calibration metrics](#confidence--calibration-metrics)                                                                                 |
+| action (Long/Short/None)                 | cross-entropy vs focal vs class-weighted-CE         | tuning scope (which loss, per-target gamma) lives in [class imbalance handling](02-Data, Label & Feature Engineering.md#class-imbalance-handling)        |
 
 Per-head metrics feed Optuna's scalar objective only as a **weighted-sum interim proxy** (matches the existing `val_loss` use in `compute_fitness()`) until the backtest module exists — real selection always stays at the backtested-KPI stage below.
 Alt: single blended loss — rejected, already flagged insufficient. Per-head multi-objective Optuna — more complex, deferred (single-GPU budget). AUC-ROC — viable companion/secondary diagnostic to F1, not primary.
@@ -198,7 +200,7 @@ The hybrid scheme wins on domain fit (position + velocity, tailored to this proj
 ##### input / feature embedding
 
 | candidate                       | evidence | dominance | modernity | resource_fit | domain_fit | impact/cost | raw | risk | tooling | adjusted | tier          |
-| -------------------------------- | -------- | --------- | --------- | ------------ | ---------- | ----------- | --- | ---- | ------- | -------- | ------------- |
+| ------------------------------- | -------- | --------- | --------- | ------------ | ---------- | ----------- | --- | ---- | ------- | -------- | ------------- |
 | linear/MLP projection (default) | 2        | 2         | 0         | 2            | 2          | 2           | 10  | 0    | 0       | 10       | **1**         |
 | PatchTST-style patch embedding  | 2        | 1         | 2         | 2            | 1          | 2           | 10  | 0    | −1      | 9        | **1**         |
 | per-tf learned tf-id embedding  | 1        | 1         | 1         | 2            | 2          | 1           | 8   | 0    | 0       | 8        | **2** (gated) |

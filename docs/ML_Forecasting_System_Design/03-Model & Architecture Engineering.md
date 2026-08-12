@@ -37,10 +37,11 @@ Full detail broken out to [input features & embedding](#input--feature-embedding
   - **InceptionTime** — multi-kernel-size Inception-style modules in parallel per block. Newest and best-benchmarked of the three, at higher per-module cost.
 
   All three: cheap, non-causal, no dilation-schedule tuning needed — worth testing as an independent floor for the plain-CNN/TCN/ModernTCN family, not assumed inferior just because the lineage is older.
-- **ModernTCN** — large-kernel, grouped/depthwise convolution in place of TCN's small-kernel stacked-dilation approach, explicitly designed to capture cross-time *and* cross-variable dependency in one pass. A direct, low-risk upgrade to the plain TCN block above — same role in the pipeline, same cost class, better-tested internals — worth promoting straight into Stage-1 profiling rather than parking as a deferred alternative. Particularly relevant here since the feature schema is genuinely multivariate (relative-HLC, volume/ATR, gap, multiple top-distance channels per candle — see [candle feature schema](02-Data, Label & Feature Engineering.md#candle-feature-schema)); plain TCN's per-channel/shared-filter convolution treats cross-variable interaction only incidentally, ModernTCN's grouped-conv design treats it deliberately.
+
+- **ModernTCN** — large-kernel, grouped/depthwise convolution in place of TCN's small-kernel stacked-dilation approach, explicitly designed to capture cross-time _and_ cross-variable dependency in one pass. A direct, low-risk upgrade to the plain TCN block above — same role in the pipeline, same cost class, better-tested internals — worth promoting straight into Stage-1 profiling rather than parking as a deferred alternative. Particularly relevant here since the feature schema is genuinely multivariate (relative-HLC, volume/ATR, gap, multiple top-distance channels per candle — see [candle feature schema](02-Data, Label & Feature Engineering.md#candle-feature-schema)); plain TCN's per-channel/shared-filter convolution treats cross-variable interaction only incidentally, ModernTCN's grouped-conv design treats it deliberately.
 - conv stem ahead of a Transformer (the hybrid CNN→Transformer candidate) — same cost-reduction goal as patching above, via learned downsampling instead of fixed patches.
 - **TimesNet-style 1D→2D reshape** — reshapes the series into a 2D grid keyed by detected/candidate periodicities, then applies 2D (inception-style) conv blocks to capture multi-periodicity directly. Relevant if session/cyclical features (hour/day sin-cos, session-open flags — see [candidate feature pool](02-Data, Label & Feature Engineering.md#candidate-feature-pool)) are meaningfully periodic; untested assumption, not yet screened.
-- **SCINet** — recursive downsample→convolve→interact structure that extracts multi-resolution features hierarchically from a single input series. Conceptually close to what this doc's "multi-timeframe fusion" section already does by hand across resampled branches (5min/15min/1H/4H/1D/1W); SCINet does something structurally similar *within* one branch, so it reads as a plausible swap for the conv stage inside each per-tf encoder rather than a whole-pipeline replacement.
+- **SCINet** — recursive downsample→convolve→interact structure that extracts multi-resolution features hierarchically from a single input series. Conceptually close to what this doc's "multi-timeframe fusion" section already does by hand across resampled branches (5min/15min/1H/4H/1D/1W); SCINet does something structurally similar _within_ one branch, so it reads as a plausible swap for the conv stage inside each per-tf encoder rather than a whole-pipeline replacement.
   Alt: no local-extraction stage, feed embedded scalars straight to sequential/attention stage — cheaper, ablation baseline.
 
 #### sequential encoding
@@ -130,7 +131,7 @@ This axis is about combining across backend **types** (Transformer/TCN/SSM/LSTM/
 - **knowledge distillation from multiple single-backend teachers → one compact student** — train each backend separately (diagnostic/upper-bound), then distill their combined behavior into a single deployable model. Buys some of the diversity benefit without paying multi-encoder training/inference cost long-term; costs more up front (train N+1 models instead of 1).
 - **differentiable/block-level NAS (DARTS-style)** — instead of hand-naming which backend combos to test, let a search algorithm learn which blocks (conv/attn/recurrent/state-space — the pipeline-stage menu above) to compose and in what arrangement. Subsumes the conv-position/layer-order questions into one search rather than a manually enumerated grid. Higher implementation cost, probably deferred given the single-GPU budget — same reasoning already applied to rejecting "very wide ranges relying only on Hyperband."
 - **single hybrid backend with block-level composability, not true parallel dual-encoders** — this is actually what the existing "hybrid CNN→Transformer" candidate (and the pipeline-stage view above) already is: one encoder stack with swappable internal blocks, versus multi-backend fusion's two-plus full independent encoder stacks fused at a later stage. Worth stating explicitly since it's easy to conflate the two — the hybrid candidate is cheap and already in the Stage-1 set; true multi-encoder fusion is a separate, pricier decision covered by the strategies above.
-  - **EffiCANet-style conv+attention fusion** — combines local conv feature extraction with attention over the conv output *inside one block*, rather than this doc's current sequential CNN→Transformer staging. A concrete, marginal-value variant of this same "single hybrid backend" idea; lower priority than the ModernTCN/TSMixer additions under "current Stage-1 candidate set" since it refines an already-covered candidate rather than adding a new capability.
+  - **EffiCANet-style conv+attention fusion** — combines local conv feature extraction with attention over the conv output _inside one block_, rather than this doc's current sequential CNN→Transformer staging. A concrete, marginal-value variant of this same "single hybrid backend" idea; lower priority than the ModernTCN/TSMixer additions under "current Stage-1 candidate set" since it refines an already-covered candidate rather than adding a new capability.
 
 **status:** unresolved, not yet measured. Default assumption = single-backend-wins (cheapest, current doc's implicit baseline); any other strategy adopted only on measured evidence it beats that baseline on backtested KPIs, per [core principle: error metric ≠ trading objective](04-Experimentation, Evaluation & Optimization.md#core-principle-error-metric--trading-objective).
 
@@ -154,7 +155,7 @@ This same menu applies to both axes: fusing across backend **types** (this secti
 - domain assumption: pattern meaning is scale-invariant across tf (15min compress-price-pattern ≈ 1H compress-price-pattern); combining tfs clarifies the "real truth" behind any one tf's pattern.
 - **multi-tf combination approach:** per-tf encoders (small TCN/Transformer per series) → concat/pool → shared cross-tf fusion block (small Transformer over pooled reps, or concat+MLP as cheaper baseline). Lower effort than full cross-attention over the concatenated sequence; natural first arch to profile before the pricier full-attention option. Per the timeframe-in-minutes resolution in [candle feature schema](02-Data, Label & Feature Engineering.md#candle-feature-schema), this per-tf-branch design drops that field entirely (branch identity already tells the encoder the tf); it's only added back if the arch choice switches to the flat/shared-encoder option below.
   - **cross-tf attention shape, once a Transformer-based fusion block is chosen:** higher-tf-as-query/lower-tf-as-key-value (coarse context refining fine detail) is one specific shape, not the only one worth testing. **Bidirectional cross-attention** (both directions, letting lower-tf representations also get refined by higher-tf context, not just the reverse) and **Perceiver-style latent-bottleneck cross-attention** (attend into a small fixed-size learned latent array instead of the raw longer lower-tf sequence) are both viable alternatives — the latter specifically targets the longest branches (15min, 1H) where quadratic cost is worst, and ties directly to the Perceiver candidate already in "current Stage-1 candidate set".
-  Alt:
+    Alt:
   - 4 separate models + late ensemble — rejected as primary, loses cross-tf interaction; cheap baseline only
   - flat Transformer full self-attn over concat seq, no per-tf stage — most expensive, candidate only if profiling allows
   - hierarchical/wavelet decomposition — deferred, more complex, no evidence needed
@@ -199,7 +200,7 @@ Scoped roles for GBMs and related tabular models in this pipeline, distinct from
 
 ### uncertainty-native GBM variants — confidence-metric gap
 
-Candidate techniques for the confidence-metric gap — see [error rating & model evaluation § confidence & calibration metrics](04-Experimentation, Evaluation & Optimization.md#confidence--calibration-metrics) for the problem statement and what's measured; this section owns *which technique* produces it. This family produces calibrated uncertainty as a mechanism of the model itself, not by engineering extra confidence-specific input features.
+Candidate techniques for the confidence-metric gap — see [error rating & model evaluation § confidence & calibration metrics](04-Experimentation, Evaluation & Optimization.md#confidence--calibration-metrics) for the problem statement and what's measured; this section owns _which technique_ produces it. This family produces calibrated uncertainty as a mechanism of the model itself, not by engineering extra confidence-specific input features.
 
 - **quantile GBM** (native quantile/pinball objective in LightGBM/XGBoost) — try first: reuses the pinball-loss work already planned for price-level heads (see [per-head statistical metrics](04-Experimentation, Evaluation & Optimization.md#per-head-statistical-metrics-dev-diagnostics)), and gives prediction intervals (e.g. 10th/50th/90th percentile TP) rather than a single point number. Cheapest option in this group, reuses infrastructure already planned.
 - **NGBoost** — a genuinely different mechanism than standard GBM: instead of gradient-boosting toward a point estimate, it boosts the parameters of an entire output distribution using natural gradients, so every prediction carries a full predictive distribution rather than a point forecast plus a bolted-on score. Base-learner-agnostic (works with tree learners) — a small step from the existing GBM screening code, not a rebuild. Clean fit for meta-labeling (calibrated P(TP-hit) instead of a bare 0/1) or for the TP/MAE/OM heads directly.
@@ -252,7 +253,7 @@ Rough prior, not yet profiler-confirmed — confirm via `profile_trial_cost()` a
 
 ### design checklist
 
-Start of "the rest of this doc" — a checklist to run against every candidate/combined-model design below (and any new one added later) so designs stay consistent, complete, and don't silently skip a concern. Two parts: what each write-up must *state*, and what layers of design it must *pass through* to get there.
+Start of "the rest of this doc" — a checklist to run against every candidate/combined-model design below (and any new one added later) so designs stay consistent, complete, and don't silently skip a concern. Two parts: what each write-up must _state_, and what layers of design it must _pass through_ to get there.
 
 #### per-candidate requirements
 
@@ -293,10 +294,10 @@ Convention used throughout:
 
 For the "which combination of stages, in which placement (before/after, start/middle/end)" question: rather than designing a separate architecture per placement variant, this doc designs **one maximally-complex skeleton** containing every pipeline stage as a slot, and tests placement by **zeroing** (disabling) or **numbering** (selecting which block type occupies) each slot — not by drawing a new diagram per combination. This is also literally what a "combined/super model" is in this doc: the skeleton itself, parameterized by `stage_config`.
 
-- the skeleton's stage **order is fixed** and maps directly onto start/middle/end: embedding = start, local-extraction → sequential → attention → fusion = middle, global-representation → heads = end. This fixed order already matches the one resolved case in `model-architecture-planning.md` (conv-then-transformer in the hybrid CNN→Transformer candidate, per [local feature extraction](#local-feature-extraction)) — so "placement" here means *which slots are active*, not reordering the skeleton itself.
+- the skeleton's stage **order is fixed** and maps directly onto start/middle/end: embedding = start, local-extraction → sequential → attention → fusion = middle, global-representation → heads = end. This fixed order already matches the one resolved case in `model-architecture-planning.md` (conv-then-transformer in the hybrid CNN→Transformer candidate, per [local feature extraction](#local-feature-extraction)) — so "placement" here means _which slots are active_, not reordering the skeleton itself.
 - `stage_config[stage] = 0` → that stage is `tf.identity` (skipped entirely) — the "zeroing" test, e.g. does attention earn its cost over conv-only.
 - `stage_config[stage] = <block name>` → the "numbering" test — which block implementation occupies that fixed slot, e.g. `attention: "self_attn"` vs `"informer"` vs `"itransformer"` (per [attention / dependency](#attention--dependency)).
-- reordering the skeleton itself (e.g. attention *before* local-extraction instead of after) is a genuinely different, larger search — that's what [differentiable/block-level NAS](#combination-strategy) would search over; out of scope for this fixed-skeleton default, deferred same as NAS is deferred in the main doc.
+- reordering the skeleton itself (e.g. attention _before_ local-extraction instead of after) is a genuinely different, larger search — that's what [differentiable/block-level NAS](#combination-strategy) would search over; out of scope for this fixed-skeleton default, deferred same as NAS is deferred in the main doc.
 
 ```python
 def build_super_architecture(stage_config: dict, profile: str, tf_list: list[str]):
@@ -342,9 +343,10 @@ Per the [design checklist](#per-candidate-requirements), each candidate below st
 
   - per-branch tail (both variants): `sequential_encode_rnn()` (LSTM stack, `return_sequences=True`) → optionally `attend_self_attn()` if `attention != 0` → `BatchNormalization` → `GlobalAveragePooling1D` → `Dense(64)` → `Dense(128)`; branches `fuse(kind="concat_mlp")` → `Dense(256)` + `LeakyReLU` → per-head `Dense`.
   - S1/S2/S3 profiles not yet assigned — backfill via `profile_trial_cost()` same as the others before including it in the Optuna study, not hand-picked.
-  Alt:
+    Alt:
   - **residual-CNN time-series-classification baselines** as the `local_extraction` block instead of the plain stacked-conv above — same slot, three separate implementations, not one: **ResNet** (residual skip connections), **FCN** (global-pooled fully-conv stack, no residual), **InceptionTime** (multi-kernel-size Inception modules); see [local feature extraction](#local-feature-extraction) and the scoring in [prioritization framework](04-Experimentation, Evaluation & Optimization.md#local-feature-extraction). None yet reduced to a `stage_config`-ready block here — flagged as a follow-up, not designed in this pass.
   - **ConvLSTM** in place of `sequential: "rnn"` — convolutional gates inside the recurrent cell itself, a different mechanism than conv-then-LSTM stacking; see [sequential encoding](#sequential-encoding). Same follow-up status as the residual-CNN alt above.
+
 - **Transformer w/ per-tf embedding + cross-tf attention**
   - `stage_config`: `{embedding: "linear", local_extraction: 0, sequential: 0, attention: "self_attn", fusion: "cross_attn", global_repr: "pool"}`
   - distinguishing block:
@@ -366,6 +368,7 @@ Per the [design checklist](#per-candidate-requirements), each candidate below st
   - d_ff (feedforward dim): S1:640, S2:1024, S3:768
   - seq_len per tf (capped 256/tf): 256 (all profiles)
   - dropout: 0.1 (all profiles)
+
 - **TCN** — cheaper, dilated convs for multi-scale, good single-GPU baseline
   - `stage_config`: `{embedding: "linear", local_extraction: "tcn_dilated", sequential: 0, attention: 0, fusion: "concat_mlp", global_repr: "pool"}`
   - distinguishing block:
@@ -386,6 +389,7 @@ Per the [design checklist](#per-candidate-requirements), each candidate below st
   - kernel_size: S1:3, S2:3, S3:9
   - num_dilated_levels: S1:10, S2:3, S3:6
   - dropout: 0.1 (all profiles)
+
 - **hybrid CNN→Transformer**
   - `stage_config`: `{embedding: "linear", local_extraction: "conv_stem", sequential: 0, attention: "self_attn", fusion: "concat_mlp", global_repr: "pool"}` — conv-then-attention is the skeleton's fixed order, so this candidate is literally `local_extract_tcn()` (as a short conv stem, `num_conv_layers` instead of `num_dilated_levels`, no dilation growth, optional stride-2 pooling to shorten `T` before attention — the VRAM-cost lever noted under [hardware constraints](#hardware-constraints)) feeding directly into `attend_self_attn()` above; no new block needed, just both non-zero.
   - conv_channels: S1:48, S2:112, S3:64
@@ -406,10 +410,12 @@ Per the [design checklist](#per-candidate-requirements), each candidate below st
     ```
 
     `MambaBlock` isn't a native `tf.keras` layer — needs a third-party/custom selective-scan implementation; flagged here as a build dependency, not assumed available.
+
   - d_model: S1:128, S2:320, S3:192
   - d_state: S1:16, S2:16, S3:64
   - num_layers: S1:8, S2:2, S3:4
   - conv_kernel (local conv width): 4 (all profiles)
+
 - **LSTM** — sanity-check floor (S3 focus = bidirectional context, not receptive field — RNN context is sequential, not attention-based)
   - `stage_config`: `{embedding: "linear", local_extraction: 0, sequential: "rnn", attention: 0, fusion: "concat_mlp", global_repr: "last_token"}`
   - distinguishing block:
@@ -428,7 +434,7 @@ Per the [design checklist](#per-candidate-requirements), each candidate below st
   - bidirectional: S1:false, S2:false, S3:true
   - dropout: 0.1 (all profiles)
   - **GRU** (`cell_type="gru"` above) — Tier-2 alt tested within this same floor role, not a separate candidate slot; see [sequential encoding](#sequential-encoding) and the scoring in [prioritization framework](04-Experimentation, Evaluation & Optimization.md#sequential-encoding).
-  Alt:
+    Alt:
   - **naive/persistence baseline** — not a `stage_config` at all, no learned stages; "no change"/carry-forward the last signal. The floor beneath this floor — computed alongside backtested KPIs for every run, not a Stage-1 categorical option; see [current Stage-1 candidate set](#current-stage-1-candidate-set).
   - pure MLP on flattened features — rejected as serious candidate, discards seq structure; trivial baseline only
   - GBM (LightGBM, XGBoost, CatBoost — three separate library classes) on flattened features — kept as a cheap non-sequence floor, distinct from the LSTM floor above (which still respects sequence order); see [auxiliary tabular models (GBM-family)](#auxiliary-tabular-models-gbm-family) for what this comparison is meant to answer
