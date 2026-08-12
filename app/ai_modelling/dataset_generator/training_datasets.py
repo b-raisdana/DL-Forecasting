@@ -33,7 +33,14 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
                               forecast_trigger_bars: int = 3 * 4 * 4 * 4 * 1,
                               actionable_rate=0.2,  # try to generate 20% actionable and 80% not-actionable batches
                               # only_actionable: bool = True
-                              verbose = True
+                              verbose = True,
+                              label_tf: str = None,
+                              # Timeframe labels (max_high/min_low/long_signal/...) are generated on.
+                              # Defaults to trigger_tf (today's behavior: forecast_trigger_bars counts
+                              # trigger_tf bars). Pass double_tf (or any of structure/pattern/trigger/double
+                              # tf) to move label generation to that frame instead; forecast_trigger_bars
+                              # then counts bars of label_tf, so callers switching frames must also update it
+                              # (e.g. 48 bars for a 4h horizon on the 5-min double frame).
                               ) \
         -> Tuple[
             Dict[str, np.ndarray], np.ndarray, Dict[str, pd.DataFrame], List[pd.DataFrame], str, List[pd.DataFrame]]:
@@ -44,6 +51,12 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
     pattern_tf = pattern_timeframe(structure_tf)
     trigger_tf = trigger_timeframe(structure_tf)
     double_tf = pattern_timeframe(trigger_timeframe(structure_tf))
+    label_tf = label_tf or trigger_tf
+    label_frame_by_tf = {structure_tf: 'structure', pattern_tf: 'pattern', trigger_tf: 'trigger',
+                         double_tf: 'double'}
+    if label_tf not in label_frame_by_tf:
+        raise ValueError(f"label_tf={label_tf} must be one of {list(label_frame_by_tf.keys())}")
+    label_frame = label_frame_by_tf[label_tf]
     dfs: Dict[str, pd.DataFrame] = {}
     for df_name, timeframe in [('structure', structure_tf), ('pattern', pattern_tf),
                                ('trigger', trigger_tf), ('double', double_tf)]:
@@ -51,12 +64,12 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
     dfs['trigger']['atr'] = ta.atr(high=dfs['trigger']['high'], low=dfs['trigger']['low'],
                                    close=dfs['trigger']['close'], length=256)
     dfs = dfs.copy()
-    dfs['future'] = add_long_n_short_profit(ohlc=dfs['trigger'], position_max_bars=forecast_trigger_bars,
-                                            trigger_tf=trigger_tf)
+    dfs['future'] = add_long_n_short_profit(ohlc=dfs[label_frame], position_max_bars=forecast_trigger_bars,
+                                            trigger_tf=label_tf)
 
     train_safe_end, train_safe_start, dfs = not_na_range(dfs)
     train_safe_start += pd.to_timedelta(structure_tf)
-    train_safe_end -= 2 * forecast_trigger_bars * pd.to_timedelta(trigger_tf)
+    train_safe_end -= 2 * forecast_trigger_bars * pd.to_timedelta(label_tf)
     duration_seconds = int((train_safe_end - train_safe_start) / timedelta(seconds=1))
     if duration_seconds <= 0:
         start, end = date_range(app_config.processing_date_range)

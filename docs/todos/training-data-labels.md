@@ -26,64 +26,66 @@ what `V` means) and are worth a one-line confirmation before implementing, since
 [model-architecture.md](model-architecture.md) and the model's input/output shapes; everything else is
 a direct, self-contained code fix against the already-written spec.
 
-1. **Add a characterization test harness for `profit_loss_adder.py`.** Small synthetic OHLC fixtures
-   (a handful of candles with known highs/lows), asserting today's actual output for
-   `max_profit_n_loss`, `quantile_maxes`, `long_n_short_drawdown`, `stop_loss`, `profit_n_loss`. Pure
-   safety net, no behavior change — there is currently no test coverage for this module or for the
-   labeling logic in `training_datasets.py`. Unblocks every step below.
-2. **(decision) Fix window granularity/size.** All call sites pass `structure_tf='4h'`, which resolves
-   `trigger_tf='15min'` and `double_tf='5min'` (`Config.py`'s `timeframe_shifter`) — but labels are
-   generated on `dfs['trigger']` (15-min) with `forecast_trigger_bars` defaulting to
+1. **(decision, partially done) Fix window granularity/size.** All call sites pass `structure_tf='4h'`,
+   which resolves `trigger_tf='15min'` and `double_tf='5min'` (`Config.py`'s `timeframe_shifter`) — but
+   labels are generated on `dfs['trigger']` (15-min) with `forecast_trigger_bars` defaulting to
    `3*4*4*4*1 = 192` bars = **48 hours**, not the spec's 5-min NOW candle + 4-hour horizon (48 bars at
-   5-min). Move label generation to the 5-min `double` frame (or add a dedicated 5-min label frame) and
-   fix the horizon to 48 bars. Touches `add_long_n_short_profit`'s call in
-   `training_datasets.py:54` and the `forecast_trigger_bars`/`position_max_bars` defaults. Build/test
-   every step below against the corrected window.
-3. **Rework entry price to the limit-order target (`E`)**: replace `worst_long_open`/`worst_short_open`'s
+   5-min).
+   - Done: `train_data_of_mt_n_profit` now takes an optional `label_tf` param (any of
+     structure/pattern/trigger/double tf) selecting which frame labels are generated on; default `None`
+     resolves to `trigger_tf`, so all existing call sites (which don't pass it) are byte-identical to
+     before. `forecast_trigger_bars` now counts bars of `label_tf`, not always `trigger_tf`.
+   - Still open: no call site passes `label_tf='5min'`/`double_tf` yet, and `forecast_trigger_bars` isn't
+     switched to 48 anywhere — both are caller-side decisions once confirmed. `add_long_n_short_profit`'s
+     `position_max_bars` default (`profit_loss_adder.py`) still says 768 bars in its stale docstring
+     (step 11 cleanup). Build/test every step below against the corrected window once a call site flips.
+2. **Rework entry price to the limit-order target (`E`)**: replace `worst_long_open`/`worst_short_open`'s
    worst-case rolling max/min-over-`action_delay` (a pessimistic market-order fill) with the best price
    reachable in the single 5-min candle immediately following NOW's close, per
    [training-data.md § targeting bid price](../training-data.md#targeting-bid-price). Update
-   `max_profit_n_loss()`. Upstream of `MFE`/`TP4`/`MAE`, so it must land before steps 4-5.
-4. **Rename/reframe `MFE`/`TP4` onto the existing best-case columns.** `MFE` = `long_profit`/
-   `short_profit` (recomputed against the fixed `E` from step 3); `TP4 = E ± MFE` = today's
+   `max_profit_n_loss()`. Upstream of `MFE`/`TP4`/`MAE`, so it must land before steps 3-4.
+3. **Rename/reframe `MFE`/`TP4` onto the existing best-case columns.** `MFE` = `long_profit`/
+   `short_profit` (recomputed against the fixed `E` from step 2); `TP4 = E ± MFE` = today's
    `max_high`/`min_low`. No new search algorithm needed — the spec dropped quantile-window TP search
-   entirely (see the appendix note below); confirm this mapping with the step-1 tests re-run against
-   the step-3 entry price, then rename for clarity.
-5. **Tighten `MAE`/SL precision and pin the ATR floor.** Current `long_n_short_drawdown()` finds the
+   entirely (see the appendix note below); confirm this mapping with the characterization tests (see
+   appendix) re-run against the step-2 entry price, then rename for clarity.
+4. **Tighten `MAE`/SL precision and pin the ATR floor.** Current `long_n_short_drawdown()` finds the
    adverse move to the best-case point via a quantile-bucketed lookup (approximate); spec wants the
    exact worst adverse excursion before `TP4`. Replace the quantile-bucket lookup with an exact rolling
    min/max over the bars between entry and the `TP4` point (or keep the bucketed approach only if the
-   precision loss is verified negligible via step-1 tests — measure, don't assume). Pin the ATR floor
-   to an explicit `ATR(255, 15min)` term rather than relying on `dfs['trigger']` incidentally being
-   15-min (this incidental match breaks the moment step 2 moves labels to the 5-min frame).
-6. **(decision) Add `Risk = MAE × (1 + F) × V`.** `F` = 0.001 fee rate is simple; `V` (position volume)
+   precision loss is verified negligible via the characterization tests — measure, don't assume). Pin
+   the ATR floor to an explicit `ATR(255, 15min)` term rather than relying on `dfs['trigger']`
+   incidentally being 15-min (this incidental match breaks the moment step 1 moves labels to the 5-min
+   frame).
+5. **(decision) Add `Risk = MAE × (1 + F) × V`.** `F` = 0.001 fee rate is simple; `V` (position volume)
    has no equivalent in code today — confirm whether `V` should default to a fixed unit size (e.g. `1`)
    for label generation, or come from elsewhere. Add as an explicit new column, replacing the current
    flat `order_fee` subtraction from `weighted_long_profit`/`weighted_short_profit` (which matches
    neither the old double-secure formula nor the new risk-side-only one).
-7. **Add `OM = MFE / MAE`.** Trivial once steps 4-5 land — a new column, no new logic beyond the
+6. **Add `OM = MFE / MAE`.** Trivial once steps 3-4 land — a new column, no new logic beyond the
    division.
-8. **Replace the direction-validity gate with `OM > 1`.** Swap `profit_n_loss()`'s current "loser"
+7. **Replace the direction-validity gate with `OM > 1`.** Swap `profit_n_loss()`'s current "loser"
    condition (`weighted_profit <= 0 or risk > max_risk`) for `OM <= 1` per
    [training-data.md § where can be a position?](../training-data.md#where-can-be-a-position). Confirm
    whether `max_risk` is still needed for anything else before removing it, or whether `OM > 1` fully
    replaces its role.
-9. **Single-label tie-break by `OM`.** When both directions have `OM > 1`, zero the signal of whichever
-   has the lower `OM`, per the same spec section. Small, self-contained change once step 8 lands.
-10. **Wire the new primary/auxiliary targets into `training_datasets.py`.** `training_y_columns` and the
-    `ys` construction at
-    [training_datasets.py:151](../../app/ai_modelling/dataset_generator/training_datasets.py#L151)
-    currently hardcode `[short_signal, long_signal]`; replace with the spec's primary targets (`MAE`,
-    `OM`) + auxiliary (`MFE`) for the winning direction, plus the entry-price target (step 3) and the
-    Long/Short/None action head. Coordinate column naming with
-    [model-architecture.md](model-architecture.md).
-11. **Add a no-lookahead regression test.** Assert that perturbing FUTURE-slice data never changes a
+8. **Single-label tie-break by `OM`.** When both directions have `OM > 1`, zero the signal of whichever
+   has the lower `OM`, per the same spec section. Small, self-contained change once step 7 lands.
+9. **Wire the new primary/auxiliary targets into `training_datasets.py`.** `training_y_columns` and the
+   `ys` construction at
+   [training_datasets.py:151](../../app/ai_modelling/dataset_generator/training_datasets.py#L151)
+   currently hardcode `[short_signal, long_signal]`; replace with the spec's primary targets (`MAE`,
+   `OM`) + auxiliary (`MFE`) for the winning direction, plus the entry-price target (step 2) and the
+   Long/Short/None action head. Coordinate column naming with
+   [model-architecture.md](model-architecture.md).
+10. **Add a no-lookahead regression test.** Assert that perturbing FUTURE-slice data never changes a
     computed label at or before the anchor candle — the causal-by-construction claims below (anchor
-    candle, entry price) are currently backed only by manual reasoning, not a test. Wire into whatever
-    CI gate `xenon` runs, per [infrastructure.md](infrastructure.md).
-12. **Cleanup pass.** Delete now-fully-dead code (`zz_stop_loss`, `singular_stop_loss`, `tops_mean` if
-    nothing else calls them, the old flat-`order_fee`/`max_risk` weighted-profit path once steps 6/8
-    land); trim `quantile_maxes()`'s 50-way scaffolding if step 5's exact computation no longer needs
+    candle, entry price) are currently backed only by manual reasoning, not a test. Place under
+    `app/tests/regression/` per [testing.md](../testing.md), tagged `regression`; wire into whatever CI
+    gate `xenon` runs, per [infrastructure.md](infrastructure.md).
+11. **Cleanup pass.** Delete now-fully-dead code (`zz_stop_loss`, `singular_stop_loss`, `tops_mean` if
+    nothing else calls them, the old flat-`order_fee`/`max_risk` weighted-profit path once steps 5/7
+    land); trim `quantile_maxes()`'s 50-way scaffolding if step 4's exact computation no longer needs
     it; fix the stale `position_max_bars` docstring comment ("768 intervals = 16 hours" vs. the actual
     192) and any other docstrings this pass makes inaccurate.
 
@@ -109,6 +111,13 @@ There are two independent, unrelated mechanisms in the repo:
    a `backtrader` strategy with its own, much simpler, single-level SL/TP. Unrelated to (1); see the
    last subsection.
 
+Characterization tests pinning today's actual output of `profit_loss_adder.py`'s five core functions
+(`max_profit_n_loss`, `quantile_maxes`, `long_n_short_drawdown`, `stop_loss`, `profit_n_loss`) live in
+[test_profit_loss_adder_characterization.py](../../app/tests/characterization/dataset_generator/profit_loss/test_profit_loss_adder_characterization.py)
+— see [testing.md](../testing.md). Re-run these after any todo step below changes this file's behavior:
+an intentional change should fail exactly the affected test(s); re-capture expected values once confirmed
+intentional.
+
 ### anchor candle, in code terms
 
 `training_datasets.py:train_data_of_mt_n_profit` calls `batch_ends(...)` to pick `double_end` — the
@@ -123,7 +132,8 @@ future_slice = dfs['future'].loc[pd.IndexSlice[double_end:], :].iloc[:forecast_t
 trigger-timeframe OHLC gets long/short profit, risk, drawdown and signal columns computed against its
 own forward window, so slicing at `double_end` gives "the hypothetical Long/Short position opened right
 after the anchor candle." All call sites pass `structure_tf='4h'`, which fixes `trigger_tf='15min'` and
-`double_tf='5min'` — see todo step 2 for why this matters.
+`double_tf='5min'` — see todo step 1 for why this matters. `train_data_of_mt_n_profit` now accepts a
+`label_tf` param to move which frame this runs on (defaults to `trigger_tf`, unused by any call site yet).
 
 ### entry price ("targeting bid price")
 
@@ -134,7 +144,7 @@ after the anchor candle." All call sites pass `structure_tf='4h'`, which fixes `
 - `worst_short_open` = same idea, rolling min of `low`, for Short.
 
 This is a worst-case **market-order** fill, pessimistic by design — not the spec's best-case
-**limit-order** target (see todo step 3).
+**limit-order** target (see todo step 2).
 
 ### TP / profit-target detection
 
@@ -153,7 +163,7 @@ position, plus internal quantile scaffolding used only to compute drawdown:
   risk-free-rate cost and flat `order_fee`, in ATR units).
 
 Today's `max_high`/`min_low`/`long_profit`/`short_profit` map closely onto the current spec's
-`TP4`/`MFE` (see todo step 4) — no quantile-window TP search is required by the current spec, that idea
+`TP4`/`MFE` (see todo step 3) — no quantile-window TP search is required by the current spec, that idea
 was dropped. `quantile_maxes()`'s 50-way scaffolding predates that simplification.
 
 ### what "drawdown" actually measures: MAE, not peak retracement
