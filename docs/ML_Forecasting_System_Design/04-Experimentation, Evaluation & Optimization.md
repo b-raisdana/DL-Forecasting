@@ -32,7 +32,7 @@ No single blended loss — measured per output head, since each has a different 
 
 | head                                     | candidates to test                                  | notes                                                                                                                                                    |
 | ---------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| price levels (TP, SL / MAE, OM, aux MFE) | quantile/pinball loss (primary) + MAE/MSE companion | quantile loss reused by [uncertainty-native GBM variants](03-Model n Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap) |
+| price levels (TP, SL / MAE, OM, aux MFE) | quantile/pinball loss (primary) + MAE/MSE companion | quantile loss reused by [uncertainty-native GBM variants](03-Model & Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap) |
 | probabilities / confidence               | Brier vs log-loss                                   | see [confidence & calibration metrics](#confidence--calibration-metrics)                                                                                 |
 | action (Long/Short/None)                 | cross-entropy vs focal vs class-weighted-CE         | tuning scope (which loss, per-target gamma) lives in [class imbalance handling](02-Data, Label & Feature Engineering.md#class-imbalance-handling)        |
 
@@ -45,7 +45,7 @@ Alt: single blended loss — rejected, already flagged insufficient. Per-head mu
 
 Calibration is measured the same way as any probability head above — Brier score, log-loss, and a **calibration curve / Expected Calibration Error (ECE)** to check predicted vs. observed hit-rate, not just point accuracy.
 
-The preferred fix is a model that produces calibrated uncertainty as a mechanism of itself, not via extra engineered features. Candidate techniques (quantile GBM, NGBoost, quantile regression forests) and their priority order live in [model-architecture-planning.md § uncertainty-native GBM variants](03-Model n Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap), scored in [prioritization-framework.md § auxiliary tabular models](#auxiliary-tabular-models-gbm-family) — this doc owns _what_ to measure and why it matters, that section owns _which technique_ produces it.
+The preferred fix is a model that produces calibrated uncertainty as a mechanism of itself, not via extra engineered features. Candidate techniques (quantile GBM, NGBoost, quantile regression forests) and their priority order live in [model-architecture-planning.md § uncertainty-native GBM variants](03-Model & Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap), scored in [prioritization-framework.md § auxiliary tabular models](#auxiliary-tabular-models-gbm-family) — this doc owns _what_ to measure and why it matters, that section owns _which technique_ produces it.
 
 ### backtested trading KPIs (final selection)
 
@@ -182,7 +182,7 @@ Different training strategies
 
 ### tiered candidates by layer
 
-Section order and headings mirror [model-architecture-planning.md](03-Model n Architecture Engineering.md)'s own structure, so a given layer's tiering sits next to the equivalent stage there. Only _open_ alternatives are scored — items a doc section already marks as resolved (e.g. ATR-relative normalization as primary, decision-anchor point, higher-tf in-progress-candle handling) aren't live candidates and are skipped. Scores are illustrative starting points from the current doc text, not final measurements — recalibrate any row once real MI/backtest/profiling evidence exists, per this project's own "measured evidence only" discipline (see [error metric ≠ trading objective](#core-principle-error-metric--trading-objective)).
+Section order and headings mirror [model-architecture-planning.md](03-Model & Architecture Engineering.md)'s own structure, so a given layer's tiering sits next to the equivalent stage there. Only _open_ alternatives are scored — items a doc section already marks as resolved (e.g. ATR-relative normalization as primary, decision-anchor point, higher-tf in-progress-candle handling) aren't live candidates and are skipped. Scores are illustrative starting points from the current doc text, not final measurements — recalibrate any row once real MI/backtest/profiling evidence exists, per this project's own "measured evidence only" discipline (see [error metric ≠ trading objective](#core-principle-error-metric--trading-objective)).
 
 #### normalization strategy
 
@@ -205,7 +205,7 @@ The hybrid scheme wins on domain fit (position + velocity, tailored to this proj
 | PatchTST-style patch embedding  | 2        | 1         | 2         | 2            | 1          | 2           | 10  | 0    | −1      | 9        | **1**         |
 | per-tf learned tf-id embedding  | 1        | 1         | 1         | 2            | 2          | 1           | 8   | 0    | 0       | 8        | **2** (gated) |
 
-`per-tf tf-id embedding` only matters if the flat/shared-encoder architecture branch is chosen over the per-tf-branch design that's currently the working assumption (see [multi-timeframe fusion](03-Model n Architecture Engineering.md#multi-timeframe-fusion)) — that dependency gate demotes an otherwise-qualifying score to Tier 2.
+`per-tf tf-id embedding` only matters if the flat/shared-encoder architecture branch is chosen over the per-tf-branch design that's currently the working assumption (see [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion)) — that dependency gate demotes an otherwise-qualifying score to Tier 2.
 
 ##### local feature extraction
 
@@ -257,7 +257,7 @@ TCN and ModernTCN stay one row: both are the same stacked-`Conv1D` block, distin
 | Performer (FAVOR+ kernel attention)             | 0        | 1         | 1         | 2            | 0          | 0           | 4   | −1   | −1      | 2        | **3** |
 | Linformer (low-rank seq-length projection)      | 0        | 1         | 0         | 2            | 0          | 0           | 3   | −1   | −1      | 1        | **3** |
 
-`GQA/MQA` stays one row per the [tool-identity test](#tool-identity-test-when-a-xy-grouping-stays-one-row): MQA is GQA with its KV-group count set to 1, the same attention call with one config value changed, not a separate mechanism. `Longformer` and `BigBird-style + random attention` score as separate rows because they're separate published models with separate reference implementations (`LongformerModel`/`BigBirdModel`), not the same function with a different argument: BigBird adds a third, block-sparse "random attention" component on top of Longformer's window+global pattern, which is enough extra implementation complexity (no straightforward dense-mask trick, needs a real block-sparse kernel to be efficient) to cost it a tooling point that plain Longformer doesn't pay — Longformer clears Tier 1, BigBird lands Tier 2. `Performer` and `Linformer` score as separate rows the same way — FAVOR+ random-feature kernels (Performer) and a fixed low-rank sequence-length projection (Linformer) are different approximation mechanisms, not parameter variants of one attention layer — both still land Tier 3, matching the doc's own "weakest... on modeling quality... bottom-of-priority fallback only" characterization; Performer edges out Linformer only on the modernity of its approximation, not on any evidence either belongs above the mitigations that already outrank both. `standard self-attention` — the un-mitigated default — sits below GQA/MQA and the sliding-window fallback precisely because of the VRAM cost this doc already flags as the binding constraint (`resource_fit = 0`); the mitigations exist specifically to outrank the mechanism they're mitigating. FlashAttention and mixed-precision AMP aren't scored here — they're always-on infrastructure applied under whichever mechanism wins, not competing candidates (see [hardware constraints](03-Model n Architecture Engineering.md#hardware-constraints)).
+`GQA/MQA` stays one row per the [tool-identity test](#tool-identity-test-when-a-xy-grouping-stays-one-row): MQA is GQA with its KV-group count set to 1, the same attention call with one config value changed, not a separate mechanism. `Longformer` and `BigBird-style + random attention` score as separate rows because they're separate published models with separate reference implementations (`LongformerModel`/`BigBirdModel`), not the same function with a different argument: BigBird adds a third, block-sparse "random attention" component on top of Longformer's window+global pattern, which is enough extra implementation complexity (no straightforward dense-mask trick, needs a real block-sparse kernel to be efficient) to cost it a tooling point that plain Longformer doesn't pay — Longformer clears Tier 1, BigBird lands Tier 2. `Performer` and `Linformer` score as separate rows the same way — FAVOR+ random-feature kernels (Performer) and a fixed low-rank sequence-length projection (Linformer) are different approximation mechanisms, not parameter variants of one attention layer — both still land Tier 3, matching the doc's own "weakest... on modeling quality... bottom-of-priority fallback only" characterization; Performer edges out Linformer only on the modernity of its approximation, not on any evidence either belongs above the mitigations that already outrank both. `standard self-attention` — the un-mitigated default — sits below GQA/MQA and the sliding-window fallback precisely because of the VRAM cost this doc already flags as the binding constraint (`resource_fit = 0`); the mitigations exist specifically to outrank the mechanism they're mitigating. FlashAttention and mixed-precision AMP aren't scored here — they're always-on infrastructure applied under whichever mechanism wins, not competing candidates (see [hardware constraints](03-Model & Architecture Engineering.md#hardware-constraints)).
 
 ##### global representation
 
@@ -337,7 +337,7 @@ All Tier-1 rows here still fall under the doc's own scope rule: activation choic
 | EffiCANet-style conv+attn fusion block           | 1        | 0         | 1         | 1            | 1          | 0           | 4   | −1   | −1      | 2        | **3**         |
 | differentiable/block-level NAS (DARTS-style)     | 1        | 0         | 1         | 0            | 1          | 0           | 3   | −1   | −1      | 1        | **3**         |
 
-Every row except `single-backend-wins` is dependency-gated: the doc's own default assumption is single-backend-wins until one of these is _measured_ to beat it (see [combination strategy](03-Model n Architecture Engineering.md#combination-strategy) → "status: unresolved"), so none of the alternatives can be Tier 1 yet regardless of score.
+Every row except `single-backend-wins` is dependency-gated: the doc's own default assumption is single-backend-wins until one of these is _measured_ to beat it (see [combination strategy](03-Model & Architecture Engineering.md#combination-strategy) → "status: unresolved"), so none of the alternatives can be Tier 1 yet regardless of score.
 
 ##### fusion mechanism
 
@@ -352,7 +352,7 @@ Every row except `single-backend-wins` is dependency-gated: the doc's own defaul
 
 #### multi-timeframe fusion
 
-Only the still-open sub-choices from [multi-timeframe fusion](03-Model n Architecture Engineering.md#multi-timeframe-fusion) are scored; the per-tf-encoders overall approach, ATR-relative scale-invariance, decision-anchor point, and completed-candles-only rule are already resolved there, not live candidates.
+Only the still-open sub-choices from [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion) are scored; the per-tf-encoders overall approach, ATR-relative scale-invariance, decision-anchor point, and completed-candles-only rule are already resolved there, not live candidates.
 
 | candidate                                                        | evidence | dominance | modernity | resource_fit | domain_fit | impact/cost | raw | risk | tooling | adjusted | tier  |
 | ---------------------------------------------------------------- | -------- | --------- | --------- | ------------ | ---------- | ----------- | --- | ---- | ------- | -------- | ----- |
@@ -367,7 +367,7 @@ Perceiver-style latent-bottleneck cross-attention outranks even the plain higher
 
 #### auxiliary tabular models (GBM-family)
 
-Screening/meta-labeling/class-imbalance-proxy _roles_ for GBMs (see [auxiliary tabular models](03-Model n Architecture Engineering.md#auxiliary-tabular-models-gbm-family)) aren't scored — they're already-settled uses, not competing techniques. The library/model choices _within_ those roles are:
+Screening/meta-labeling/class-imbalance-proxy _roles_ for GBMs (see [auxiliary tabular models](03-Model & Architecture Engineering.md#auxiliary-tabular-models-gbm-family)) aren't scored — they're already-settled uses, not competing techniques. The library/model choices _within_ those roles are:
 
 | candidate                                                       | evidence | dominance | modernity | resource_fit | domain_fit | impact/cost | raw | risk | tooling | adjusted | tier          |
 | --------------------------------------------------------------- | -------- | --------- | --------- | ------------ | ---------- | ----------- | --- | ---- | ------- | -------- | ------------- |
@@ -396,7 +396,7 @@ Four groupings are worth spelling out explicitly, per the [tool-identity test](#
 
 ### Time-Series Foundation Models (TSFMs)
 
-Excluded from [AI Trading System — Planning Notes](03-Model n Architecture Engineering.md#model-architecture--selection) — that doc covers custom/from-scratch architecture design only; this file covers the pretrained-checkpoint alternative track.
+Excluded from [AI Trading System — Planning Notes](03-Model & Architecture Engineering.md#model-architecture--selection) — that doc covers custom/from-scratch architecture design only; this file covers the pretrained-checkpoint alternative track.
 
 Chronos, TimesFM, Moirai, Lag-Llama, PatchTST-based pretrained checkpoints
 
@@ -448,7 +448,7 @@ Score each 0–2: 0 = absent/weak, 1 = moderate, 2 = strong. **Score in context,
 1. **research/reference-document support** — peer-reviewed papers or published benchmarks (the kind already cited inline across this project's docs, e.g. TSMixer's own ablations, TabArena 2025) showing the candidate beats relevant alternatives _on a comparable problem_ — not just "it's been used somewhere."
 2. **field dominance / standard-of-practice** — is it the current default choice in the relevant application area (time-series forecasting, NLP-derived sequence modeling, tabular ML), independent of project-specific evidence? De-facto standards carry lower integration risk.
 3. **modernity / replacement trajectory** — is it a newer technique explicitly designed to supersede something already in the candidate set (ModernTCN→TCN, MLA→GQA)? Adopting it should retire complexity, not just add a parallel option.
-4. **resource fit (hardware/compute budget)** — narrowly: does it run within the single-GPU VRAM/RAM/wall-clock ceiling that governs every candidate (see [hardware constraints](03-Model n Architecture Engineering.md#hardware-constraints))? This is a feasibility check, not a value judgment — it doesn't ask whether the technique is _worth_ its cost, only whether the cost is affordable at all.
+4. **resource fit (hardware/compute budget)** — narrowly: does it run within the single-GPU VRAM/RAM/wall-clock ceiling that governs every candidate (see [hardware constraints](03-Model & Architecture Engineering.md#hardware-constraints))? This is a feasibility check, not a value judgment — it doesn't ask whether the technique is _worth_ its cost, only whether the cost is affordable at all.
 5. **domain/problem fit** — two things bundled deliberately: (a) _structural_ fit — does the technique's required input shape (multivariate channels, multi-tf branches, ~256-candle sequences, "needs a graph," "assumes univariate") match what this project actually has, and (b) _characteristic_ fit — does its benefit target something this data actually exhibits (non-stationary, noisy OHLCV, genuinely multivariate schema) rather than a generic capability bump never tested against this kind of noise. A technique that structurally can't consume this input at all (e.g. a graph-structured model with no graph in the data) scores 0 here regardless of how well-regarded it is elsewhere.
 6. **marginal impact vs. cost** — a _value_ judgment layered on top of the two feasibility checks above: given it fits (resource_fit) and applies (domain_fit), does adopting it directly close a gap already flagged elsewhere (O(n²)/VRAM ceiling, confidence-metric gap, class imbalance) cheaply, or is it a large lift for a small/speculative gain? Two candidates can both score well on resource_fit/domain_fit and still diverge sharply here — a technique can be cheap and applicable but bring only a marginal, already-covered benefit (e.g. Mish activation), or bring the exact fix to a bottleneck this doc already names (e.g. Perceiver-style latent-bottleneck attention against the flagged multi-tf VRAM cost).
 
@@ -456,7 +456,7 @@ Score each 0–2: 0 = absent/weak, 1 = moderate, 2 = strong. **Score in context,
 
 1. **risk / reversibility** — an incremental, low-risk swap into an already-covered role (e.g. xLSTM within the LSTM floor) vs. a structurally new, unproven mechanism that needs its own validation cycle.
 2. **tooling/library maturity** — drop-in within libraries already in scope (LightGBM/XGBoost/Optuna/Keras) vs. a custom implementation from a paper.
-3. **dependency / gating status** — hard gate, not a score: blocked behind another unresolved decision (e.g. the fusion-mechanism choice only matters once "combination strategy" ≠ single-backend-wins, see [combination strategy](03-Model n Architecture Engineering.md#combination-strategy)) demotes the tier, per the rule below, until the blocker resolves.
+3. **dependency / gating status** — hard gate, not a score: blocked behind another unresolved decision (e.g. the fusion-mechanism choice only matters once "combination strategy" ≠ single-backend-wins, see [combination strategy](03-Model & Architecture Engineering.md#combination-strategy)) demotes the tier, per the rule below, until the blocker resolves.
 
 ### tool-identity test: when a X/Y grouping stays one row
 

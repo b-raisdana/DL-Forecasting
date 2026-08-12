@@ -56,7 +56,7 @@ gap in the whole project: every model-selection decision elsewhere is provisiona
     code.
 11. **(decision) Confidence/calibration metric technique.** No input feature carries confidence
     information today. Pick a technique from
-    [model-architecture-planning.md § uncertainty-native GBM variants](../ML_Forecasting_System_Design/03-Model n Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap)
+    [model-architecture-planning.md § uncertainty-native GBM variants](../ML_Forecasting_System_Design/03-Model & Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap)
     (quantile GBM first — reuses the pinball-loss work from step 7 — then NGBoost) and implement Brier
     score / log-loss / calibration-curve (ECE) measurement against it, per
     [error-rating-and-evaluation.md § confidence & calibration metrics](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#confidence--calibration-metrics).

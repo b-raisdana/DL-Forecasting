@@ -41,9 +41,9 @@ each candle includes:
 - is a top? which tf (minutes of highest confirmed tf; + peak / − valley)
   - no lookahead — confirmed peak/valley tf capped by elapsed time to anchor candle (see glossary). E.g. candle 4mo before anchor can confirm as 4M peak if it stayed max to anchor; candle 1wk before anchor capped at 1W. Causal by construction.
   - if not = 0
-- timeframe in minutes — only for multi-tf shared architectures; omitted for per-timeframe-branch architectures (branch identity already encodes tf, field would be constant/redundant there). See [multi-timeframe fusion](03-Model n Architecture Engineering.md#multi-timeframe-fusion).
+- timeframe in minutes — only for multi-tf shared architectures; omitted for per-timeframe-branch architectures (branch identity already encodes tf, field would be constant/redundant there). See [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion).
 - 2 and 3 higher tfs tops time and price distances
-  - tf ordered list: 5min, 15min, 1H, 4H, 1D, 1W, 1M, 4M, 1Y — note: this list is only used for peak/valley timeframe confirmation and the fields below; only the first 6 (5min–1W) are actual input series, per [multi-timeframe fusion](03-Model n Architecture Engineering.md#multi-timeframe-fusion).
+  - tf ordered list: 5min, 15min, 1H, 4H, 1D, 1W, 1M, 4M, 1Y — note: this list is only used for peak/valley timeframe confirmation and the fields below; only the first 6 (5min–1W) are actual input series, per [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion).
     - eg. for 15mins, it is 4H and 1D
   - dont overlook future but we know about input duration
   - time: +/- ~ number of candles before/after the top
@@ -71,7 +71,7 @@ each candle includes:
 - priority order for step 2, ranked by suspicion (unverified guess, just for sequencing the ablation queue):
   1. candle height/ATR — deterministic fn of existing OHLC (high−low), redundant info though may speed small-model training.
   - OHLC/ATR, peak/valley signal, dist-from-anchor = load-bearing, not suspect.
-- timeframe-in-minutes was also on this queue (near-zero-info under per-tf-branch archs, since branch id already encodes tf) — out of the ablation queue entirely instead: made a config option gated on architecture — included for flat/shared-encoder archs (disambiguates mixed timeframes, so _not_ low-info there), excluded for per-tf-branch archs (would be constant/redundant), per the feature schema above / [multi-timeframe fusion](03-Model n Architecture Engineering.md#multi-timeframe-fusion) in the main doc.
+- timeframe-in-minutes was also on this queue (near-zero-info under per-tf-branch archs, since branch id already encodes tf) — out of the ablation queue entirely instead: made a config option gated on architecture — included for flat/shared-encoder archs (disambiguates mixed timeframes, so _not_ low-info there), excluded for per-tf-branch archs (would be constant/redundant), per the feature schema above / [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion) in the main doc.
   Alt:
   - certify completeness by reasoning alone, no ablation — rejected, too easy to fool self
   - start with large feature set + prune — rejected, costlier than minimal+screened-additions
@@ -110,13 +110,13 @@ Alt:
 
 #### candidate-feature screening — method
 
-mutual information (`sklearn.mutual_info_classif/regression`) between candidate + each label head, vs current top features — no GPU needed. Near-zero MI → deprioritize. If ambiguous: small LightGBM/XGBoost w/ vs w/o candidate. Full DL run reserved for candidates passing both. This is the correct scoped use of a GBM here: cheap, tabular, point-in-time, no sequence structure needed — the question at this stage is "does this one feature carry signal at all," not "does the sequence pattern matter" (see [auxiliary tabular models (GBM-family)](03-Model n Architecture Engineering.md#auxiliary-tabular-models-gbm-family) for the other roles GBMs play in this pipeline, and for scope limits).
+mutual information (`sklearn.mutual_info_classif/regression`) between candidate + each label head, vs current top features — no GPU needed. Near-zero MI → deprioritize. If ambiguous: small LightGBM/XGBoost w/ vs w/o candidate. Full DL run reserved for candidates passing both. This is the correct scoped use of a GBM here: cheap, tabular, point-in-time, no sequence structure needed — the question at this stage is "does this one feature carry signal at all," not "does the sequence pattern matter" (see [auxiliary tabular models (GBM-family)](03-Model & Architecture Engineering.md#auxiliary-tabular-models-gbm-family) for the other roles GBMs play in this pipeline, and for scope limits).
 Alt:
 
 - Pearson/Spearman alone — rejected, misses nonlinear; kept as even-cheaper pre-check
 - full training run per candidate — rejected, the expensive default this avoids
 - Boruta/RFE around GBM screen — deferred, useful once larger candidate pool exists
-- CatBoost instead of/alongside LightGBM/XGBoost for this screen — viable third option, near-identical API; see [modern GBM-family alternatives](03-Model n Architecture Engineering.md#modern-gbm-family-alternatives) for why it may edge out the other two on this repo's likely feature mix (mixed-type, moderate-noise, some high-cardinality categoricals like tf-id)
+- CatBoost instead of/alongside LightGBM/XGBoost for this screen — viable third option, near-identical API; see [modern GBM-family alternatives](03-Model & Architecture Engineering.md#modern-gbm-family-alternatives) for why it may edge out the other two on this repo's likely feature mix (mixed-type, moderate-noise, some high-cardinality categoricals like tf-id)
 
 ## Label design
 
@@ -176,7 +176,7 @@ Rules:
 
 ### model output targets
 
-What the model actually predicts, given the labels above (target/label definitions belong with the labeling spec; how the model represents/predicts them stays in [model-architecture-planning.md](03-Model n Architecture Engineering.md#model-architecture--selection)):
+What the model actually predicts, given the labels above (target/label definitions belong with the labeling spec; how the model represents/predicts them stays in [model-architecture-planning.md](03-Model & Architecture Engineering.md#model-architecture--selection)):
 
 - action head = Long / Short / None (see [where can be a position?](#where-can-be-a-position))
 - primary regression targets = `MAE`, `OM` (see [TP / MAE / OM labels](#tp--mae--om-labels))
@@ -254,5 +254,5 @@ Purged validation
 - normal price distance = natural price distance with sign flipped for valleys, so + always means "away from the top" for both peaks and valleys
 - volume strength of tops = SUM(volume) / ATR(volume) of the 2-tf-lower candles (e.g. 4H top → 15min) within ±256 top-tf candles, restricted to candles whose [L,H] overlaps the top's price range (peak-high/valley-low ± 2-tf-lower ATR(256))
 - Stage-1 = the current architecture-search phase; picks one whole model architecture from the candidate set (see "model architecture & selection")
-- S1/S2/S3 = hyperparameter-profile labels per Stage-1 architecture candidate: depth-heavy / width-heavy / context-heavy (see [Stage-1 candidate sets](03-Model n Architecture Engineering.md#stage-1-candidate-sets))
+- S1/S2/S3 = hyperparameter-profile labels per Stage-1 architecture candidate: depth-heavy / width-heavy / context-heavy (see [Stage-1 candidate sets](03-Model & Architecture Engineering.md#stage-1-candidate-sets))
 - GBM = gradient boosting machine (LightGBM/XGBoost/CatBoost family) — see "auxiliary tabular models (GBM-family)"

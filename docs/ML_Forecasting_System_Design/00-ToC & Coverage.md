@@ -416,7 +416,7 @@ The following remain outside the current scope:
 
 ## Excluded Topics
 
-## 1. Security
+### 1. Security
 
 Not part of the current ML research scope:
 
@@ -429,7 +429,7 @@ Not part of the current ML research scope:
 
 These concern protecting the model/system from malicious behavior rather than improving market forecasting quality. fileciteturn1file0L17-L23
 
-## 2. MLOps / Infrastructure
+### 2. MLOps / Infrastructure
 
 Excluded:
 
@@ -442,7 +442,7 @@ Excluded:
 
 The project can use the existing local development/training environment; production-scale infrastructure engineering is not needed to answer the current forecasting research questions. fileciteturn1file0L25-L31
 
-## 3. Reinforcement Learning
+### 3. Reinforcement Learning
 
 Excluded:
 
@@ -456,7 +456,7 @@ Excluded:
 
 The current approach is supervised/self-supervised ML/DL forecasting from historical market data, not learning a trading policy through environment interaction and rewards. fileciteturn1file0L33-L40
 
-## 4. Production Decision Layer
+### 4. Production Decision Layer
 
 Excluded:
 
@@ -467,7 +467,7 @@ Excluded:
 
 The model may predict Long/Short/None and related quantities for research/backtesting, but building the production mechanism that converts those predictions into live orders is outside this project. fileciteturn1file0L42-L46
 
-## 5. System-Level Architecture
+### 5. System-Level Architecture
 
 Excluded:
 
@@ -478,7 +478,7 @@ Excluded:
 
 The project is concerned with the forecasting/modeling research pipeline, not production software architecture. fileciteturn1file0L48-L52
 
-## 6. Meta-Optimization / AutoML
+### 6. Meta-Optimization / AutoML
 
 Excluded as a project discipline:
 
@@ -489,7 +489,7 @@ Excluded as a project discipline:
 
 Manual/hypothesis-driven candidate selection plus controlled automated hyperparameter optimization is sufficient. The project already uses architecture choice as a controlled categorical search variable rather than unrestricted AutoML. fileciteturn1file0L54-L58
 
-## 7. Final Production Validation
+### 7. Final Production Validation
 
 Excluded:
 
@@ -501,7 +501,7 @@ Excluded:
 
 Historical out-of-sample and backtesting validation remain in scope; production certification is not. fileciteturn1file0L60-L65
 
-## 8. LLM / General AI
+### 8. LLM / General AI
 
 Excluded for now:
 
@@ -517,7 +517,7 @@ Excluded for now:
 
 The current problem is numerical time-series forecasting from financial-market data, so these techniques do not belong in the present research scope. fileciteturn1file0L67-L78
 
-## 9. Irrelevant Data Modalities
+### 9. Irrelevant Data Modalities
 
 Excluded:
 
@@ -529,7 +529,7 @@ Excluded:
 
 The input domain is market time series: OHLCV, derived prices, volume, technical indicators, temporal features, and market-structure features. fileciteturn1file0L80-L85
 
-## 10. Alternative Market-Data Acquisition
+### 10. Alternative Market-Data Acquisition
 
 Excluded:
 
