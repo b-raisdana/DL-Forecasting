@@ -8,6 +8,7 @@
 /venv3124/
 /venv3912/
 /venv312/
+/.testvenv/
 
 # Python bytecode / cache
 **/__pycache__/

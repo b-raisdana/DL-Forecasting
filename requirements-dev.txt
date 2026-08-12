@@ -1,0 +1,9 @@
+# Install into the WSL "tf" conda env, not any Windows Python - see
+# docs/infrastructure.md#environments. git commit itself runs on Windows, but a thin
+# hook shim (scripts/git-hooks/pre-commit) delegates into WSL/tf so pre-commit,
+# mypy, and pytest all run against the repo's real dependency graph.
+#
+#   wsl.exe -d Ubuntu-24.04 -- bash -lc \
+#     'source ~/miniconda3/etc/profile.d/conda.sh && conda activate tf && \
+#      pip install -r requirements-dev.txt'
+pre-commit

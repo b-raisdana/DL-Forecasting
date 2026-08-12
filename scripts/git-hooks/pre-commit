@@ -1,0 +1,15 @@
+#!/bin/sh
+# Tracked source of truth for .git/hooks/pre-commit (that dir isn't versioned by git,
+# so each clone runs `bash scripts/git-hooks/install.sh` once - see docs/infrastructure.md#environments).
+#
+# git commit itself runs on Windows here, but the tools this hook drives (mypy, pytest,
+# and their real deps: pandas, tensorflow, pandera, ...) only exist in the WSL "tf" conda
+# env - see .claude/skills/pytest/SKILL.md. So this hook is a thin delegator: hop into WSL
+# once, then run pre-commit natively from there against the same working tree/.git
+# (accessed via the /mnt/c bind mount - same repo, same staged index).
+exec wsl.exe -d Ubuntu-24.04 -- bash -lc '
+    source ~/miniconda3/etc/profile.d/conda.sh &&
+    conda activate tf &&
+    cd /mnt/c/Code/DL-Forecasting &&
+    pre-commit run --hook-stage pre-commit
+'

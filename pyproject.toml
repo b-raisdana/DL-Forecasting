@@ -1,0 +1,19 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+extend-exclude = ["*.ipynb", ".testvenv"]
+
+[tool.ruff.lint]
+# Complexity is xenon/radon's job (docs/infrastructure.md#qa) - not duplicated here.
+select = ["E", "F", "I", "UP", "B", "C4", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+explicit_package_bases = true
+mypy_path = "app"
+strict = true
+disallow_any_explicit = true
+no_implicit_optional = true
+warn_return_any = true
+ignore_missing_imports = true
+follow_imports = "silent"

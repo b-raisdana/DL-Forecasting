@@ -178,7 +178,7 @@ The `*_drawdown` columns are ambiguous by name — two different things could be
 `long_n_short_drawdown()` computes (1): `max_high_quantile` picks the quantile bucket matching how many
 bars it took to reach the best-case exit, then `quantile_long_min_low` = the lowest low reached within a
 window of approximately that same length — i.e. roughly "entry → best-case exit," a quantile-bucketed
-approximation, not an exact bar-by-bar minimum (see todo step 5). Read every "drawdown" in this codebase
+approximation, not an exact bar-by-bar minimum (see todo step 4). Read every "drawdown" in this codebase
 as **MAE from entry**, not "retracement from a peak."
 
 ### SL detection
@@ -189,7 +189,7 @@ Two implementations exist, one active:
   — the one wired into `add_long_n_short_profit()`. Sets `long_sl_distance`/`short_sl_distance` =
   `max(1, long_drawdown|short_drawdown)`, i.e. the SL distance in ATR units is the MAE floored at 1 ATR.
   No explicit price level is stored, only the distance. The ATR term is incidentally 15-min today (since
-  `trigger_tf='15min'`), not an explicit higher-timeframe term — see todo step 5.
+  `trigger_tf='15min'`), not an explicit higher-timeframe term — see todo step 4.
 - **`zz_stop_loss()`** — dead code, not wired in.
 
 ### strength of the anchor-suggested position
@@ -210,7 +210,7 @@ treats a candle as `is_actionable` iff `long_signal != 0 or short_signal != 0`; 
 training target is `ys = [short_signal, long_signal]`
 ([training_datasets.py:151](../../app/ai_modelling/dataset_generator/training_datasets.py#L151)) — both
 signals kept independently, no tie-break, no discrete Long/Short/None column. This whole mechanism
-predates the spec's `MAE`/`OM`/`MFE` targets — see todo steps 6-10.
+predates the spec's `MAE`/`OM`/`MFE` targets — see todo steps 5-9.
 
 ### other position-related metrics
 
