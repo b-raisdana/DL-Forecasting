@@ -56,7 +56,19 @@ prefered to do via well-known libs instead of self-implementation (research firs
 
 ### DDD
 
+MVC doesn't fit (no request/response UI cycle) — layer by dependency direction instead
+(Clean/Onion-style): Domain (market-structure TA logic + PanderaDFM schemas as value objects) →
+Application (dataset generation, training, prediction, optimization, backtesting orchestration) →
+Infrastructure (exchange/data-fetch, model-artifact persistence, config, logging) → Presentation
+(plotting, entrypoints). Full layer-to-module mapping, violations found, and migration order:
+[architecture-layers.md](architecture-layers.md).
+
 ### SOA
+
+Not adopted — single-process offline pipeline, no independently-deployed services. The
+"application services" in the DDD layering above (orchestrators like `train_data_of_mt_n_profit`,
+a trainer, a predictor) are service-*shaped* (one entry point, coordinate lower layers) but stay
+in-process; revisit only if a stage needs independent scaling/deployment.
 
 ### principles
 
