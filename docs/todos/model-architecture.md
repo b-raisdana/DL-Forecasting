@@ -1,8 +1,8 @@
 # TODO — model architecture & selection
 
-Closing the gap between [model-architecture-planning.md](../model-architecture-planning.md) +
-[model-architecture-candidate-sets.md](../model-architecture-candidate-sets.md) +
-[prioritization-framework.md](../prioritization-framework.md) (the architecture-search design) and what's
+Closing the gap between [model-architecture-planning.md](../ML_Forecasting_System_Design/03-Model n Architecture Engineering.md) +
+[model-architecture-candidate-sets.md](../ML_Forecasting_System_Design/03-Model n Architecture Engineering.md#stage-1-candidate-sets) +
+[prioritization-framework.md](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#decision-framework) (the architecture-search design) and what's
 actually built today. See [master-todo.md](master-todo.md) for how this fits the overall plan — this
 topic is downstream of [input-data-channels.md](input-data-channels.md) (input shape) and
 [training-data-labels.md](training-data-labels.md) (output shape), so sequence it after those stabilize.
@@ -16,7 +16,7 @@ topic is downstream of [input-data-channels.md](input-data-channels.md) (input s
 1. **Build the unified super-architecture skeleton** (`build_super_architecture(stage_config, profile,
    tf_list)` and its stage functions `embed`/`local_extract`/`sequential_encode`/`attend`/`fuse`/
    `global_repr`/`head`) per
-   [model-architecture-candidate-sets.md § unified super-architecture skeleton](../model-architecture-candidate-sets.md#unified-super-architecture-skeleton).
+   [model-architecture-candidate-sets.md § unified super-architecture skeleton](../ML_Forecasting_System_Design/03-Model n Architecture Engineering.md#unified-super-architecture-skeleton).
    Currently pseudocode only — no `stage_config`-driven builder exists in `app/`. This is the
    foundation every candidate below plugs into.
 2. **Express the existing CNN-LSTM(-attention) code as a `stage_config`** (`{embedding: 0,
@@ -31,14 +31,14 @@ topic is downstream of [input-data-channels.md](input-data-channels.md) (input s
 4. Wait for [training-data-labels.md](training-data-labels.md) todo step 10 (final label/target column
    names) before wiring the `head()` stage's action/MAE-OM/MFE/confidence outputs — head shapes are
    defined by that file, not this one, per
-   [training-data.md § model output targets](../training-data.md#model-output-targets).
+   [training-data.md § model output targets](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#model-output-targets).
 5. **Add the naive/persistence baseline** ("no change"/carry-forward last signal) — not a `stage_config`
    at all, the mandatory floor every learned candidate must beat. Cheapest possible first thing to wire
    once the eval harness in [evaluation-metrics.md](evaluation-metrics.md) can score it.
 6. **Add the Tier-1 Stage-1 candidates from
-   [prioritization-framework.md § current Stage-1 candidate set](../prioritization-framework.md#current-stage-1-candidate-set)**
+   [prioritization-framework.md § current Stage-1 candidate set](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#current-stage-1-candidate-set)**
    not yet in code, each as its own `stage_config` + pseudocode block already drafted in
-   [model-architecture-candidate-sets.md § architecture candidates](../model-architecture-candidate-sets.md#architecture-candidates):
+   [model-architecture-candidate-sets.md § architecture candidates](../ML_Forecasting_System_Design/03-Model n Architecture Engineering.md#architecture-candidates):
    Transformer w/ per-tf embedding + cross-tf attention, TCN (with ModernTCN as the same block's
    large-kernel/grouped-conv parameterization), hybrid CNN→Transformer, Mamba (flag the
    non-native-Keras `MambaBlock` dependency up front), LSTM floor (GRU as the Tier-2 alt within it),
@@ -46,15 +46,15 @@ topic is downstream of [input-data-channels.md](input-data-channels.md) (input s
    testable against the skeleton from step 1.
 7. **Wire `profile_trial_cost()`/`estimate_total_budget()`/`max_trials_for_budget()`** (already exist in
    `optuna_optimizer.py`, see appendix) against each new candidate as it lands in step 6, per
-   [model-architecture-candidate-sets.md § hardware constraints](../model-architecture-candidate-sets.md#hardware-constraints)
+   [model-architecture-candidate-sets.md § hardware constraints](../ML_Forecasting_System_Design/03-Model n Architecture Engineering.md#hardware-constraints)
    — measure real wall-clock/VRAM, don't hand-estimate, before adding it to the live Optuna study.
 8. **Add architecture as a categorical Optuna dimension** across all landed Stage-1 candidates in the
    same study as their hyperparameters (conditional sub-params per arch), per
-   [model-architecture-planning.md § optimization strategy](../model-architecture-planning.md#optimization-strategy).
+   [model-architecture-planning.md § optimization strategy](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#optimization-strategy).
    Confirm `compute_fitness()`/`OptunaPruningCallback` (both already exist, see appendix) generalize
    across the new candidates' output shapes, not just the current CNN-LSTM one.
 9. **(decision) Global budget/sequencing plan.** Counting Tier-1 rows across
-   [prioritization-framework.md](../prioritization-framework.md): 9 full Stage-1 architectures, 4
+   [prioritization-framework.md](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#decision-framework): 9 full Stage-1 architectures, 4
    activation functions, 6 GBM-family techniques, 2 embedding options, 2 global-repr options, 2
    multi-tf fusion options — each gated behind its own ≥3-seed statistical-validity protocol (see
    [evaluation-metrics.md](evaluation-metrics.md)). `estimate_total_budget()` exists per-study; nothing
@@ -63,15 +63,15 @@ topic is downstream of [input-data-channels.md](input-data-channels.md) (input s
    ordered test phases, dependency arrows between them, estimated GPU-hours per phase, running total.
 10. **Normalization-scheme test.** ATR-relative is the resolved default; the alt schemes (log-return,
     rolling z-score, hybrid ATR+log-return) are untested per
-    [model-architecture-planning.md § normalization strategy](../model-architecture-planning.md#normalization-strategy).
+    [model-architecture-planning.md § normalization strategy](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#normalization-strategy).
     Run once step 1's skeleton exists, using the ≥3-seed protocol from
     [evaluation-metrics.md § statistical validity](evaluation-metrics.md#todo).
 11. **Class-imbalance prevalence measurement** — actual prevalence (% candles peak/valley per horizon,
     % positions clearing `OM > 1`) isn't known yet; measure empirically via a data-profiling script once
     [training-data-labels.md](training-data-labels.md) lands, before finalizing the class-weight/focal
-    choice in [model-architecture-planning.md § class imbalance handling](../model-architecture-planning.md#class-imbalance-handling).
+    choice in [model-architecture-planning.md § class imbalance handling](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#class-imbalance-handling).
 12. **(decision) Cross-symbol validation split — potential leakage via shared calendar time.**
-    [model-architecture-planning.md § validation & train/test splitting](../model-architecture-planning.md#validation--traintest-splitting)
+    [model-architecture-planning.md § validation & train/test splitting](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#validation--traintest-splitting)
     argues train-on-other-pairs / validate-on-BTC needs no walk-forward machinery since there's no
     same-symbol window overlap. But crypto pairs are heavily correlated on shared calendar time — if
     training-pair windows overlap the same weeks as the BTC validation window, the model can learn
@@ -82,11 +82,11 @@ topic is downstream of [input-data-channels.md](input-data-channels.md) (input s
     deferred "rotating leave-one-symbol-out" alt already named in that section).
 13. **Resolve combination-strategy status.** Currently "unresolved, not yet measured, default =
     single-backend-wins" per
-    [model-architecture-planning.md § combination strategy](../model-architecture-planning.md#combination-strategy).
+    [model-architecture-planning.md § combination strategy](../ML_Forecasting_System_Design/03-Model n Architecture Engineering.md#combination-strategy).
     Only revisit once step 6's single-backend candidates have measured backtested-KPI results to compare
     a combo against — premature before then.
 14. **Activation-mechanism sweep** (GELU/GLU-family/ReLU/SiLU — Tier 1 per
-    [prioritization-framework.md § activation mechanisms](../prioritization-framework.md#activation-mechanisms))
+    [prioritization-framework.md § activation mechanisms](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#activation-mechanisms))
     — cheap post-hoc refinement within the Stage-1 categorical-search winner from step 8, not folded
     into the primary search. Sequence last, after a winner exists.
 
@@ -110,11 +110,11 @@ Verified against `app/` directly on 2026-08-12.
   todo step 8.
 - **GA optimizer** — [ga_optimizer.py](../../app/ai_modelling/parameter_optimizser/ga_optimizer.py) also
   exists alongside the Optuna path; not yet cross-referenced against
-  [model-architecture-planning.md § optimization strategy](../model-architecture-planning.md#optimization-strategy)'s
+  [model-architecture-planning.md § optimization strategy](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#optimization-strategy)'s
   "GA/NSGA-II for optional 2nd refinement stage" framing — worth a quick audit alongside todo step 8 to
   confirm it's the same mechanism the docs describe, not a parallel/superseded path.
 - **No unified super-architecture skeleton** (`stage_config`-driven `build_super_architecture()`) exists
-  — [model-architecture-candidate-sets.md § unified super-architecture skeleton](../model-architecture-candidate-sets.md#unified-super-architecture-skeleton)
+  — [model-architecture-candidate-sets.md § unified super-architecture skeleton](../ML_Forecasting_System_Design/03-Model n Architecture Engineering.md#unified-super-architecture-skeleton)
   is pseudocode only, not yet transcribed into `app/`.
 - **Deployment/live layer is essentially absent, and the one thing that exists is disconnected.**
   `BasePatternStrategy` (see
@@ -123,7 +123,7 @@ Verified against `app/` directly on 2026-08-12.
   labels. No documented or implemented path from "trained model produces a prediction" to "an order gets
   placed." Compounding this, transaction costs/spread/slippage/latency, risk/position sizing beyond TP
   targets, and market-regime/retraining cadence are all explicitly deferred in
-  [model-architecture-planning.md § deferred topics](../model-architecture-planning.md#deferred-topics-not-current-concerns-placeholders).
+  [model-architecture-planning.md § deferred topics](../ML_Forecasting_System_Design/99-Exclusion.md).
   Reasonable individually during architecture search; together they mean nothing describes how a model
   result becomes a live position. Before any live/paper trading, promote these three deferred topics to
   real docs — cost-free backtest KPIs will otherwise overstate performance at a 4H horizon where fees are

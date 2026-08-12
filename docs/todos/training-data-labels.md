@@ -1,6 +1,6 @@
 # TODO — training data / label preparation
 
-Closing the gap between [training-data.md](../training-data.md) (the MAE/MFE/OM label spec) and what
+Closing the gap between [training-data.md](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md) (the MAE/MFE/OM label spec) and what
 `profit_loss_adder.py`/`training_datasets.py` actually compute today. See
 [master-todo.md](master-todo.md) for how this topic fits the overall plan.
 
@@ -42,7 +42,7 @@ a direct, self-contained code fix against the already-written spec.
 2. **Rework entry price to the limit-order target (`E`)**: replace `worst_long_open`/`worst_short_open`'s
    worst-case rolling max/min-over-`action_delay` (a pessimistic market-order fill) with the best price
    reachable in the single 5-min candle immediately following NOW's close, per
-   [training-data.md § targeting bid price](../training-data.md#targeting-bid-price). Update
+   [training-data.md § targeting bid price](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#targeting-bid-price). Update
    `max_profit_n_loss()`. Upstream of `MFE`/`TP4`/`MAE`, so it must land before steps 3-4.
 3. **Rename/reframe `MFE`/`TP4` onto the existing best-case columns.** `MFE` = `long_profit`/
    `short_profit` (recomputed against the fixed `E` from step 2); `TP4 = E ± MFE` = today's
@@ -66,7 +66,7 @@ a direct, self-contained code fix against the already-written spec.
    division.
 7. **Replace the direction-validity gate with `OM > 1`.** Swap `profit_n_loss()`'s current "loser"
    condition (`weighted_profit <= 0 or risk > max_risk`) for `OM <= 1` per
-   [training-data.md § where can be a position?](../training-data.md#where-can-be-a-position). Confirm
+   [training-data.md § where can be a position?](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#where-can-be-a-position). Confirm
    whether `max_risk` is still needed for anything else before removing it, or whether `OM > 1` fully
    replaces its role.
 8. **Single-label tie-break by `OM`.** When both directions have `OM > 1`, zero the signal of whichever
@@ -91,7 +91,7 @@ a direct, self-contained code fix against the already-written spec.
 
 **Not in scope for this file** (execution/live-trading concerns, not training data): the `TP1`-`TP3`
 scale-out levels and their live-order-placement mechanics — spec explicitly marks these as non-ML-target
-execution levels ([training-data.md § TP / MAE / OM labels](../training-data.md#tp--mae--om-labels)),
+execution levels ([training-data.md § TP / MAE / OM labels](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#tp--mae--om-labels)),
 closer in spirit to `BasePatternStrategy` (see appendix below) than to the label generator this file
 covers.
 

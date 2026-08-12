@@ -11,7 +11,7 @@ are cross-cutting enablers other topics depend on rather than a pipeline stage o
 ## todo
 
 1. **(decision) Pick and wire experiment tracking.** Flagged "current priority" in
-   [model-architecture-planning.md § experiment tracking](../model-architecture-planning.md#experiment-tracking-current-priority)
+   [model-architecture-planning.md § experiment tracking](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#experiment-tracking-current-priority)
    but still unresolved: ad hoc `.bak`/`Copy (2)` file naming is acknowledged broken, MLflow-local vs.
    CSV/SQLite undecided. Given how many separate multi-seed test phases this project's own discipline
    requires (normalization, activation, GBM variants, ~9 Tier-1 architectures, fusion mechanism,

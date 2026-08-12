@@ -87,3 +87,8 @@ The following areas are explicitly outside the current scope of the project.
 12. **Decision/System Architecture**
     - End-to-end trading system architecture
     - Automated decision-making layer built on model output
+
+13. **Deferred (project-specific)**
+    - **transaction costs/spread/slippage/latency**: matters for sub-4H scalping, not addressed now. Revisit before live/paper trading — cost-free backtest overstates real perf.
+    - **risk/position sizing beyond TP targets**: handled manually via existing procedure, not by model. No AI work needed now.
+    - **market regime robustness/retraining cadence**: not addressed now. Revisit once live a while — crypto regime shifts (trend/range/vol), untouched model can decay silently.

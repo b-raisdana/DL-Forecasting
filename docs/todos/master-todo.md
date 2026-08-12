@@ -18,7 +18,7 @@ content is fully distributed across the topic files below, not lost.
 ## current focus
 
 **[input data / channels preparation](input-data-channels.md)** — start here. The candle feature schema
-in [input-features.md](../input-features.md) is almost entirely unimplemented (the model trains on raw
+in [input-features.md](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md) is almost entirely unimplemented (the model trains on raw
 OHLCV + a fixed technical-indicator set today, none of the spec'd relative-HLC/gap/peak-valley/multi-tf
 top-distance fields), and every other topic's input shape depends on this resolving first.
 
@@ -26,15 +26,15 @@ top-distance fields), and every other topic's input shape depends on this resolv
 
 | topic                                                    | closes the gap in                                                                                                                                          | depends on                                    |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| [input data / channels preparation](input-data-channels.md) | [input-features.md](../input-features.md)                                                                                                                   | —                                              |
-| [training data / label preparation](training-data-labels.md) | [training-data.md](../training-data.md)                                                                                                                     | —                                              |
-| [model architecture & selection](model-architecture.md)   | [model-architecture-planning.md](../model-architecture-planning.md), [model-architecture-candidate-sets.md](../model-architecture-candidate-sets.md), [prioritization-framework.md](../prioritization-framework.md) | input shape ← input-data; output shape ← training-data-labels |
-| [evaluation & backtesting metrics](evaluation-metrics.md) | [error-rating-and-evaluation.md](../error-rating-and-evaluation.md)                                                                                          | trained candidates ← model-architecture (partially parallelizable — the backtest-module *design* doc, todo step 1, doesn't need a trained model) |
+| [input data / channels preparation](input-data-channels.md) | [input-features.md](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md)                                                                                                                   | —                                              |
+| [training data / label preparation](training-data-labels.md) | [training-data.md](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md)                                                                                                                     | —                                              |
+| [model architecture & selection](model-architecture.md)   | [model-architecture-planning.md](../ML_Forecasting_System_Design/03-Model n Architecture Engineering.md), [model-architecture-candidate-sets.md](../ML_Forecasting_System_Design/03-Model n Architecture Engineering.md#stage-1-candidate-sets), [prioritization-framework.md](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#decision-framework) | input shape ← input-data; output shape ← training-data-labels |
+| [evaluation & backtesting metrics](evaluation-metrics.md) | [error-rating-and-evaluation.md](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md)                                                                                          | trained candidates ← model-architecture (partially parallelizable — the backtest-module *design* doc, todo step 1, doesn't need a trained model) |
 | [infrastructure & tooling](infrastructure.md)              | [infrastructure.md](../infrastructure.md)                                                                                                                    | cross-cutting — experiment tracking (step 1-2) should land before the other topics' multi-seed test volume begins |
 
-Not a topic file on its own: [timeseries-foundation-models-architecture-planning.md](../timeseries-foundation-models-architecture-planning.md)
+Not a topic file on its own: [timeseries-foundation-models-architecture-planning.md](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#time-series-foundation-models-tsfms)
 covers pretrained-checkpoint TSFMs, explicitly excluded from the from-scratch architecture search — no
-implementation TODO until/unless that exclusion is revisited. [prioritization-framework.md](../prioritization-framework.md)
+implementation TODO until/unless that exclusion is revisited. [prioritization-framework.md](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#decision-framework)
 is a scoring methodology consumed by the other topics, not a pipeline stage with its own gap to close.
 
 ## suggested sequencing

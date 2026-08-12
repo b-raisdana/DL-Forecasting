@@ -1,6 +1,6 @@
 # TODO — input data / channels preparation
 
-Closing the gap between [input-features.md](../input-features.md) (the candle feature schema + feature
+Closing the gap between [input-features.md](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md) (the candle feature schema + feature
 screening spec) and what actually feeds the model today. Current focus topic — see
 [master-todo.md](master-todo.md).
 
@@ -20,13 +20,13 @@ screening spec) and what actually feeds the model today. Current focus topic —
 Ordered so each step is small and independently testable. Steps marked **(decision)** need a one-line
 confirmation before implementing since they affect input shape (and therefore every downstream model
 candidate in [model-architecture.md](model-architecture.md)); everything else is a direct fix against
-the already-written spec in [input-features.md](../input-features.md). Steps 1-4 (audit, relative-HLC,
+the already-written spec in [input-features.md](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md). Steps 1-4 (audit, relative-HLC,
 volume/ATR, peak/valley reuse decision) are done — see [done (reference)](#done-reference).
 
 1. Implement the **no-lookahead cap** on peak/valley confirmation: "is a top? which tf" must be capped
    by elapsed time to the anchor candle (a candle 4mo before anchor can confirm 4M peak only if it
    stayed max to anchor; 1wk before anchor caps at 1W) — per
-   [input-features.md § candle feature schema](../input-features.md#candle-feature-schema). This is the
+   [input-features.md § candle feature schema](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#candle-feature-schema). This is the
    part of the schema most likely to silently leak future information if implemented naively; write the
    causality test in step 2 against this specific field first. Builds on the peak/valley reuse decision
    in [done (reference)](#done-reference) (raw extrema reimplemented, confirmation logic still to write
@@ -56,11 +56,11 @@ volume/ATR, peak/valley reuse decision) are done — see [done (reference)](#don
    confirm it's actually screened not just present; ICHIMUKU — same; MACD, ADX, VWAP, volatility-regime
    trio, session/time cyclical, structural counts — all unimplemented). Use
    `sklearn.mutual_info_classif/regression` per
-   [input-features.md § candidate-feature screening](../input-features.md#candidate-feature-screening--method);
+   [input-features.md § candidate-feature screening](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#candidate-feature-screening--method);
    small LightGBM/XGBoost only if MI is ambiguous.
 8. **Reconcile the candidate pool with what's already in `classic_indicators.py`.** Code currently
    computes `cci`/`rsi`/`mfi`/`bbands` — none of which appear in
-   [input-features.md § candidate feature pool](../input-features.md#candidate-feature-pool) (which
+   [input-features.md § candidate feature pool](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#candidate-feature-pool) (which
    instead names MACD and says "drop RSI as redundant with it"). Either the pool needs updating to
    reflect what's already screened-and-kept, or these existing indicators need to go through the same
    MI screen as new candidates before being trusted as load-bearing. Don't assume either way.
@@ -85,13 +85,13 @@ the active list short without needing prose edits on every completion.
    [training_datasets.py:40](../../app/ai_modelling/dataset_generator/training_datasets.py#L40) is
    currently just `['open', 'high', 'low', 'close', 'volume'] + classic_indicator_columns()` — raw OHLCV
    plus `bbands`/`obv`/`cci`/`rsi`/`mfi`/`ichimoku` (see appendix). None of
-   [input-features.md § candle feature schema](../input-features.md#candle-feature-schema) (relative-HLC,
+   [input-features.md § candle feature schema](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#candle-feature-schema) (relative-HLC,
    gap-from-close, candle-height/ATR, volume/ATR, peak/valley tf detection, multi-tf top-distance
    fields) is wired into the actual model input today.
 2. Implement the **relative-HLC block**: `close/ATR`, `(high-close)/ATR`, `(close-low)/ATR`, absolute
    close, `gap = (open - prev_close)/ATR`, `candle_height/ATR`. Pure per-row vectorized pandas, no
    cross-candle state — the cheapest, most load-bearing part of the schema per
-   [input-features.md § feature-set completeness](../input-features.md#feature-set-completeness--testing)
+   [input-features.md § feature-set completeness](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#feature-set-completeness--testing)
    ("OHLC/ATR ... = load-bearing, not suspect"). **Done 2026-08-12** — new
    [relative_candle.py](../../app/ai_modelling/dataset_generator/relative_candle.py)
    (`add_relative_candle_columns`/`relative_candle_columns`, the 5 new ratios; absolute `close` already
@@ -177,7 +177,7 @@ returns `['bbands_u', 'bbands_m', 'bbands_l', 'sc_obv', 'sc_cci', 'rsi', 'mfi', 
 - `bbands_u`/`bbands_m`/`bbands_l` = Bollinger Bands (upper/middle/lower), raw price units
 - `ichi_conv`/`ichi_base`/`ichi_lead_a`/`ichi_lead_b`/`ichi_lag` = Ichimoku components
 
-None of [input-features.md § candle feature schema](../input-features.md#candle-feature-schema)'s
+None of [input-features.md § candle feature schema](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#candle-feature-schema)'s
 relative-HLC, gap, candle-height/ATR, volume/ATR, peak/valley-tf, or multi-tf top-distance fields exist
 in this list. The model today trains on raw OHLCV + this fixed technical-indicator set only.
 
@@ -243,7 +243,7 @@ Conclusion: step 3 not blocked — `volume/ATR(volume)` implemented as specified
 ### data-quality / CCXT feed gaps
 
 Only coverage today is "windows built only from contiguous complete data; any gap-containing range
-discarded entirely" ([model-architecture-planning.md § validation & train/test splitting](../model-architecture-planning.md#validation--traintest-splitting)).
+discarded entirely" ([model-architecture-planning.md § validation & train/test splitting](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#validation--traintest-splitting)).
 Nothing addresses exchange downtime gaps, restated/adjusted candles, delisted-pair survivorship bias in
 the "train on all other pairs" set, or per-exchange history-depth inconsistency — all real CCXT pain
 points that quietly bias a multi-pair training set. Not yet built; see todo step 10.
