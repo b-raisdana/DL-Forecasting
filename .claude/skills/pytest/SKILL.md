@@ -29,6 +29,15 @@ failure signal; check the actual pytest summary line. WSL has no outbound networ
 fail with a DNS error) — `pytest` and the full dep set are already installed in `tf`, so this is rarely
 needed; if a genuinely new dependency is required, ask the user rather than assuming network access.
 
+**Data cache lives off `/mnt/c`.** The code clone above stays on the `drvfs` mount (needed for Windows
+git/VS Code access), but the real cached OHLCV under `data/` (`Config.path_of_data`) has been moved to
+a native ext4 path, `/home/brais/dlf-data` — `drvfs` is the worst case for its ~19.5k small per-day zip
+files (each open crosses the WSL2 9p protocol). The `tf` conda env's `activate.d`/`deactivate.d` hooks
+set `DLF_DATA_ROOT=/home/brais/dlf-data` automatically, so `conda activate tf` (as in the command above)
+already points there — nothing extra to do. Only `e2e`/`perf` tests touch real `data/` at all (see
+[test-strategy](../test-strategy/SKILL.md) fixture/data policy); unit/characterization/regression/smoke
+never read it. Full rationale: [docs/infrastructure.md § environments](../../../docs/infrastructure.md#environments).
+
 Fast gate vs full run — see [docs/testing.md § markers and running](../../../docs/testing.md#markers-and-running).
 
 ## Repo config
