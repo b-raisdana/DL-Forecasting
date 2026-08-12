@@ -59,6 +59,13 @@ are cross-cutting enablers other topics depend on rather than a pipeline stage o
     NSGA-II-later plan. Confirm whether `ga_optimizer.py` is the "NSGA-II reserved for a later
     multi-objective refinement stage" piece already partially built, or a separate/superseded path, and
     update this doc's Optuna section (or add a GA section) accordingly.
+11. **Evaluate, don't just document, the [performance-and-concurrency.md](../performance-and-concurrency.md)
+    candidate libraries.** That doc lists `numba`/`polars`/`bottleneck`/`dask.dataframe`/`ta-lib`/async
+    CCXT fetch as candidates against real bottlenecks, but none are profiled or adopted yet — in
+    particular, `data_processing/fetch_ohlcv.py`'s multi-symbol/multi-timeframe fetch loop is still
+    sequential (no `ccxt.async_support`/thread-pool), and `bottleneck` is still commented out in
+    `requirements.txt`. Profile the dataset-generation and fetch paths first; only adopt a candidate
+    once a measured bottleneck justifies it.
 
 ## appendix: current implementation status
 

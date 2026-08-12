@@ -27,6 +27,9 @@
 
 prefer vectorized pandas ops; tag any non-vectorized fallback with `NOT_VECTORIZED_OPERATION`.
 prefered to do via well-known libs instead of self-implementation (research first / then implement).
+Full performance/concurrency/resource-usage rules for all new code, plus a candidate list of
+pandas/numpy-adjacent libraries evaluated for this repo: [performance-and-concurrency.md](performance-and-concurrency.md)
+(enforced day to day by the skills indexed in [performance-skills.md](performance-skills.md)).
 
 ## environments
 
@@ -42,15 +45,22 @@ prefered to do via well-known libs instead of self-implementation (research firs
 - Rejected: a dedicated Windows venv running mypy/ruff/xenon directly. Doubles the environments to
   maintain, can't install the real deps (see above), so mypy would ignore-missing-import everything into
   implicit `Any` - defeats the point of the strict/no-`Any` gate below.
-- **Filesystem location**: the clone lives on the Windows-mounted drive (`C:\Code\DL-Forecasting` =
-  WSL `/mnt/c/Code/DL-Forecasting`, via `drvfs`), not a native WSL ext4 volume (e.g. under `~/`).
+- **Filesystem location — code**: the clone lives on the Windows-mounted drive (`C:\Code\DL-Forecasting`
+  = WSL `/mnt/c/Code/DL-Forecasting`, via `drvfs`), not a native WSL ext4 volume (e.g. under `~/`).
   Deliberate: it's the one location both Windows (`git.exe`, VS Code) and WSL (`tf` conda env) can
-  read/write as the same clone, with no separate checkout or sync step. Cost: `drvfs` I/O is
-  substantially slower than a native Linux filesystem, so large data-pipeline runs (dataset generation,
-  bulk OHLCV read/write under `data/`) pay a throughput penalty. Rejected fix: moving the clone to a
-  native WSL path — Windows-side git/VS Code would then need `\\wsl$\...` (or a second checkout kept in
-  sync), reintroducing the dual-environment problem this layout avoids. If pipeline I/O becomes a
-  measured bottleneck, revisit as a scoped decision rather than a blanket relocation.
+  read/write as the same clone, with no separate checkout or sync step. Rejected fix: moving the whole
+  clone to a native WSL path — Windows-side git/VS Code would then need `\\wsl$\...` (or a second
+  checkout kept in sync), reintroducing the dual-environment problem this layout avoids.
+- **Filesystem location — data cache**: unlike the clone, the training-data cache under `data/` is
+  gitignored, so Windows-side tooling never touches it — only the WSL `tf` env reads/writes it (dataset
+  generation, training; `pytest`'s fast markers don't touch real `data/`, see [testing.md § fixture/data
+  policy](testing.md#fixturedata-policy)). `drvfs` I/O is substantially slower than a native Linux
+  filesystem, and this cache is the worst case for it: ~19.5k small per-day zip files under
+  `data/Kucoin/Spot/*` (~8GB), each open crossing the WSL2 9p protocol. Since nothing requires dual-OS
+  access here, `Config.path_of_data` is overridable via the `DLF_DATA_ROOT` env var (defaults to
+  `<repo_root>/data` if unset); the `tf` conda env's `activate.d`/`deactivate.d` hooks set it to
+  `/home/brais/dlf-data`, a native ext4 path, so WSL-side runs skip the `drvfs` tax entirely while
+  Windows keeps the unchanged default.
 
 ## methodologies for follow
 
