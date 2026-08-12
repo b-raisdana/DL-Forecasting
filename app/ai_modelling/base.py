@@ -3,9 +3,10 @@ import os
 import re
 import sys
 from datetime import datetime, timedelta
-from typing import Dict, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from GPUtil import getGPUs
 
@@ -17,7 +18,7 @@ from helper.br_py.br_py.do_log import log_d
 from helper.functions import date_range
 
 
-def setup_gpu():
+def setup_gpu() -> None:
     physical_devices = tf_config.list_physical_devices('GPU')
     expanded_memory_size = 0.90 * 8 * 1024
     for device in physical_devices:
@@ -30,7 +31,7 @@ def setup_gpu():
         )
 
 
-def setup_tensorboard():
+def setup_tensorboard() -> tf_keras.callbacks.TensorBoard:
     this_run_folder = "TFB-" + datetime.now().strftime("%Y%m%d-%H%M%S")
     this_run_log_path = os.path.join(app_config.path_of_logs, this_run_folder)
     os.mkdir(this_run_log_path)
@@ -39,7 +40,7 @@ def setup_tensorboard():
     return tensorboard
 
 
-def ceil_start_of_slide(t_date: datetime, slide: timedelta):
+def ceil_start_of_slide(t_date: datetime, slide: timedelta) -> datetime:
     if (t_date - datetime(t_date.year, t_date.month, t_date.day, tzinfo=t_date.tzinfo)) > timedelta(0):
         t_date = datetime(t_date.year, t_date.month, t_date.day + 1, tzinfo=t_date.tzinfo)
     days = (t_date - datetime(t_date.year, 1, 1, tzinfo=t_date.tzinfo)).days
@@ -66,15 +67,14 @@ def sanitize_filename(filename: str) -> str:
     return filename
 
 
-class CustomEpochLogger(tf_keras.callbacks.Callback):
-    def on_epoch_start(self, epoch, logs=None):
+class CustomEpochLogger(tf_keras.callbacks.Callback):  # type: ignore[misc]
+    def on_epoch_start(self, epoch: int, logs: Optional[Dict[str, float]] = None) -> None:
         print(f"\n>>> Epoch {epoch} started at {datetime.now().strftime('%H:%M:%S.%f')}")
 
-    def on_epoch_end(self, epoch, logs=None):
-
-        training_loss = logs.get('loss')
-        validation_loss = logs.get('val_loss')
-        if np.isnan(training_loss) or np.isnan(validation_loss):
+    def on_epoch_end(self, epoch: int, logs: Optional[Dict[str, float]] = None) -> None:
+        training_loss = (logs or {}).get('loss')
+        validation_loss = (logs or {}).get('val_loss')
+        if training_loss is None or validation_loss is None or np.isnan(training_loss) or np.isnan(validation_loss):
             raise RuntimeError(f"nan found! training_loss:{training_loss}, validation_loss:{training_loss}")
         mem_info = tf_config.experimental.get_memory_info("GPU:0")
         gpu = getGPUs()[0]
@@ -87,11 +87,11 @@ class CustomEpochLogger(tf_keras.callbacks.Callback):
         if gpu.memoryUtil > 0.95:
             raise MemoryError(f"gpu.memoryUtil{gpu.memoryUtil} > 0.95")
 
-    def set_model(self, model):
+    def set_model(self, model: tf_keras.Model) -> None:
         super().set_model(model)
 
 
-def pre_train_model():
+def pre_train_model() -> None:
     policy = tf_keras.mixed_precision.Policy('mixed_float16')
     tf_keras.mixed_precision.set_global_policy(policy)
     # Check if a GPU is available
@@ -102,17 +102,20 @@ def pre_train_model():
     tf_config.optimizer.set_jit('autoclustering')  # Or simply True
 
 
-def overlapped_quarters(i_date_range, length=timedelta(days=30 * 3), slide=timedelta(days=30 * 1.5)):
+def overlapped_quarters(i_date_range: Optional[str], length: timedelta = timedelta(days=30 * 3),
+                        slide: timedelta = timedelta(days=30 * 1.5)) -> List[Tuple[datetime, datetime]]:
     if i_date_range is None:
         i_date_range = app_config.processing_date_range
-    start, end = date_range(i_date_range)
+    start, end = cast(Tuple[datetime, datetime], date_range(i_date_range))
     rounded_start = ceil_start_of_slide(start, slide)
-    list_of_periods = [(p_start, p_start + length) for p_start in
-                       pd.date_range(rounded_start, end - length, freq=slide)]
+    window_end: datetime = end - length
+    list_of_periods: List[Tuple[datetime, datetime]] = [
+        (p_start, p_start + length) for p_start in pd.date_range(rounded_start, window_end, freq=slide)
+    ]
     return list_of_periods
 
 
-def model_compile(t_model):
+def model_compile(t_model: tf_keras.Model) -> tf_keras.Model:
     # tf_keras.utils.enable_checkpointing(t_model)
     opt = tf_keras.optimizers.RMSprop(clipnorm=1.0)
     opt = tf_keras.mixed_precision.LossScaleOptimizer(opt)
@@ -121,7 +124,7 @@ def model_compile(t_model):
     return t_model
 
 
-def build_model(batch_size, model, x_shape):
+def build_model(batch_size: int, model: tf_keras.Model, x_shape: Dict[str, Tuple[int, ...]]) -> None:
     if hasattr(tf_keras.utils, "enable_gradient_checkpointing"):  # TF 2.18+ official API
         tf_keras.utils.enable_gradient_checkpointing(model)
     elif hasattr(tf_keras.utils, "enable_checkpointing"):  # TF 2.13-2.17 fallback
@@ -138,7 +141,7 @@ def build_model(batch_size, model, x_shape):
     #                           , show_shapes=True, show_layer_names=True)
 
 
-def check_dataset_shape_change(x_dataset, y_dataset):
+def check_dataset_shape_change(x_dataset: Dict[str, npt.NDArray[np.float64]], y_dataset: npt.NDArray[np.float64]) -> None:
     global _dataset_x_shapes, _dataset_y_shape
     if _dataset_x_shapes is None:
         _dataset_x_shapes = {k: v.shape for k, v in x_dataset.items()}
@@ -157,12 +160,12 @@ def check_dataset_shape_change(x_dataset, y_dataset):
             sys.exit(1)
 
 
-master_x_shape = {
-    # (sequence_length , price/OHLC cols + 12 indicator cols)
-    'structure': (127, 17),
-    'pattern': (253, 17),
-    'trigger': (254, 17),
-    'double': (255, 17),
+master_x_shape: Dict[str, Tuple[int, int]] = {
+    # (sequence_length , 5 OHLCV cols + 12 classic-indicator cols + 5 relative-HLC cols + 1 volume/ATR col)
+    'structure': (127, 23),
+    'pattern': (253, 23),
+    'trigger': (254, 23),
+    'double': (255, 23),
 }
-_dataset_x_shapes = None
-_dataset_y_shape = None
+_dataset_x_shapes: Optional[Dict[str, Tuple[int, ...]]] = None
+_dataset_y_shape: Optional[Tuple[int, ...]] = None

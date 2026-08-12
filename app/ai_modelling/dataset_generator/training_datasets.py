@@ -4,7 +4,6 @@ from typing import List, Dict, Tuple
 
 import numpy as np
 import pandas as pd
-import pandas_ta as ta
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -15,6 +14,10 @@ from ai_modelling.dataset_generator.classic_indicators import add_classic_indica
     classic_indicator_columns, scaleless_indicators
 from ai_modelling.dataset_generator.profit_loss.profit_loss_adder import \
     add_long_n_short_profit
+from ai_modelling.dataset_generator.relative_candle import add_relative_candle_columns, \
+    relative_candle_columns
+from ai_modelling.dataset_generator.volume_feature import add_volume_feature_columns, \
+    volume_feature_columns
 from helper.br_py.br_py.do_log import log_d
 from helper.data_preparation import pattern_timeframe, trigger_timeframe, single_timeframe
 from helper.functions import date_range
@@ -24,6 +27,8 @@ from helper.importer import pt
 def single_timeframe_n_indicators(mt_ohlcv: pt.DataFrame[MultiTimeframe], timeframe: str) -> pd.DataFrame:
     ohlcv = single_timeframe(mt_ohlcv, timeframe)
     ohlcv = add_classic_indicators(ohlcv)
+    ohlcv = add_relative_candle_columns(ohlcv)
+    ohlcv = add_volume_feature_columns(ohlcv)
     return ohlcv
 
 
@@ -44,7 +49,8 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
                               ) \
         -> Tuple[
             Dict[str, np.ndarray], np.ndarray, Dict[str, pd.DataFrame], List[pd.DataFrame], str, List[pd.DataFrame]]:
-    training_x_columns = ['open', 'high', 'low', 'close', 'volume', ] + classic_indicator_columns()
+    training_x_columns = (['open', 'high', 'low', 'close', 'volume', ] + classic_indicator_columns()
+                          + relative_candle_columns() + volume_feature_columns())
     training_y_columns = ['long_signal', 'short_signal', 'min_low', 'max_high', 'long_profit', 'short_profit',
                           'long_risk', 'short_risk', 'long_drawdown', 'short_drawdown',
                           'long_drawdown', 'short_drawdown', ]
@@ -61,8 +67,6 @@ def train_data_of_mt_n_profit(structure_tf: str, mt_ohlcv: pt.DataFrame[MultiTim
     for df_name, timeframe in [('structure', structure_tf), ('pattern', pattern_tf),
                                ('trigger', trigger_tf), ('double', double_tf)]:
         dfs[df_name] = single_timeframe_n_indicators(mt_ohlcv, timeframe)
-    dfs['trigger']['atr'] = ta.atr(high=dfs['trigger']['high'], low=dfs['trigger']['low'],
-                                   close=dfs['trigger']['close'], length=256)
     dfs = dfs.copy()
     dfs['future'] = add_long_n_short_profit(ohlc=dfs[label_frame], position_max_bars=forecast_trigger_bars,
                                             trigger_tf=label_tf)
@@ -224,7 +228,9 @@ def shape_assertion(Xs: Dict[str, np.ndarray], x_dfs: Dict[str, List[pd.DataFram
 
 
 def x_shape_assertion(Xs: Dict[str, np.ndarray], batch_size: int, x_shape: Dict[str, Tuple[int, int]],
-                      num_of_indicators: int = 12) -> None:
+                      num_of_indicators: int = (len(classic_indicator_columns()) + len(relative_candle_columns())
+                                                + len(volume_feature_columns()))
+                      ) -> None:
     # i_l = x_shape['indicators'][0]
     b_l = batch_size
     if get_shape(Xs) != {
