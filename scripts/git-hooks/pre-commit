@@ -7,6 +7,17 @@
 # env - see .claude/skills/pytest/SKILL.md. So this hook is a thin delegator: hop into WSL
 # once, then run pre-commit natively from there against the same working tree/.git
 # (accessed via the /mnt/c bind mount - same repo, same staged index).
+#
+# GIT_INDEX_FILE: for a partial/pathspec commit (`git commit -- <paths>`), Windows git sets
+# this to a temp index (e.g. C:/Code/.../next-index-N.lock) and holds the REAL .git/index.lock
+# for the whole hook run. wsl.exe doesn't forward Windows env vars into the WSL process by
+# default, so without this, pre-commit's internal `git write-tree` falls back to the real
+# (locked) index and deadlocks against the outer process - deterministically, every partial
+# commit. WSLENV's /p flag forwards *and* translates the path (C:/... -> /mnt/c/...).
+if [ -n "$GIT_INDEX_FILE" ]; then
+    export WSLENV="GIT_INDEX_FILE/p:$WSLENV"
+fi
+
 exec wsl.exe -d Ubuntu-24.04 -- bash -lc '
     source ~/miniconda3/etc/profile.d/conda.sh &&
     conda activate tf &&

@@ -11,7 +11,7 @@
   - [environments](#environments)
   - [QA](#qa)
     - [pre-commit](#pre-commit)
-    - [monitor and maintain code complexity](#monitor-and-maintain-code-complexity)
+    - [incremental ratchet (mypy/ruff/xenon scope)](#incremental-ratchet-mypyruffxenon-scope)
     - [tests](#tests)
   - [libraries](#libraries)
     - [TensorFlow](#tensorflow)
@@ -117,26 +117,43 @@ setup per clone is `bash scripts/git-hooks/install.sh`.
   check-added-large-files at 1MB - this repo has a history of committed multi-MB `.keras`/`.zip` files,
   check-merge-conflict, debug-statements).
 - `ruff` — lint (`E,F,I,UP,B,C4,SIM`) + format, 120-char line length (`pyproject.toml`
-  `[tool.ruff]`). Not `C90`/complexity - that's xenon's job, not duplicated here.
-- `xenon`/`radon` — complexity gate, see below.
+  `[tool.ruff]`). Not `C90`/complexity - that's xenon's job, not duplicated here. `ruff check` runs
+  with `--exit-zero` (auto-fixes what's safely fixable, never hard-blocks on the rest) because `ruff`
+  is also an incremental-ratchet vector below - it shouldn't independently force-fixing a whole touched
+  legacy file's unrelated violations on top of the ratchet's own gate.
 - `mypy --strict --disallow-any-explicit` (`pyproject.toml` `[tool.mypy]`) — every function
   signature must be typed, `Any` may never appear explicitly in this repo's own code. Third-party
   imports without stubs still resolve as implicit `Any` (`ignore_missing_imports = true`) rather than
   erroring - full `--disallow-any-unimported` was rejected as impractical given `ccxt`/`pandas_ta`/
   `prophet` ship no stubs; would need stub packages authored for each first.
 - `pytest -m "unit or characterization or regression or smoke"` — fast gate, see [testing.md](testing.md).
-- **Scope: new/modified files only**, not the whole repo. A strict-mypy baseline run found 911
-  pre-existing errors across 80/132 files; gating the whole repo at once would block unrelated commits
-  until all of that legacy debt was fixed first. `mypy`/`ruff`/`xenon` only see the files pre-commit
-  passes them (git diff), and `follow-imports=silent` on mypy stops that check from cascading into
-  untouched files' errors. Files tighten to the strict standard as they're touched, not all at once.
 - Bypassable with `git commit --no-verify` — pre-commit is a local convenience gate, not a substitute for
   CI (none exists yet, see [testing.md § CI gate](testing.md#ci-gate)).
 
-### monitor and maintain code complexity
+### incremental ratchet (mypy/ruff/xenon scope)
 
-`radon` for cyclomatic complexity / maintainability index metrics; `xenon` (wraps `radon`,
-non-zero exit above threshold) as the pre-commit gate: `--max-absolute B --max-modules A --max-average A`.
+`mypy` and `radon`/`xenon` analyze whole files, not diff hunks, so an early "must be 100% clean on any
+touched file" design (per-file, strict) turned a one-line edit to a legacy file into a forced cleanup of
+every unrelated pre-existing violation in that file - a chain reaction into a dramatically bigger diff
+than the change called for. A first baseline run found 911 pre-existing strict-mypy errors across
+80/132 files, so that design would've blocked nearly any commit to a legacy file.
+
+Replaced with `scripts/git-hooks/incremental-precommit/` (full design in that folder's README): track
+each tool's ("vector": `mypy`, `ruff`, `xenon`) total problem count project-wide in a committed
+`baseline.json`. A commit is only blocked if a vector's count goes **up** past its baseline (a real
+regression you introduced) - never for pre-existing debt in a file you happen to touch. As debt gets
+fixed (by anyone), once a vector's improvement reaches `chunk_size` (`config.json`, default 50), the
+baseline ratchets down to the new lower count and is committed - locking the improvement in.
+
+Mutation-safety note: fixing a real (non-mechanical) violation means hand-editing legacy code, which
+risks silently changing behavior while "just satisfying the linter." No mutation-testing tool for this
+(considered, rejected as too slow to run every commit - see the incremental-precommit README) - the
+safeguard is test discipline instead: `ratchet_check.py` prints a reminder (not a block) when a commit
+ratchets a baseline down without touching `app/tests/{characterization,unit,regression}/`, pointing at
+[testing.md](testing.md)'s characterization-test discipline.
+
+xenon's own thresholds (used by the `xenon` vector's count): `--max-absolute B --max-modules A
+--max-average A` (blocks ranked worse than `B`).
 
 ### tests
 

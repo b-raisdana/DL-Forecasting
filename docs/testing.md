@@ -99,11 +99,11 @@ live in the WSL conda env `tf` (`/home/brais/miniconda3/envs/tf`), not in any Wi
 
 No CI workflow file exists yet (see [infrastructure.md](infrastructure.md)). The fast test gate
 (`pytest -m "unit or characterization or regression or smoke"`) is wired into `.pre-commit-config.yaml`
-alongside the `xenon` complexity gate and `mypy` strict-typing gate (see
-[infrastructure.md § pre-commit](infrastructure.md#pre-commit)) — local/per-commit only, new/modified
-files only, bypassable with `--no-verify`. When CI lands, promote the same command to a required check,
-per [training-data-labels.md](todos/training-data-labels.md) step 11 ("wire into whatever CI gate `xenon`
-runs").
+alongside the `mypy`/`ruff`/`xenon` incremental ratchet (see
+[infrastructure.md § incremental ratchet](infrastructure.md#incremental-ratchet-mypyruffxenon-scope)) —
+local/per-commit only, bypassable with `--no-verify`. When CI lands, promote the same command to a
+required check, per [training-data-labels.md](todos/training-data-labels.md) step 11 ("wire into
+whatever CI gate `xenon` runs").
 
 ## open items
 

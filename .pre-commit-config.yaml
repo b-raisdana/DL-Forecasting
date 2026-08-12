@@ -17,30 +17,32 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.2
     hooks:
+      # --exit-zero: auto-fix what's safely fixable, report the rest, but never hard-block on
+      # it here - ruff is also an incremental-ratchet vector (only blocks on a project-wide
+      # regression), so this hook shouldn't independently force-fix a whole touched legacy
+      # file's unrelated pre-existing violations. ruff-format has no "unfixable" concept
+      # (deterministic rewrite), so it's left as a normal blocking-until-restaged hook.
       - id: ruff
-        args: ["--fix"]
+        args: ["--fix", "--exit-zero"]
       - id: ruff-format
 
   # This whole run executes inside the WSL "tf" conda env (see .git/hooks/pre-commit and
   # docs/infrastructure.md#environments) - it's where the real deps (pandas, tensorflow,
   # pandera, ...) live, so mypy/pytest resolve real types/imports instead of falling back
-  # to Any. ruff/xenon don't need those deps but run here too now for a single environment.
+  # to Any. ruff doesn't need those deps but runs here too now for a single environment.
   - repo: local
     hooks:
-      - id: xenon
-        name: xenon (cyclomatic complexity gate)
-        language: python
-        additional_dependencies: ["xenon==0.9.3"]
-        entry: xenon --max-absolute B --max-modules A --max-average A
-        types: [python]
-        files: ^app/
-
-      - id: mypy
-        name: mypy --strict --disallow-any-explicit
+      # mypy (strict/no-Any) and complexity (xenon-equivalent) are NOT gated per-file/strict
+      # here - both tools analyze whole files, so that would turn any one-line edit to a
+      # legacy file into a forced cleanup of every unrelated pre-existing violation in it.
+      # incremental-ratchet only blocks a REGRESSION in the project-wide count for each -
+      # see scripts/git-hooks/incremental-precommit/README.md.
+      - id: incremental-ratchet
+        name: incremental ratchet (mypy/ruff/xenon - blocks regressions only, see README)
         language: system
-        entry: python -m mypy --config-file pyproject.toml
-        types: [python]
-        files: ^app/
+        entry: python scripts/git-hooks/incremental-precommit/ratchet_check.py
+        pass_filenames: false
+        files: ^app/.*\.py$
 
       - id: pytest-fast
         name: pytest fast gate (unit/characterization/regression/smoke)
