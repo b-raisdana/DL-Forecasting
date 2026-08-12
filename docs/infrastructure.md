@@ -84,8 +84,7 @@ architecture + hyperparameter search (`optuna_optimizer.py`): TPE sampler + Hype
 pruning for the main search (architecture is one categorical param in the same study as
 its hyperparameters, so bad architectures get pruned early instead of each getting an
 exhaustive run); NSGA-II reserved for a later multi-objective refinement stage once
-trading-KPI backtesting exists. Replaced the earlier DEAP-based flat GA optimizer, which
-ran every individual to completion with no pruning and no architecture search.
+trading-KPI backtesting exists.
 
 ### CCXT
 
