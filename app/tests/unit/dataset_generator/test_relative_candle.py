@@ -6,16 +6,16 @@ captured from running the function — this is new spec-conformance code, not le
 
 import pandas as pd
 import pytest
-
 from ai_modelling.dataset_generator.relative_candle import (
     add_relative_candle_columns,
     relative_candle_columns,
 )
+from tests.conftest import ZigzagOhlcFactory
 
 pytestmark = pytest.mark.unit
 
 
-def _assert_col(df, col, expected):
+def _assert_col(df: pd.DataFrame, col: str, expected: list[float]) -> None:
     pd.testing.assert_series_equal(
         df[col].reset_index(drop=True),
         pd.Series(expected, name=col),
@@ -25,42 +25,46 @@ def _assert_col(df, col, expected):
 
 
 @pytest.fixture
-def base_ohlc(zigzag_ohlc):
+def base_ohlc(zigzag_ohlc: ZigzagOhlcFactory) -> pd.DataFrame:
     return zigzag_ohlc(n=5, atr=1.0)
 
 
 @pytest.fixture
-def after_relative_candle(base_ohlc):
+def after_relative_candle(base_ohlc: pd.DataFrame) -> pd.DataFrame:
     return add_relative_candle_columns(base_ohlc)
 
 
-def test_relative_candle_columns_lists_the_five_derived_fields():
+def test_relative_candle_columns_lists_the_five_derived_fields() -> None:
     assert relative_candle_columns() == [
-        'rel_close', 'rel_high_close', 'rel_close_low', 'gap', 'rel_candle_height',
+        "rel_close",
+        "rel_high_close",
+        "rel_close_low",
+        "gap",
+        "rel_candle_height",
     ]
 
 
-def test_rel_close_is_close_over_atr(after_relative_candle):
-    _assert_col(after_relative_candle, 'rel_close', [102.0, 106.2, 108.0, 112.2, 114.0])
+def test_rel_close_is_close_over_atr(after_relative_candle: pd.DataFrame) -> None:
+    _assert_col(after_relative_candle, "rel_close", [102.0, 106.2, 108.0, 112.2, 114.0])
 
 
-def test_rel_high_close_is_high_minus_close_over_atr(after_relative_candle):
-    _assert_col(after_relative_candle, 'rel_high_close', [3.0, 4.8, 3.0, 4.8, 3.0])
+def test_rel_high_close_is_high_minus_close_over_atr(after_relative_candle: pd.DataFrame) -> None:
+    _assert_col(after_relative_candle, "rel_high_close", [3.0, 4.8, 3.0, 4.8, 3.0])
 
 
-def test_rel_close_low_is_close_minus_low_over_atr(after_relative_candle):
-    _assert_col(after_relative_candle, 'rel_close_low', [7.0, 11.2, 7.0, 11.2, 7.0])
+def test_rel_close_low_is_close_minus_low_over_atr(after_relative_candle: pd.DataFrame) -> None:
+    _assert_col(after_relative_candle, "rel_close_low", [7.0, 11.2, 7.0, 11.2, 7.0])
 
 
-def test_gap_is_open_minus_prev_close_over_atr_and_nan_on_first_row(after_relative_candle):
-    _assert_col(after_relative_candle, 'gap', [float('nan'), -2.2, -2.2, -2.2, -2.2])
+def test_gap_is_open_minus_prev_close_over_atr_and_nan_on_first_row(after_relative_candle: pd.DataFrame) -> None:
+    _assert_col(after_relative_candle, "gap", [float("nan"), -2.2, -2.2, -2.2, -2.2])
 
 
-def test_rel_candle_height_is_high_minus_low_over_atr(after_relative_candle):
-    _assert_col(after_relative_candle, 'rel_candle_height', [10.0, 16.0, 10.0, 16.0, 10.0])
+def test_rel_candle_height_is_high_minus_low_over_atr(after_relative_candle: pd.DataFrame) -> None:
+    _assert_col(after_relative_candle, "rel_candle_height", [10.0, 16.0, 10.0, 16.0, 10.0])
 
 
-def test_scales_inversely_with_atr(zigzag_ohlc):
+def test_scales_inversely_with_atr(zigzag_ohlc: ZigzagOhlcFactory) -> None:
     unit_atr = add_relative_candle_columns(zigzag_ohlc(n=5, atr=1.0))
     double_atr = add_relative_candle_columns(zigzag_ohlc(n=5, atr=2.0))
     for col in relative_candle_columns():
@@ -72,10 +76,13 @@ def test_scales_inversely_with_atr(zigzag_ohlc):
         )
 
 
-def test_computes_atr_when_missing(zigzag_ohlc):
-    ohlc = zigzag_ohlc(n=300).drop(columns=['atr'])
+def test_computes_atr_when_missing(zigzag_ohlc: ZigzagOhlcFactory) -> None:
+    ohlc = zigzag_ohlc(n=300).drop(columns=["atr"])
     result = add_relative_candle_columns(ohlc)
-    assert 'atr' in result.columns
+    assert "atr" in result.columns
     pd.testing.assert_series_equal(
-        result['rel_close'], result['close'] / result['atr'], check_names=False, rtol=1e-4,
+        result["rel_close"],
+        result["close"] / result["atr"],
+        check_names=False,
+        rtol=1e-4,
     )

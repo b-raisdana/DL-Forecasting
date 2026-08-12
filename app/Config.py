@@ -9,7 +9,6 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 
-
 # class CandleSize(Enum):
 #     Spinning = (0.0, 0.80)
 #     Standard = (0.80, 1.20)
@@ -23,58 +22,58 @@ class CandleSize(Enum):
         min: float
         max: float
 
-    Spinning: MinMax = MinMax(min=0.0, max=0.80)
-    Standard: MinMax = MinMax(min=0.80, max=1.20)
-    Long: MinMax = MinMax(min=1.2, max=2.5)
-    Spike: MinMax = MinMax(min=2.5, max=np.inf)
+    Spinning = MinMax(min=0.0, max=0.80)
+    Standard = MinMax(min=0.80, max=1.20)
+    Long = MinMax(min=1.2, max=2.5)
+    Spike = MinMax(min=2.5, max=np.inf)
 
 
 class TREND(Enum):
-    BULLISH = 'BULLISH_TREND'
-    BEARISH = 'BEARISH_TREND'
-    SIDE = 'SIDE_TREND'
+    BULLISH = "BULLISH_TREND"
+    BEARISH = "BEARISH_TREND"
+    SIDE = "SIDE_TREND"
 
 
 class TopTYPE(Enum):
-    PEAK = 'peak'
-    VALLEY = 'valley'
+    PEAK = "peak"
+    VALLEY = "valley"
 
 
 class Config:
     root_path = os.path.dirname(os.path.dirname(__file__))
     # self.processing_date_range = '17-12-24.00-00T17-12-31.23-59'
-    processing_date_range = '17-12-01.00-00T17-12-31.23-59'
+    processing_date_range = "17-12-01.00-00T17-12-31.23-59"
     limit_to_under_process_period = False
-    under_process_symbol = 'BTCUSDT'
-    under_process_exchange = 'Kucoin'
-    under_process_market = 'Spot'
+    under_process_symbol = "BTCUSDT"
+    under_process_exchange = "Kucoin"
+    under_process_market = "Spot"
     # do_not_fetch_prices = False
     files_to_load = [
-        '17-01-01.0-01TO17-12-31.23-59.1min',
-        '17-01-01.0-01TO17-12-31.23-59.5min',
-        '17-01-01.0-01TO17-12-31.23-59.15min',
-        '17-01-01.0-01TO17-12-31.23-59.1h',
-        '17-01-01.0-01TO17-12-31.23-59.4h',
-        '17-01-01.0-01TO17-12-31.23-59.1D',
-        '17-01-01.0-01TO17-12-31.23-59.1W',
+        "17-01-01.0-01TO17-12-31.23-59.1min",
+        "17-01-01.0-01TO17-12-31.23-59.5min",
+        "17-01-01.0-01TO17-12-31.23-59.15min",
+        "17-01-01.0-01TO17-12-31.23-59.1h",
+        "17-01-01.0-01TO17-12-31.23-59.4h",
+        "17-01-01.0-01TO17-12-31.23-59.1D",
+        "17-01-01.0-01TO17-12-31.23-59.1W",
     ]
-    data_path_preamble = 'https://raw.githubusercontent.com/b-raisdana/BTC-price/main/'
+    data_path_preamble = "https://raw.githubusercontent.com/b-raisdana/BTC-price/main/"
 
     timeframe_shifter = {
-        'structure': 0,
-        'pattern': -1,
-        'trigger': -2,
-        'double': -4,
-        'hat_trick': -6,
+        "structure": 0,
+        "pattern": -1,
+        "trigger": -2,
+        "double": -4,
+        "hat_trick": -6,
     }
     timeframes = [
-        '1min',  #: to_offset('1min'),
-        '5min',  #: to_offset('5min'),
-        '15min',  #: to_offset('15min'),
-        '1h',  #: to_offset('1H'),
-        '4h',  #: to_offset('4H'),
-        '1D',  #: to_offset('1D'),
-        '1W',  #: to_offset('1W')
+        "1min",  #: to_offset('1min'),
+        "5min",  #: to_offset('5min'),
+        "15min",  #: to_offset('15min'),
+        "1h",  #: to_offset('1H'),
+        "4h",  #: to_offset('4H'),
+        "1D",  #: to_offset('1D'),
+        "1W",  #: to_offset('1W')
     ]
     structure_timeframes = timeframes[2:]
     pattern_timeframes = timeframes[1:]
@@ -86,15 +85,14 @@ class Config:
 
     dept_of_analysis = 3
 
-    end_time = '2021-03-01 03:43:00'
+    end_time = "2021-03-01 03:43:00"
 
     INFINITY_TIME_DELTA = timedelta(days=10 * 365)
 
-    path_of_data = os.path.join(root_path, 'data')
-    path_of_plots = os.path.join(path_of_data, 'plots')
-    path_of_logs = os.path.join(root_path, 'logs')
-    path_of_test_plots = os.path.join('test_plots')
-
+    path_of_data = os.environ.get("DLF_DATA_ROOT", os.path.join(root_path, "data"))
+    path_of_plots = os.path.join(path_of_data, "plots")
+    path_of_logs = os.path.join(root_path, "logs")
+    path_of_test_plots = os.path.join("test_plots")
 
     base_time_delta = pd.to_timedelta(timeframes[0])  # timedelta(minutes=1)
 
@@ -133,27 +131,34 @@ class Config:
     check_assertions = True
 
     id = ""
+    GLOBAL_CACHE: dict[str, object] = {}
 
 
 class MyEncoder(json.JSONEncoder):
-    def default(self, o):
+    def default(self, o: object) -> object:
         try:
-            return o.__dict__
-        except AttributeError:
+            return vars(o)
+        except TypeError:
             return str(o)
 
 
 myEncoder = MyEncoder()
 app_config = Config()
 config_as_json = myEncoder.encode(app_config)
-config_digest = str.translate(base64.b64encode(hashlib.md5(config_as_json.encode('utf-8')).digest())
-                              .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', })
+config_digest = str.translate(
+    base64.b64encode(hashlib.md5(config_as_json.encode("utf-8")).digest()).decode("ascii"),
+    {
+        ord("+"): "",
+        ord("/"): "",
+        ord("="): "",
+    },
+)
 
-dump_filename = os.path.join(app_config.path_of_logs, f'Config.{config_digest}.json')
+dump_filename = os.path.join(app_config.path_of_logs, f"Config.{config_digest}.json")
 if not os.path.exists(app_config.path_of_logs):
     os.makedirs(app_config.path_of_logs)
 if not os.path.exists(dump_filename):
-    with open(dump_filename, 'w+') as config_file:
+    with open(dump_filename, "w+") as config_file:
         config_file.write(str(config_as_json))
 
 app_config.id = config_digest
