@@ -27,9 +27,9 @@
 
 prefer vectorized pandas ops; tag any non-vectorized fallback with `NOT_VECTORIZED_OPERATION`.
 prefered to do via well-known libs instead of self-implementation (research first / then implement).
-Full performance/concurrency/resource-usage rules for all new code, plus a candidate list of
-pandas/numpy-adjacent libraries evaluated for this repo: [performance-and-concurrency.md](performance-and-concurrency.md)
-(enforced day to day by the skills indexed in [performance-skills.md](performance-skills.md)).
+Performance/concurrency/resource-usage rules for all new code, plus the candidate list of
+pandas/numpy-adjacent libraries evaluated for this repo, are enforced day to day by the
+`vectorized-pandas-numpy`, `lib-first`, and `concurrency-and-blocking` skills.
 
 ## environments
 
@@ -53,8 +53,8 @@ pandas/numpy-adjacent libraries evaluated for this repo: [performance-and-concur
   checkout kept in sync), reintroducing the dual-environment problem this layout avoids.
 - **Filesystem location — data cache**: unlike the clone, the training-data cache under `data/` is
   gitignored, so Windows-side tooling never touches it — only the WSL `tf` env reads/writes it (dataset
-  generation, training; `pytest`'s fast markers don't touch real `data/`, see [testing.md § fixture/data
-  policy](testing.md#fixturedata-policy)). `drvfs` I/O is substantially slower than a native Linux
+  generation, training; `pytest`'s fast markers don't touch real `data/`, see the `pytest` skill's
+  fixture/data policy). `drvfs` I/O is substantially slower than a native Linux
   filesystem, and this cache is the worst case for it: ~19.5k small per-day zip files under
   `data/Kucoin/Spot/*` (~8GB), each open crossing the WSL2 9p protocol. Since nothing requires dual-OS
   access here, `Config.path_of_data` is overridable via the `DLF_DATA_ROOT` env var (defaults to
@@ -70,8 +70,8 @@ MVC doesn't fit (no request/response UI cycle) — layer by dependency direction
 (Clean/Onion-style): Domain (market-structure TA logic + PanderaDFM schemas as value objects) →
 Application (dataset generation, training, prediction, optimization, backtesting orchestration) →
 Infrastructure (exchange/data-fetch, model-artifact persistence, config, logging) → Presentation
-(plotting, entrypoints). Full layer-to-module mapping, violations found, and migration order:
-[architecture-layers.md](architecture-layers.md).
+(plotting, entrypoints). Full layer-to-module mapping and placement rules: the `code-layers` skill;
+migration order/cleanup plan: [todos/infrastructure.md](todos/infrastructure.md#todo) item 12.
 
 ### SOA
 
@@ -126,9 +126,9 @@ setup per clone is `bash scripts/git-hooks/install.sh`.
   imports without stubs still resolve as implicit `Any` (`ignore_missing_imports = true`) rather than
   erroring - full `--disallow-any-unimported` was rejected as impractical given `ccxt`/`pandas_ta`/
   `prophet` ship no stubs; would need stub packages authored for each first.
-- `pytest -m "unit or characterization or regression or smoke"` — fast gate, see [testing.md](testing.md).
+- `pytest -m "unit or characterization or regression or smoke"` — fast gate, see the `pytest` skill.
 - Bypassable with `git commit --no-verify` — pre-commit is a local convenience gate, not a substitute for
-  CI (none exists yet, see [testing.md § CI gate](testing.md#ci-gate)).
+  CI (none exists yet).
 
 ### incremental ratchet (mypy/ruff/xenon scope)
 
@@ -150,15 +150,15 @@ risks silently changing behavior while "just satisfying the linter." No mutation
 (considered, rejected as too slow to run every commit - see the incremental-precommit README) - the
 safeguard is test discipline instead: `ratchet_check.py` prints a reminder (not a block) when a commit
 ratchets a baseline down without touching `app/tests/{characterization,unit,regression}/`, pointing at
-[testing.md](testing.md)'s characterization-test discipline.
+the `test-strategy` skill's characterization-test discipline.
 
 xenon's own thresholds (used by the `xenon` vector's count): `--max-absolute B --max-modules A
 --max-average A` (blocks ranked worse than `B`).
 
 ### tests
 
-See [testing.md](testing.md) for the test-type taxonomy, `app/tests/` layout, and pytest marker
-convention — complements this complexity gate with a correctness gate.
+See the `test-strategy` skill for the test-type taxonomy and the `pytest` skill for `app/tests/` layout
+and marker convention — complements this complexity gate with a correctness gate.
 
 ## libraries
 

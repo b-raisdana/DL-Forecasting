@@ -43,7 +43,8 @@ def run(*args: str, cwd: Path = ROOT) -> str:
 def mypy_count() -> int:
     # cwd=app (not ROOT, target "app") deliberately: this repo's modules import each other
     # bare (`from ai_modelling.base import ...`, matching pytest.ini's pythonpath=app - see
-    # docs/testing.md), so mypy needs app/ itself as its implicit search-path root. Running
+    # the pytest skill's "Repo config" section), so mypy needs app/ itself as its implicit
+    # search-path root. Running
     # from ROOT with target="app" made every file resolve under two conflicting module names
     # (via explicit_package_bases finding repo-root vs app/ as the package base, since
     # app/__init__.py exists) and mypy aborted after 1 file ("found twice").
@@ -140,8 +141,8 @@ def main() -> int:
                 "\nNote: this commit fixed enough pre-existing problems to ratchet a baseline down, "
                 "but doesn't touch app/tests/{characterization,unit,regression}. If any of these were "
                 "behavior-affecting fixes (not just type annotations/formatting), pin the before/after "
-                "behavior with a characterization test first - see docs/testing.md. This is a reminder, "
-                "not a block: this repo's mutation-safety net is test discipline, not a mutation-testing "
+                "behavior with a characterization test first - see the test-strategy skill. This is a "
+                "reminder, not a block: this repo's mutation-safety net is test discipline, not a mutation-testing "
                 "tool (see docs/infrastructure.md#pre-commit)."
             )
 

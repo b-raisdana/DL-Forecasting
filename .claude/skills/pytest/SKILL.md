@@ -5,8 +5,8 @@ description: Use whenever writing, running, or debugging a pytest test in this r
 
 # pytest (this repo)
 
-Companion to [test-strategy](../test-strategy/SKILL.md) (which type to write) and
-[docs/testing.md](../../../docs/testing.md) (full layout reference). This skill covers the mechanics.
+Companion to [test-strategy](../test-strategy/SKILL.md) (which type to write). This skill covers the
+mechanics: layout, running, fixtures, naming.
 
 ## Running tests — read this first
 
@@ -38,22 +38,53 @@ already points there — nothing extra to do. Only `e2e`/`perf` tests touch real
 [test-strategy](../test-strategy/SKILL.md) fixture/data policy); unit/characterization/regression/smoke
 never read it. Full rationale: [docs/infrastructure.md § environments](../../../docs/infrastructure.md#environments).
 
-Fast gate vs full run — see [docs/testing.md § markers and running](../../../docs/testing.md#markers-and-running).
+Fast gate (every commit): `pytest -m "unit or characterization or regression or smoke"`. Full run
+(nightly/manual, includes `e2e`/`perf`): `pytest`. The fast gate is wired into `.pre-commit-config.yaml`
+alongside the `mypy`/`ruff`/`xenon` incremental ratchet ([infrastructure.md § incremental
+ratchet](../../../docs/infrastructure.md#incremental-ratchet-mypyruffxenon-scope)) — local/per-commit
+only, bypassable with `--no-verify`. No CI workflow exists yet; when one lands, promote the same fast-gate
+command to a required check.
 
 ## Repo config
 
 `pytest.ini` (repo root): `testpaths = app/tests`, `pythonpath = app` (so `from Config import app_config`
 style absolute imports resolve without a `src.`/`app.` prefix, matching how the app itself imports),
-`--import-mode=importlib`, `--strict-markers`. Markers are pre-registered there — using an unregistered
-one is an error by design; add it to `pytest.ini` if a genuinely new type is needed (check
-[test-strategy](../test-strategy/SKILL.md) first, this should be rare).
+`--import-mode=importlib`, `--strict-markers`. Registered markers: `unit`, `characterization`,
+`integration`, `regression`, `smoke`, `e2e`, `perf` — `--strict-markers` makes an unregistered marker an
+authoring error, not a silently-ignored typo; add a new one to `pytest.ini` only if a genuinely new type
+is needed (check [test-strategy](../test-strategy/SKILL.md) first, this should be rare).
 
-## Where a new test goes
+## Directory layout
 
-`app/tests/<type>/<mirrors the app/ package path of what's under test>/test_<module>.py` — e.g. a
-characterization test for `app/ai_modelling/dataset_generator/profit_loss/profit_loss_adder.py` goes in
+```
+pytest.ini                      # repo root: markers, testpaths, pythonpath
+app/
+  tests/
+    conftest.py                 # shared fixtures (synthetic OHLC builders, etc.)
+    unit/<mirrors app/ package path>/test_<module>.py
+    characterization/<mirrors app/ package path>/test_<module>_characterization.py
+    integration/<mirrors app/ package path>/test_<flow>.py
+    regression/test_<invariant>.py
+    smoke/test_<surface>.py
+    e2e/test_<pipeline>.py
+    perf/test_<budget>.py
+```
+
+One tree under `app/tests/`, split by type first then mirroring the source package path — not colocated
+`test_*.py` next to source, and not one flat folder. Type is the axis test selection runs on (`-m unit`,
+skip `e2e` by default), so it has to be the top split; mirroring source under that keeps a test's home
+discoverable from its target's path. Only create a subfolder when it has a test in it — don't
+pre-scaffold empty type folders.
+
+A new test goes at `app/tests/<type>/<mirrors the app/ package path of what's under test>/test_<module>.py`
+— e.g. a characterization test for
+`app/ai_modelling/dataset_generator/profit_loss/profit_loss_adder.py` goes in
 `app/tests/characterization/dataset_generator/profit_loss/test_profit_loss_adder_characterization.py`.
-Only create the folders you're actually populating.
+
+`app/ai_modelling/dataset_generator/test_normalization.py` (pre-existing) is not a pytest test — no
+`assert`s, prints/shows plots for manual inspection. Leave it in place as an analysis script; don't
+migrate it into `app/tests/` as-is. If it grows real assertions later, split the assertions into
+`app/tests/integration/dataset_generator/test_normalization.py` and keep the plotting script separate.
 
 ## Structure: Arrange-Act-Assert
 
@@ -74,9 +105,17 @@ tests, not one with multiple unrelated asserts.
 
 Shared synthetic-data builders go in `app/tests/conftest.py` as factory fixtures (a fixture that returns
 a function, so each test controls size/shape), not fixed DataFrames — e.g. `flat_ohlc(n)`,
-`trending_ohlc(n, direction)`. Keep fixtures small (5-30 rows) and deterministic. Don't read from
-`data/` (real cached OHLCV) in unit/characterization/regression/smoke tests — see
-[docs/testing.md § fixture/data policy](../../../docs/testing.md#fixturedata-policy).
+`trending_ohlc(n, direction)`. Keep fixtures small (5-30 rows) and deterministic.
+
+Fixture/data policy by type:
+
+- Unit/characterization/regression/smoke: synthetic in-memory DataFrames only — small (5-30 candles),
+  deterministic, no disk/network reads. Real cached OHLCV under `data/` is large and non-deterministic
+  across cache refreshes, which would make failures un-diagnosable.
+- Integration: still synthetic by default; real cached data only when the test's actual point is the
+  I/O/repository layer itself (rare — most of `app/`'s logic is transform, not storage).
+- E2E: the one place real (or a small pinned real-data snapshot) OHLCV is acceptable, because the point
+  is proving the full chain, not isolating a bug.
 
 ## Naming
 

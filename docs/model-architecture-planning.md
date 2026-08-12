@@ -33,6 +33,9 @@ Goal: best AI method to predict price moves → optimal trade positions, max pro
   - [deferred topics (not current concerns, placeholders)](#deferred-topics-not-current-concerns-placeholders)
   - [glossary](#glossary)
 
+[next-step] dedicate a doc for 'optimization strategy'
+[next-step] move 'class imbalance handling'
+
 ## key questions
 
 ### data feed design

@@ -33,8 +33,8 @@ chunk.
 
 Fixing a real violation (not just a formatting/import-order nit) means touching legacy code by hand,
 which risks silently changing behavior while "just satisfying the linter." This repo's safeguard for
-that is test discipline, not a mutation-testing tool (see
-[docs/testing.md](../../../docs/testing.md#characterization-tests-the-key-discipline)): pin the
+that is test discipline, not a mutation-testing tool (see the `test-strategy` skill's
+characterization-test discipline): pin the
 function's *current actual* output with a characterization test before changing it. When a commit
 ratchets a baseline down, `ratchet_check.py` checks whether the same commit touches
 `app/tests/{characterization,unit,regression}/` and prints a reminder (not a block) if it doesn't -

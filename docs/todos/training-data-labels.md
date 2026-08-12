@@ -81,7 +81,7 @@ a direct, self-contained code fix against the already-written spec.
 10. **Add a no-lookahead regression test.** Assert that perturbing FUTURE-slice data never changes a
     computed label at or before the anchor candle — the causal-by-construction claims below (anchor
     candle, entry price) are currently backed only by manual reasoning, not a test. Place under
-    `app/tests/regression/` per [testing.md](../testing.md), tagged `regression`; wire into whatever CI
+    `app/tests/regression/` per the `pytest` skill, tagged `regression`; wire into whatever CI
     gate `xenon` runs, per [infrastructure.md](infrastructure.md).
 11. **Cleanup pass.** Delete now-fully-dead code (`zz_stop_loss`, `singular_stop_loss`, `tops_mean` if
     nothing else calls them, the old flat-`order_fee`/`max_risk` weighted-profit path once steps 5/7
@@ -114,7 +114,7 @@ There are two independent, unrelated mechanisms in the repo:
 Characterization tests pinning today's actual output of `profit_loss_adder.py`'s five core functions
 (`max_profit_n_loss`, `quantile_maxes`, `long_n_short_drawdown`, `stop_loss`, `profit_n_loss`) live in
 [test_profit_loss_adder_characterization.py](../../app/tests/characterization/dataset_generator/profit_loss/test_profit_loss_adder_characterization.py)
-— see [testing.md](../testing.md). Re-run these after any todo step below changes this file's behavior:
+— see the `pytest` skill. Re-run these after any todo step below changes this file's behavior:
 an intentional change should fail exactly the affected test(s); re-capture expected values once confirmed
 intentional.
 

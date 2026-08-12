@@ -1,13 +1,13 @@
 ---
 name: test-strategy
-description: Use whenever deciding what kind of test a change needs, or reviewing whether a PR/change is adequately tested. Maps the Microsoft engineering-playbook test-type taxonomy onto this repo's actual nature (offline data/ML pipeline, no deployed service) so you pick the right category — unit, characterization, integration, regression, smoke, e2e, perf — instead of defaulting to "add a unit test". See docs/testing.md for the full, versioned reference this skill summarizes.
+description: Use whenever deciding what kind of test a change needs, or reviewing whether a PR/change is adequately tested. Maps the Microsoft engineering-playbook test-type taxonomy onto this repo's actual nature (offline data/ML pipeline, no deployed service) so you pick the right category — unit, characterization, integration, regression, smoke, e2e, perf — instead of defaulting to "add a unit test".
 source: https://microsoft.github.io/code-with-engineering-playbook/automated-testing/
 ---
 
 # Test Strategy
 
-Full reference: [docs/testing.md](../../../docs/testing.md). This skill is the quick-decision version —
-read the doc for directory layout, naming, fixture policy, marker config.
+This skill is the quick-decision version — for directory layout, naming, fixture policy, and marker
+config (the mechanics), see [pytest](../pytest/SKILL.md).
 
 ## This repo's nature
 

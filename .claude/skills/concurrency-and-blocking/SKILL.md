@@ -6,9 +6,21 @@ description: Use when adding code that does network/exchange I/O (CCXT calls, fi
 # Concurrency & blocking
 
 Goal: new code should never assume it's the only thing running, and should pick the cheapest
-concurrency primitive that fits the actual bottleneck — not add threads/processes reflexively. Full
-rationale and candidate libraries:
-[performance-and-concurrency.md](../../../docs/performance-and-concurrency.md).
+concurrency primitive that fits the actual bottleneck — not add threads/processes reflexively.
+
+## principles
+
+1. **Production-grade speed/resource use by default** — not deferred to a later optimization pass.
+2. **Concurrency-compatible** — new code shouldn't assume it's the only thing running; avoid designs
+   that can't later run under asyncio/thread-pool/process-pool without a rewrite (e.g. mutating shared
+   global state instead of passing it explicitly — already required by [infrastructure.md §
+   Dependency injection](../../../docs/infrastructure.md#dependency-injection)).
+3. **Least blocking** — I/O (exchange fetch, disk read/write) shouldn't block a thread that could be
+   doing other work while it waits.
+4. **Least resource usage** — minimize memory footprint: right-sized dtypes, no needless copies,
+   stream/chunk instead of materializing everything.
+5. **Library-first** — research an existing, well-maintained library before hand-writing an algorithm;
+   see [lib-first](../lib-first/SKILL.md) for the checklist and candidate-library table.
 
 ## first question: I/O-bound or CPU-bound?
 
@@ -50,7 +62,7 @@ rationale and candidate libraries:
 
 ## scope note
 
-This repo is a single-process offline pipeline (SOA rejected — see
-[architecture-layers.md](../../../docs/architecture-layers.md)). Concurrency here means asyncio/
+This repo is a single-process offline pipeline (SOA rejected — see the `code-layers` skill). Concurrency
+here means asyncio/
 thread-pool/process-pool primitives *within* that process for I/O and CPU fan-out, not standing up
 separate services.

@@ -1,12 +1,13 @@
 ---
 name: code-layers
-description: Use when adding a new module/file under app/, or deciding where code belongs, or reviewing whether a change crosses layer boundaries correctly. Applies this repo's DDD-flavored layering (Domain/Application/Infrastructure/Presentation) — not MVC, this is an offline data/ML pipeline with no request/response cycle. Full design: docs/architecture-layers.md.
+description: Use when adding a new module/file under app/, or deciding where code belongs, or reviewing whether a change crosses layer boundaries correctly. Applies this repo's DDD-flavored layering (Domain/Application/Infrastructure/Presentation) — not MVC, this is an offline data/ML pipeline with no request/response cycle.
 ---
 
 # Code layers
 
 Layer by dependency direction (Clean/Onion-style). Domain depends on nothing in-house. Arrows point
-inward. Full mapping/rationale: [architecture-layers.md](../../../docs/architecture-layers.md).
+inward. (The directory-rename/cleanup migration this layering implies is tracked as a todo, not repeated
+here — see [docs/todos/infrastructure.md](../../../docs/todos/infrastructure.md).)
 
 ## the 4 layers, outside in
 
@@ -32,6 +33,19 @@ inward. Full mapping/rationale: [architecture-layers.md](../../../docs/architect
   pattern](../../../docs/infrastructure.md#repository-design-pattern)), not inline file/CCXT calls.
 - Produces a plot, print, or CLI entrypoint → **Presentation** (`FigurePlotter/*`, `main.py`-style
   scripts).
+
+## DDD concepts mapped
+
+- **Value objects** = PanderaDFM schemas — no persistent identity (a candle/pivot isn't "the same
+  entity" across recomputation); pandera enforces shape/dtype at every hand-off.
+- **Domain services** = the TA transform chain (PeakValley → BullBearSide → BasePattern → ATR/Classic
+  pivots → ftc), each a pure DataFrame→DataFrame step, no side effects.
+- **Application services** = orchestrators calling domain services + repositories for one use case
+  (a trainer, a predictor, an optimizer, a `Strategy`). New pipelines are new application services, not
+  new domain logic.
+- **Bounded contexts**, sharing the OHLCV/PanderaDFM kernel: *market structure* (TA pattern detection +
+  backtesting — `Model`, `Strategy`) and *forecasting* (dataset generation, training, prediction,
+  optimization — `ai_modelling/*`).
 
 ## rules
 
