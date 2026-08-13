@@ -1,0 +1,147 @@
+{
+  "designset_id": "Tier-1_003.patchtst_patch_embed_sel",
+  "status": "proposed",
+  "category": "architecture-design",
+  "prioritization": {
+    "tier": 1,
+    "raw": 10,
+    "adjusted": 9,
+    "evidence": 2,
+    "dominance": 1,
+    "modernity": 2,
+    "resource_fit": 2,
+    "domain_fit": 1,
+    "impact_cost": 2,
+    "risk_modifier": 0,
+    "tooling_modifier": -1,
+    "gated": false,
+    "gate_reason": "n/a"
+  },
+  "axis_under_test": {
+    "layer": "input / feature embedding",
+    "candidate": "PatchTST-style patch embedding — groups contiguous candles into patches before projecting, shortening the effective sequence length fed downstream",
+    "source_anchor": "04-Experimentation, Evaluation & Optimization.md#input--feature-embedding"
+  },
+  "comparison_scope": {
+    "backbone_ref": "CNN-LSTM (no-attention variant) — currently implemented baseline, see 03 § architecture candidates",
+    "held_constant": ["local extraction stage (plain_cnn)", "sequential stage (rnn/LSTM)", "attention stage (none)", "local_extraction_post stage (zeroed)", "fusion stage (concat_mlp)", "global representation stage (pool)", "candle feature schema", "label scheme", "data split scheme", "per-tf window length", "normalization scheme", "training hyperparameters", "seed count"],
+    "baseline": {
+      "name": "no explicit embedding stage (zeroed) — features feed directly into local_extraction, current implemented baseline",
+      "source": "03-Model & Architecture Engineering.md#architecture-candidates"
+    },
+    "hypothesis": "Grouping contiguous candles into patches before projecting to d_model (shortening the effective sequence length fed to downstream stages) improves backtested KPIs over the current zeroed-embedding baseline -- the second-highest-adjusted-score embedding candidate in 04's tiered table (adjusted 9, one point behind linear/MLP projection's adjusted 10, on the tooling modifier for lacking a mature drop-in library). Caveat, stated rather than silently ignored: 03's own rationale for this candidate is reducing attention's O(n^2) VRAM cost specifically, but this project's current Tier-1 reference backbone (CNN-LSTM, no-attention variant) has no attention stage -- so this run tests patch embedding's secondary effects only (shortened sequence into the conv/LSTM stages, patch-level local aggregation), not its primary motivating benefit. A more informative test of the attention-cost claim would pair this candidate with an attention-bearing backbone once one is promoted to reference status."
+  },
+  "related_designsets": {
+    "architecture_design": ["Tier-1_000.arch_sz_n_train_hparams_sel.json", "Tier-1_001.lin_mlp_embed_sel.json"],
+    "input_data_feature": ["input-data-feature/Tier-1_000.win_len_n_feat_params_sel.json"],
+    "outcome_label_target_head": ["outcome-label-target-head/Tier-1_000.lbl_thr_n_loss_params_sel.json"]
+  },
+  "objective": {
+    "targets": ["MAE", "OM", "MFE"],
+    "horizon_min": 240,
+    "formulation": "point"
+  },
+  "data": {
+    "symbol_universe": "full historical Binance USDT-pair universe, current + delisted (survivorship-corrected), see 02 § training symbol universe",
+    "snapshot_policy": "no dataset-versioning/snapshot-pinning mechanism resolved yet — open gap, see known_risks",
+    "split_scheme": "4-way: Train (non-BTC universe, earliest 80-90% per pair) / Validation A (same pairs, latest 10-20%, regime generalization) / Validation B (BTC/USDT, cross-asset generalization) / Final Test (BTC/USDT holdout, run once)",
+    "purge_embargo_candles": 48,
+    "uniqueness_weighting": true
+  },
+  "features": {
+    "schema_version": "candle feature schema v1: relative-HLC/ATR, gap/ATR, height/ATR, volume/ATR, peak-valley confirmed-tf flag, multi-tf top time/price distances",
+    "feature_set": "full schema, no ablation-driven exclusions yet",
+    "screening_status": "provisional — permutation-importance ablation and MI/GBM candidate screen not yet run, see 02 § feature-set completeness — testing"
+  },
+  "labels": {
+    "scheme": "MFE/MAE/OM bespoke scheme (supersedes old 3-way SL-hit/Timeout/TP label)",
+    "horizon_min": 240,
+    "om_threshold": 1,
+    "class_imbalance_handling": "class-weighted vs focal loss on action head, per-target gamma; prevalence not yet empirically measured, see 02 § class imbalance handling"
+  },
+  "normalization": {
+    "scheme": "ATR-relative rolling normalization (current resolved primary, pre-hybrid) — the hybrid ATR-norm+log-return candidate is still a proposed, unrun experiment, not yet the adopted default",
+    "params": {"atr_period": 256, "atr_source": "pandas-ta.ATR(256)"}
+  },
+  "window": {
+    "scheme": "uniform",
+    "per_tf_length": {"5min": 256, "15min": 256, "1H": 256, "4H": 256, "1D": 256, "1W": 256}
+  },
+  "architecture": {
+    "stage_config": {
+      "embedding": "patchtst_patch_embed",
+      "local_extraction": "plain_cnn",
+      "sequential": "rnn",
+      "attention": 0,
+      "local_extraction_post": 0,
+      "fusion": "concat_mlp",
+      "global_repr": "pool",
+      "heads": {"action": "softmax3", "mae": "regression", "om": "regression", "mfe": "regression_aux"}
+    },
+    "backbone_name": "CNN-LSTM (no-attention variant), implemented baseline + PatchTST-style patch embedding (stage under test, replacing the zeroed/no-embedding baseline)",
+    "hyperparam_profile": "not yet assigned S1/S2/S3 for this stage_config variant — backfill via profile_trial_cost() per 03 § architecture candidates. PatchTST-specific new hyperparams introduced by this block: patch_len and stride (patch grouping window/step over the per-tf candle sequence) — not yet default-valued or profiled; distinct from the pretrained PatchTST-based TSFM checkpoints' own patching scheme (excluded track, see 04 § Time-Series Foundation Models), this block is trained from scratch as this project's own Stage-1 candidate.",
+    "param_count_estimate": "not yet computed for this stage_config; order ~0.1M-5M per 03 § hardware constraints general Stage-1 sizing note — patch embedding is a single linear projection over grouped patches, comparable or fewer params than the raw per-candle linear/MLP projection alternative since patching reduces the effective sequence length the projection operates over, negligible against that budget",
+    "activation": "n/a — patch embedding is a linear projection layer, no activation function in the base patching mechanism per 03 § input / feature embedding; GELU/SiLU/GLU-family remain separate Tier-1 activation-layer candidates tested post-primary-search on whichever embedding/backbone wins"
+  },
+  "combination": {
+    "strategy": "single-backend-wins (current default)",
+    "fusion_mechanism": "n/a — no multi-backend fusion in scope for this test"
+  },
+  "training": {
+    "strategy": "train-from-scratch",
+    "batch_size": "profiler-derived ceiling down to floor 8-16, not yet profiled for this stage_config, see 04 § hyperparam search-space bounds",
+    "epoch_budget": "derived from estimate_total_budget()/max_trials_for_budget(), not yet run",
+    "early_stopping": "monitor val_loss, patience = small multiple of Hyperband grace-period epoch count, restore best weights",
+    "loss_per_head": {
+      "action": "cross-entropy or focal — choice pending 02 prevalence measurement",
+      "mae": "quantile/pinball loss + MAE companion",
+      "om": "quantile/pinball loss + MAE companion",
+      "mfe": "quantile/pinball loss + MAE companion"
+    },
+    "loss_weights": "EMA-scale-normalized per-head weighted sum, Optuna-searched per 04 § loss-weight selection — not yet searched for this run",
+    "sampling": "uniform random shuffle",
+    "augmentation": "none (default; ATR-scaled jitter etc. are Tier-2/parked per 04 § training augmentation)",
+    "seed_count": 3
+  },
+  "optimization": {
+    "mode": "fixed-config, seed-based A/B (not an Optuna categorical dimension) — this row isolates the embedding stage choice only",
+    "search_space": {},
+    "pruning": "n/a across embedding arms; Hyperband/NaN-Inf pruning still applies within each arm's own training run",
+    "gpu_budget_hours": "not yet estimated — profile_trial_cost() not run for this candidate"
+  },
+  "evaluation": {
+    "dev_metrics": {
+      "action_head": "cross-entropy/focal loss + macro-F1 diagnostic",
+      "price_heads": "quantile/pinball loss + MAE, per head"
+    },
+    "backtested_kpis": {"primary": "expectancy_per_trade", "guardrail": "max_dd", "secondary": "sortino"},
+    "statistical_validity": {
+      "min_seeds": 3,
+      "test": "paired t-test/Wilcoxon across matched folds, CI excluding zero",
+      "overlap_correction": "uniqueness-weighted effective N, per 02 § overlapping labels"
+    },
+    "stopping_criteria": "advance only if it does not regress on Validation A or Validation B vs. current best, per 02 § validation & train/test splitting selection rule"
+  },
+  "alternatives_considered": [
+    "linear/MLP projection (current default) — tier 1, adjusted 10, tested separately as Tier-1_001.lin_mlp_embed_sel.json",
+    "per-tf learned tf-id embedding — tier 2 (gated on the flat/shared-encoder arch branch being chosen over the current per-tf-branch design), adjusted 8"
+  ],
+  "known_risks": ["A12", "A14"],
+  "doc_refs": [
+    "04-Experimentation, Evaluation & Optimization.md#input--feature-embedding",
+    "04-Experimentation, Evaluation & Optimization.md#decision-framework",
+    "04-Experimentation, Evaluation & Optimization.md#time-series-foundation-models-tsfms",
+    "03-Model & Architecture Engineering.md#input--feature-embedding",
+    "03-Model & Architecture Engineering.md#architecture-candidates",
+    "03-Model & Architecture Engineering.md#unified-super-architecture-skeleton",
+    "03-Model & Architecture Engineering.md#hardware-constraints",
+    "02-Data, Label & Feature Engineering.md#normalization-strategy",
+    "02-Data, Label & Feature Engineering.md#validation--traintest-splitting",
+    "02-Data, Label & Feature Engineering.md#overlapping-labels",
+    "Tier-1_000.arch_sz_n_train_hparams_sel.json",
+    "Tier-1_001.lin_mlp_embed_sel.json",
+    "input-data-feature/Tier-1_000.win_len_n_feat_params_sel.json",
+    "outcome-label-target-head/Tier-1_000.lbl_thr_n_loss_params_sel.json",
+    "99-Weakness Analysis.md"
+  ]
+}

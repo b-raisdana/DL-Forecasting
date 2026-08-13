@@ -6,14 +6,11 @@ source: https://microsoft.github.io/code-with-engineering-playbook/automated-tes
 
 # Test Strategy
 
-This skill is the quick-decision version — for directory layout, naming, fixture policy, and marker
-config (the mechanics), see [pytest](../pytest/SKILL.md).
+Quick-decision version — for directory layout, naming, fixture policy, and marker config (the mechanics), see [pytest](../pytest/SKILL.md).
 
 ## This repo's nature
 
-Offline data/ML pipeline: pandas dataframes → TensorFlow model → `backtrader` strategy. No HTTP API, no
-UI, no other team's service calling in yet. That rules out several categories the MS playbook otherwise
-lists — don't reach for them here (see "not applicable" below).
+Offline data/ML pipeline: pandas DataFrames → TensorFlow model → `backtrader` strategy. No HTTP API, no UI, no other team's service calling in yet. That rules out several categories the MS playbook otherwise lists — don't reach for them here (see "not applicable" below).
 
 ## Picking a type
 
@@ -29,22 +26,15 @@ lists — don't reach for them here (see "not applicable" below).
 
 ## Characterization tests: the key discipline
 
-Never hand-compute expected values for legacy/unspecced code — run the real function against the fixture
-and capture what it *actually* outputs today, then assert that. The goal is a safety net for refactoring,
-not a spec-conformance check (that's what a regression test against the written spec is for, once one
-exists). Getting this backwards (writing what you *think* it should output) produces a test that's wrong
-from day one and blocks refactors with false failures.
+Never hand-compute expected values for legacy/unspecced code — run the real function against the fixture and capture what it *actually* outputs today, then assert that. The goal is a safety net for refactoring, not a spec-conformance check (that's what a regression test against the written spec is for, once one exists). Getting this backwards (writing what you *think* it should output) produces a test that's wrong from day one and blocks refactors with false failures.
 
 ## Not applicable here (and why)
 
-- **CDC (consumer-driven contract)** — no separately-deployed consumer/provider pair this repo owns;
-  CCXT is a third-party API, not a versioned contract to test against.
+- **CDC (consumer-driven contract)** — no separately-deployed consumer/provider pair this repo owns; CCXT is a third-party API, not a versioned contract to test against.
 - **Synthetic monitoring / shadow testing** — nothing deployed/serving traffic.
 - **UI testing** — plotly usage is diagnostic plotting, not a product UI.
 - **Fault injection** — not yet; revisit once live trading makes real broker/network calls.
 
 ## When reviewing a PR/change for test coverage
 
-Ask: what type does this change actually need, per the table above — not "does it have *a* test." A
-correctness fix to legacy label-generation code needs a characterization test capturing the old and new
-values (proving the change is intentional), not just a unit test asserting the new behavior in isolation.
+Ask: what type does this change actually need, per the table above — not "does it have *a* test." A correctness fix to legacy label-generation code needs a characterization test capturing the old and new values (proving the change is intentional), not just a unit test asserting the new behavior in isolation.
