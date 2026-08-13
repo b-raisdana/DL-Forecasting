@@ -48,6 +48,16 @@ Full detail broken out to [input features & embedding](#input--feature-embedding
 - **SCINet** — recursive downsample→convolve→interact structure that extracts multi-resolution features hierarchically from a single input series. Conceptually close to what this doc's "multi-timeframe fusion" section already does by hand across resampled branches (5min/15min/1H/4H/1D/1W); SCINet does something structurally similar _within_ one branch, so it reads as a plausible swap for the conv stage inside each per-tf encoder rather than a whole-pipeline replacement.
   Alt: no local-extraction stage, feed embedded scalars straight to sequential/attention stage — cheaper, ablation baseline.
 
+#### local feature extraction — placement
+
+Everything above answers "which conv block" for the one fixed pre-sequential slot. This axis answers "where in the pipeline" — a different, orthogonal question the skeleton didn't previously expose as a lever (see [unified super-architecture skeleton](#unified-super-architecture-skeleton) → `local_extraction_post`):
+
+- **pre-sequential only (current default)** — conv extracts local candlestick/volatility patterns from raw normalized features before the sequential/attention stage sees them. Already the resolved baseline, scored in [local feature extraction](04-Experimentation, Evaluation & Optimization.md#local-feature-extraction) above, not re-scored here.
+- **post-attention only** (`local_extraction_post`, pre-sequential slot zeroed) — same `local_extract()` block library, called on the sequential/attention stage's contextualized output instead of the raw input: a local-refinement/smoothing pass over already-temporally-mixed representations, Conformer-style (conv module after self-attention, common in speech/ASR hybrids). Untested for this project specifically.
+- **both (sandwich)** — pre- and post- slots both non-zero. Most expensive of the three (two conv stacks), and confounds two individually-unproven levers in one trial — poor experimental discipline before either is tested alone, per this doc's own [statistical validity](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons) one-axis-at-a-time principle.
+
+Scored in [prioritization framework](04-Experimentation, Evaluation & Optimization.md#local-feature-extraction--placement); reuses whichever block (`plain_cnn`/`tcn_dilated`/etc.) wins the placement-agnostic technique comparison above, so this axis is "where," not "which."
+
 #### sequential encoding
 
 - LSTM recurrence — sanity-check floor, sequential context without attention's O(n²) cost. This is what the existing code already runs (`cnn_lstm_model.py`), so it's the floor, not just an option.
@@ -307,10 +317,11 @@ Convention used throughout:
 
 For the "which combination of stages, in which placement (before/after, start/middle/end)" question: rather than designing a separate architecture per placement variant, this doc designs **one maximally-complex skeleton** containing every pipeline stage as a slot, and tests placement by **zeroing** (disabling) or **numbering** (selecting which block type occupies) each slot — not by drawing a new diagram per combination. This is also literally what a "combined/super model" is in this doc: the skeleton itself, parameterized by `stage_config`.
 
-- the skeleton's stage **order is fixed** and maps directly onto start/middle/end: embedding = start, local-extraction → sequential → attention → fusion = middle, global-representation → heads = end. This fixed order already matches the one resolved case in `model-architecture-planning.md` (conv-then-transformer in the hybrid CNN→Transformer candidate, per [local feature extraction](#local-feature-extraction)) — so "placement" here means _which slots are active_, not reordering the skeleton itself.
+- the skeleton's stage **order is fixed** and maps directly onto start/middle/end: embedding = start, local-extraction → sequential → attention → local-extraction (post) → fusion = middle, global-representation → heads = end. This fixed order already matches the one resolved case in `model-architecture-planning.md` (conv-then-transformer in the hybrid CNN→Transformer candidate, per [local feature extraction](#local-feature-extraction)) — so "placement" here means _which slots are active_, not reordering the skeleton itself.
 - `stage_config[stage] = 0` → that stage is `tf.identity` (skipped entirely) — the "zeroing" test, e.g. does attention earn its cost over conv-only.
 - `stage_config[stage] = <block name>` → the "numbering" test — which block implementation occupies that fixed slot, e.g. `attention: "self_attn"` vs `"informer"` vs `"itransformer"` (per [attention / dependency](#attention--dependency)).
-- reordering the skeleton itself (e.g. attention _before_ local-extraction instead of after) is a genuinely different, larger search — that's what [differentiable/block-level NAS](#combination-strategy) would search over; out of scope for this fixed-skeleton default, deferred same as NAS is deferred in the main doc.
+- **`local_extraction_post`** — a second, independently-zeroable call site for the same `local_extract()` block library (per [local feature extraction — placement](#local-feature-extraction--placement)), positioned after `attention` instead of before `sequential`. This is _not_ full reordering search: it's one specific, motivated alternate placement (conv over the temporally-contextualized hidden states, Conformer-style, vs. conv only over raw input) named as an explicit extra slot rather than left to a general search. Defaults to `0` for every candidate below unless stated otherwise.
+- reordering the skeleton **generally** (e.g. attention before local-extraction, or arbitrary block permutations) is still a genuinely different, larger search — that's what [differentiable/block-level NAS](#combination-strategy) would search over, and stays deferred/out of scope. Only the one named `local_extraction_post` alternate above is promoted out of that deferral, because it's a bounded, cheap, independently-motivated hypothesis rather than an open-ended ordering search.
 
 ```python
 def build_super_architecture(stage_config: dict, profile: str, tf_list: list[str]):
@@ -324,6 +335,7 @@ def build_super_architecture(stage_config: dict, profile: str, tf_list: list[str
         x = local_extract(x, kind=stage_config["local_extraction"], profile=profile)  # 0 = identity
         x = sequential_encode(x, kind=stage_config["sequential"], profile=profile)    # 0 = identity
         x = attend(x, kind=stage_config["attention"], profile=profile)                # 0 = identity
+        x = local_extract(x, kind=stage_config["local_extraction_post"], profile=profile)  # same block library as local_extraction above, called on the contextualized sequence — 0 = identity
 
         per_tf_branches.append(x)
 
@@ -342,20 +354,23 @@ hyperparam sets below are illustrative starting candidates for `profile_trial_co
 Per the [design checklist](#per-candidate-requirements), each candidate below states its `stage_config` (relative to the skeleton above) before its hyperparam profile, plus a short pseudocode block only for what's distinct from a plain skeleton pass-through.
 
 - **CNN-LSTM(-attention)** — the pre-existing baseline, not a new proposal; see [current Stage-1 candidate set](#current-stage-1-candidate-set). Included here mainly as a worked illustration of the skeleton itself: the two variants that already exist in code — [cnn_lstm_model.py](../../app/ai_modelling/cnn_lstm/cnn_lstm_model.py) and [cnn_lstm_attention_model.py](../../app/ai_modelling/cnn_lstm_attention/cnn_lstm_attention_model.py) — differ from each other by exactly one `stage_config` value (`attention: 0` vs `attention: "self_attn"`), which is the zeroing mechanism working as designed, not a coincidence.
-  - `stage_config`: `{embedding: 0, local_extraction: "plain_cnn", sequential: "rnn", attention: 0 | "self_attn", fusion: "concat_mlp", global_repr: "pool"}` — `embedding: 0` because the existing code feeds raw per-candle features straight into the conv stack, no separate linear-projection stage.
-  - distinguishing block (plain, non-causal, non-dilated conv — the base option the TCN/ModernTCN candidates below build on top of):
+  - `stage_config`: `{embedding: 0, local_extraction: "plain_cnn", sequential: "rnn", attention: 0 | "self_attn", local_extraction_post: 0, fusion: "concat_mlp", global_repr: "pool"}` — `embedding: 0` because the existing code feeds raw per-candle features straight into the conv stack, no separate linear-projection stage. `local_extraction_post: 0` is the new [placement](#local-feature-extraction--placement) slot, reserved but nulled for this candidate (matches the pre-existing code exactly; not yet a funded test).
+  - distinguishing block (plain, non-causal, non-dilated conv — the base option the TCN/ModernTCN candidates below build on top of), sized by an explicit per-layer list rather than a depth-count + growth-formula pair (see [precise sizing convention](designsets/PROMPT.md#precise-sizing-convention) for why):
 
     ```python
-    def local_extract_plain_cnn(x, cnn_count, base_filters, base_kernel_size, dropout):
-        for i in range(cnn_count):
-            x = Conv1D(base_filters * (i + 1), base_kernel_size + i, padding="same", activation="relu")(x)  # shape: (B, T, filters_i)
+    def local_extract_plain_cnn(x, conv_layers: list[tuple[int, int]], dropout):
+        # conv_layers = [(filters, kernel_size), ...] one entry per layer, in order; [] = 0 layers (identity/nulled placeholder)
+        for filters, kernel_size in conv_layers:
+            x = Conv1D(filters, kernel_size, padding="same", activation="relu")(x)  # shape: (B, T, filters)
             x = BatchNormalization()(x)
             x = Dropout(dropout)(x)
         return x
     ```
 
-  - per-branch tail (both variants): `sequential_encode_rnn()` (LSTM stack, `return_sequences=True`) → optionally `attend_self_attn()` if `attention != 0` → `BatchNormalization` → `GlobalAveragePooling1D` → `Dense(64)` → `Dense(128)`; branches `fuse(kind="concat_mlp")` → `Dense(256)` + `LeakyReLU` → per-head `Dense`.
-  - S1/S2/S3 profiles not yet assigned — backfill via `profile_trial_cost()` same as the others before including it in the Optuna study, not hand-picked.
+    current implemented default (`cnn_lstm_model.py`/`cnn_lstm_trainer.py`, `cnn_filters=64, cnn_count=4, cnn_kernel_growing_steps=2`, formula `filters=cnn_filters*(i+1)`, `kernel_size=3+i*cnn_kernel_growing_steps`): `conv_layers = [(64,3), (128,5), (192,7), (256,9)]`. `local_extraction_post` for this candidate: `conv_layers = []` (reserved, nulled).
+
+  - per-branch tail (both variants): `sequential_encode_rnn()` (LSTM stack, `return_sequences=True`) → optionally `attend_self_attn()` if `attention != 0` → optionally `local_extract_plain_cnn()` again if `local_extraction_post != 0` → `BatchNormalization` → `GlobalAveragePooling1D` → `Dense(64)` → `Dense(128)`; branches `fuse(kind="concat_mlp")` → `Dense(256)` + `LeakyReLU` → per-head `Dense`.
+  - S1/S2/S3 profiles not yet assigned — backfill via `profile_trial_cost()` same as the others before including it in the Optuna study, not hand-picked; the `conv_layers` list above is the current-default anchor, not a profiled S1/S2/S3 spread yet.
     Alt:
   - **residual-CNN time-series-classification baselines** as the `local_extraction` block instead of the plain stacked-conv above — same slot, three separate implementations, not one: **ResNet** (residual skip connections), **FCN** (global-pooled fully-conv stack, no residual), **InceptionTime** (multi-kernel-size Inception modules); see [local feature extraction](#local-feature-extraction) and the scoring in [prioritization framework](04-Experimentation, Evaluation & Optimization.md#local-feature-extraction). None yet reduced to a `stage_config`-ready block here — flagged as a follow-up, not designed in this pass.
   - **ConvLSTM** in place of `sequential: "rnn"` — convolutional gates inside the recurrent cell itself, a different mechanism than conv-then-LSTM stacking; see [sequential encoding](#sequential-encoding). Same follow-up status as the residual-CNN alt above.

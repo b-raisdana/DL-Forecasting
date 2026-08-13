@@ -286,6 +286,17 @@ TCN and ModernTCN stay one row: both are the same stacked-`Conv1D` block, distin
 
 `residual-CNN TSC baselines` (ResNet/FCN/InceptionTime) are scored as three separate rows because ResNet, FCN, and InceptionTime are three separately-implemented network topologies (residual blocks / plain fully-conv stack / multi-branch multi-kernel-size Inception modules — distinct classes in any TSC library, e.g. `aeon`/`tsai`), not parameter choices on one function, and scoring them independently surfaces a real difference an averaged score would hide: InceptionTime (the newest, best-benchmarked of the three, but costlier per module) and FCN (the cheapest, still competitive) both clear Tier 1 on their own merits, while plain ResNet — the oldest and weakest of the three on `impact/cost` since InceptionTime generally supersedes it in TSC benchmarks — lands Tier 2. TimesNet and SCINet land Tier 3 on the same pattern: real modernity, but the doc itself flags both as untested/plausible-not-confirmed for this pipeline specifically (risk modifier applies to both).
 
+##### local feature extraction — placement
+
+Which conv block to use is scored above; this table scores _where_ it runs (see [local feature extraction — placement](03-Model & Architecture Engineering.md#local-feature-extraction--placement)). `pre-sequential only` is the already-resolved current default, not re-scored.
+
+| candidate | evidence | dominance | modernity | resource_fit | domain_fit | impact/cost | raw | risk | tooling | adjusted | tier |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| post-attention only (`local_extraction_post`) | 1 | 0 | 1 | 2 | 1 | 1 | 6 | 0 | 0 | 6 | **2** |
+| both (sandwich, pre + post) | 0 | 0 | 1 | 1 | 1 | 0 | 3 | −1 | 0 | 2 | **3** |
+
+`post-attention only` scores a moderate `evidence`/`modernity` off an adjacent-domain precedent (Conformer-style conv-after-attention in speech/ASR) rather than direct evidence in this project's own multivariate-candle setting, and `dominance = 0` since it isn't a field-standard move in TS forecasting specifically — same "score in context" discipline as the rest of this doc, per [scoring factors](#scoring-factors). `resource_fit = 2` because it reuses the existing conv block with negligible added compute (no O(n²) cost, unlike attention). Lands Tier 2, not Tier 1: cheap enough to be worth testing once the higher-scoring Tier-1 rows across other layers are through, but not evidenced enough to jump ahead of them. `both (sandwich)` is penalized on `impact/cost` and carries a `risk = −1` for confounding two individually-unproven levers in one trial (see [statistical validity of comparisons](#statistical-validity-of-comparisons)) — parked at Tier 3 pending either placement showing a standalone win first.
+
 ##### sequential encoding
 
 | candidate                     | evidence | dominance | modernity | resource_fit | domain_fit | impact/cost | raw | risk | tooling | adjusted | tier          |

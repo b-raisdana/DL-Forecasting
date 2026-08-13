@@ -1,7 +1,12 @@
 {
-  "designset_id": "Tier-1_000-atr-hybrid-normalization",
+  "designset_id": "Tier-1_001.atr_hyb_norm_sel",
   "status": "proposed",
   "category": "input-data-feature",
+  "related_designsets": {
+    "architecture_design": ["Tier-1_000.arch_sz_n_train_hparams_sel.json"],
+    "input_data_feature": ["input-data-feature/Tier-1_000.win_len_n_feat_params_sel.json"],
+    "outcome_label_target_head": ["outcome-label-target-head/Tier-1_000.lbl_thr_n_loss_params_sel.json"]
+  },
   "prioritization": {
     "tier": 1,
     "raw": 9,
