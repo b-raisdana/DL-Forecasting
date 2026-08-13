@@ -24,7 +24,7 @@
 - **Prediction horizon**: fixed 240 minutes.
 - **Prediction frequency**: every closed 5-min NOW candle.
 - **Single- vs multi-step**: single-step — one-shot 240-minute-ahead regression, no iterative rollout.
-- **Point vs probability distribution**: point estimates only; no quantile/distributional output.
+- **Point vs probability distribution**: point estimates only today (**baseline**). **Alternative, unresolved:** probabilistic `MFE`/`MAE` — predict distribution parameters (mean, std, skew, kurtosis) instead of a point value, moments added incrementally rather than a full 4-moment head assumed upfront; feeds the same TP/SL ladder and could additionally yield TP/SL probability/risk estimates. See [02 § model output targets](02-Data, Label & Feature Engineering.md#model-output-targets), [05 B9](05-Weakness Analysis.md).
 - **Absolute vs relative movement**: relative — ATR-normalized price distances, not absolute price levels.
 
 ## Problem decomposition

@@ -49,16 +49,20 @@ gap in the whole project: every model-selection decision elsewhere is provisiona
    [input-data-channels.md](input-data-channels.md) depends on — build once, reuse everywhere, don't
    let each topic reinvent it.
 10. **Wire the model-selection pipeline end to end**: search-time per-head losses → finalist re-run
-    across ≥3 seeds → backtested-KPI comparison → BTC/USDT validation selection → final holdout run
-    exactly once, per
+    across ≥3 seeds → backtested-KPI comparison → Validation A + Validation B selection (both must
+    clear) → Final Test run exactly once, per
     [error-rating-and-evaluation.md § model-selection pipeline](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#model-selection-pipeline).
     Currently only the first stage (search-time loss) is implemented (see appendix); stages 2-4 have no
     code.
 11. **(decision) Confidence/calibration metric technique.** No input feature carries confidence
     information today. Pick a technique from
     [model-architecture-planning.md § uncertainty-native GBM variants](../ML_Forecasting_System_Design/03-Model & Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap)
-    (quantile GBM first — reuses the pinball-loss work from step 7 — then NGBoost) and implement Brier
-    score / log-loss / calibration-curve (ECE) measurement against it, per
+    (quantile GBM first — reuses the pinball-loss work from step 7 — then NGBoost), **or** the
+    primary-DL-head probabilistic `MFE`/`MAE` alternative (mean/std/skew/kurtosis, added incrementally —
+    see [training-data.md § model output targets](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#model-output-targets),
+    [05 B9](../ML_Forecasting_System_Design/05-Weakness Analysis.md)), which derives TP/SL
+    probability/risk directly from the fitted distribution instead of a separate GBM detour. Implement
+    Brier score / log-loss / calibration-curve (ECE) measurement against whichever is picked, per
     [error-rating-and-evaluation.md § confidence & calibration metrics](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#confidence--calibration-metrics).
 12. **Add the no-lookahead regression test to CI**, once written in
     [input-data-channels.md](input-data-channels.md) todo step 6 and

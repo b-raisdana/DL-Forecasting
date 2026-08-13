@@ -32,7 +32,7 @@ No single blended loss — measured per output head, since each has a different 
 
 | head                                     | candidates to test                                  | notes                                                                                                                                                    |
 | ---------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| price levels (TP, SL / MAE, OM, aux MFE) | quantile/pinball loss (primary) + MAE/MSE companion | quantile loss reused by [uncertainty-native GBM variants](03-Model & Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap) |
+| price levels (TP, SL / MAE, OM, aux MFE) | **baseline (point):** quantile/pinball loss (primary) + MAE/MSE companion. **alternative (probabilistic `MFE`/`MAE`):** distributional NLL, moments added incrementally — Gaussian (mean+std) → skew-normal/Johnson-SU (+skew) → skew-t/Pearson-system (+kurtosis) | quantile loss reused by [uncertainty-native GBM variants](03-Model & Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap); probabilistic alt defined in [02 § model output targets](02-Data, Label & Feature Engineering.md#model-output-targets) |
 | probabilities / confidence               | Brier vs log-loss                                   | see [confidence & calibration metrics](#confidence--calibration-metrics)                                                                                 |
 | action (Long/Short/None)                 | cross-entropy vs focal vs class-weighted-CE         | tuning scope (which loss, per-target gamma) lives in [class imbalance handling](02-Data, Label & Feature Engineering.md#class-imbalance-handling)        |
 
@@ -47,9 +47,11 @@ Calibration is measured the same way as any probability head above — Brier sco
 
 The preferred fix is a model that produces calibrated uncertainty as a mechanism of itself, not via extra engineered features. Candidate techniques (quantile GBM, NGBoost, quantile regression forests) and their priority order live in [model-architecture-planning.md § uncertainty-native GBM variants](03-Model & Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap), scored in [prioritization-framework.md § auxiliary tabular models](#auxiliary-tabular-models-gbm-family) — this doc owns _what_ to measure and why it matters, that section owns _which technique_ produces it.
 
+A second candidate, on the primary DL head rather than the auxiliary GBM: probabilistic `MFE`/`MAE` (distribution-parameter regression, mean/std/skew/kurtosis added incrementally) — see [training-data.md § model output targets](02-Data, Label & Feature Engineering.md#model-output-targets). If adopted, TP/SL probability/risk estimates derive directly from the fitted distribution feeding the existing TP/SL ladder mechanism, instead of needing a bolted-on separate confidence head.
+
 ### backtested trading KPIs (final selection)
 
-Computed from actual simulated trades derived from TP/SL predictions, on the BTC/USDT validation split, then the untouched final holdout (see [model-architecture-planning.md § validation & train/test splitting](02-Data, Label & Feature Engineering.md#validation--traintest-splitting)).
+Computed from actual simulated trades derived from TP/SL predictions, on Validation A and Validation B, then the untouched Final Test (see [model-architecture-planning.md § validation & train/test splitting](02-Data, Label & Feature Engineering.md#validation--traintest-splitting)).
 
 - **primary — expectancy/trade** (R-multiples or %): real profitability per opportunity, less sensitive to trade frequency than profit factor.
 - **guardrail — max-DD**: reject any config over acceptable drawdown/risk tolerance regardless of other numbers.
@@ -105,8 +107,8 @@ How the pieces above chain together, end to end:
 
 1. **during search** — per-head losses (weighted-sum interim proxy, or plain `val_loss` pre-backtest-module) drive Optuna/Hyperband pruning. Dev diagnostics only.
 2. **finalists** — re-run top configs across ≥3 seeds (see [statistical validity](#statistical-validity-of-comparisons)), compare backtested-KPI distributions: expectancy primary, max-DD guardrail, Sortino secondary.
-3. **selection** — best finalist on the BTC/USDT validation split.
-4. **final holdout** — run exactly once, after everything (arch/hparams/normalization/threshold) is locked in. A materially worse holdout result than validation is an overfitting-to-tuning signal → investigate, don't re-tune against it (that would require a fresh holdout).
+3. **selection** — best finalist on _both_ [Validation A and Validation B](02-Data,%20Label%20&%20Feature%20Engineering.md#validation--traintest-splitting): must not regress on either vs. the current best, not a single blended score (see that section's selection rule). Two comparisons per candidate instead of one raises the stakes on the still-open family-wise/backtest-overfitting correction ([05 A14](05-Weakness%20Analysis.md)/B5) — not yet solved by this split.
+4. **final holdout** — run exactly once, on Final Test (BTC/USDT, temporal-only — see split doc), after everything (arch/hparams/normalization/threshold) is locked in. A materially worse holdout result than Validation B is an overfitting-to-tuning signal → investigate, don't re-tune against it (that would require a fresh holdout).
 
 ### experiment tracking (current priority)
 
@@ -121,7 +123,7 @@ How the pieces above chain together, end to end:
 ### cross-architecture fairness
 
 - architecture = categorical param in one Optuna study (not N sweeps) → fairness enforced at study level:
-  - (1) same train-pairs/BTC-USDT split every trial (see [validation & train/test splitting](02-Data, Label & Feature Engineering.md#validation--traintest-splitting));
+  - (1) same 4-way split (train / Validation A / Validation B / Final Test) every trial (see [validation & train/test splitting](02-Data, Label & Feature Engineering.md#validation--traintest-splitting));
   - (2) one shared GPU-hour budget via `estimate_total_budget()`, not per-arch;
   - (3) Hyperband pruning arch-agnostic;
   - (4) min grace-period epochs before pruning (protects slow-converging archs); post-study sanity-check trial counts per arch, top-up budget if one is starved.

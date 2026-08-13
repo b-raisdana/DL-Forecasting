@@ -95,6 +95,7 @@ Full strategy list lives in the standalone "multi-timeframe fusion" section belo
 #### prediction heads
 
 - action head (Long/Short/None), MAE/OM regression (auxiliary MFE) or quantile heads, confidence head — targets defined in [training-data.md](02-Data, Label & Feature Engineering.md#model-output-targets).
+- **point-estimate (baseline) vs probabilistic `MFE`/`MAE` heads (alternative):** baseline regresses `MAE`/`OM`/`MFE` as single point values; the alternative outputs distribution parameters (mean/std/skew/kurtosis, added incrementally) via a distributional NLL loss (Gaussian → skew-normal → skew-t as moments are added) instead of MAE/MSE/pinball. Full framing, testing order, and the derived TP/SL-probability payoff live in [training-data.md § model output targets](02-Data, Label & Feature Engineering.md#model-output-targets) — this section only owns the head/architecture shape.
 - loss/metric choice per head — see [error rating & model evaluation](04-Experimentation, Evaluation & Optimization.md#per-head-statistical-metrics-dev-diagnostics); not duplicated here.
 
 #### current Stage-1 candidate set
@@ -214,6 +215,8 @@ Candidate techniques for the confidence-metric gap — see [error rating & model
   - retrieval-augmented in-context tabular learning (TabR-style: at inference, look up similar historical rows via nearest-neighbor search in a learned embedding space, condition the prediction on them) — conceptually close to what the zigzag/nearest-top-distance features already hand-engineer (see "candle feature schema"), but research-stage, not yet a mature drop-in library the way NGBoost/quantile-LightGBM are; deferred.
 
 **priority, given this doc's cheap-proxy-before-expensive-run discipline:** quantile GBM first (cheapest, reuses planned pinball-loss work, native in libraries already in scope) → NGBoost second (bigger uncertainty-quantification payoff, still a straightforward library addition) → hybrid/retrieval approaches deferred, same "parked, not funded a slot" tier as the LLM-reprogramming and GNN entries, pending evidence from the cheaper options first.
+
+**relationship to the primary DL head:** the same mean/std/skew/kurtosis-parametric idea (NGBoost's mechanism) applies directly to the primary sequence model's `MFE`/`MAE` heads too, not only this GBM-auxiliary role — see [training-data.md § model output targets](02-Data, Label & Feature Engineering.md#model-output-targets) for that (larger) alternative. If adopted there, TP/SL probability/risk estimates derive from the primary model's own fitted distribution, which may make a separate GBM-based confidence mechanism unnecessary.
 
 ## Stage-1 candidate sets
 

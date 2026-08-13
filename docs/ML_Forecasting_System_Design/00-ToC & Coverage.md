@@ -126,7 +126,7 @@ The existing data document covers Binance OHLCV, historical depth, completed-can
   - multiple training pairs → held-out pair.
 - Measuring whether learned patterns are market-specific or transferable.
 
-The current split is explicitly cross-symbol: other pairs for training and BTC/USDT for validation, with a recent BTC/USDT final holdout. fileciteturn3file0L31-L41 fileciteturn3file1L68-L77
+The current split is a 4-way scheme: other pairs for training, each training pair's own latest slice as Validation A (regime generalization), BTC/USDT as Validation B (cross-symbol generalization), and a recent BTC/USDT Final Test. fileciteturn3file0L31-L41 fileciteturn3file1L68-L77
 
 ---
 
