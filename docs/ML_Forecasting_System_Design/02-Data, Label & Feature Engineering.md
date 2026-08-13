@@ -185,7 +185,17 @@ What the model actually predicts, given the labels above (target/label definitio
 
 ## Future-information handling
 
-Overlapping labels
+### overlapping labels
+
+- **cause:** 5-minute NOW-candle spacing + 240-minute label horizon → each label's future window spans up to 48 candles, so consecutive same-symbol samples' windows overlap by up to 47/48 candles. Same-symbol serial correlation, distinct from the cross-symbol train/val split (see [validation & train/test splitting](#validation--traintest-splitting)) — that prevents train/val leakage but does nothing about overlap _within_ one split's own sample set (e.g. all of BTC/USDT validation).
+- **resolved — sample-uniqueness weighting (López de Prado):** for sample `i`, uniqueness `u_i` = `1 / c_t` averaged over the candles `t` its label window spans, where `c_t` = count of samples whose window covers `t`.
+  - **training:** sample weight ∝ average uniqueness — down-weights samples buried in a dense overlap cluster, up-weights comparatively isolated ones, without dropping data.
+  - **statistical reporting:** report **effective N = Σ u_i**, not raw row count, wherever a same-symbol per-candle sample count feeds a significance claim — feeds [04 § statistical validity](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons). Effective N ≤ raw N whenever overlap exists.
+- **purge/embargo — not added on top of this:** purge/embargo exist to stop a label's future window from leaking across a train/val boundary; that's already handled structurally by the cross-symbol split (different assets, no shared window to leak across) and by the final holdout being the most-recent contiguous block. Adding purge/embargo within either split would duplicate that decision for no benefit — uniqueness weighting is the fix for the remaining problem (correlated samples within one split's own reported statistic), not a leakage problem.
+  Alt:
+  - drop overlapping samples to a non-overlapping subsample (stride ≥ 48 candles) — rejected, discards most labeled data for a problem uniqueness weighting solves without discarding anything.
+  - treat samples as i.i.d., no correction — rejected, the inflated-effective-N/false-significance risk this section exists to close.
+  - full walk-forward purge/embargo within a single symbol's history — already rejected at the split level (see [validation & train/test splitting](#validation--traintest-splitting)); reintroducing it here duplicates that call.
 
 ## Dataset construction
 
@@ -225,11 +235,21 @@ Rolling windows
 Expanding windows
 Purged validation
 
+### training symbol universe (survivorship)
+
+- **cause:** "all other trading pairs" (below) sourced naively from Binance's _currently_ listed USDT pairs would silently exclude any pair delisted since — training would only ever see assets that survived to dataset-build time, so the model never learns candle-level patterns around delisting-driven decay/illiquidity. Cross-sectional finance research shows this kind of survivorship bias inflates apparent edge; unmentioned anywhere before this.
+- **resolved:** enumerate the universe as every USDT pair Binance has ever listed as of build time — current and delisted — by querying klines directly by symbol string rather than filtering through the current `exchangeInfo`/market list. Delisted symbols contribute their full history up to their last traded candle.
+  - **fallback:** if a delisted symbol's klines are no longer served, drop it and document the gap rather than block the build — most Binance pair "removals" are renames/rebrands (klines still served under the old symbol), so the true unrecoverable-delisting count is a small minority of the universe; residual bias is bounded, not eliminated by design.
+  - **rebuild cadence:** re-enumerate the universe (incl. pulling any newly-delisted symbol's history) on every dataset rebuild, so the training pool doesn't drift back toward "currently listed only" as more pairs get delisted over time.
+  Alt:
+  - filter to current `exchangeInfo` listing only — rejected, this is the survivorship-inducing default being fixed.
+  - manually-curated "major pairs" shortlist — rejected, shrinks the training pool without addressing the bias, just hides it.
+
 ### validation & train/test splitting
 
 - windows built only from contiguous complete data; any gap-containing range discarded entirely.
 
-- **split scheme — resolved (simplified):** train on all other trading pairs, validate on BTC/USDT. This is a cross-symbol (leave-one-symbol-out) split, not a temporal one — since train and validation are entirely different assets, there's no same-symbol window overlap to leak across, so the walk-forward-vs-embargo machinery isn't needed. Use the full BTC/USDT history as the validation set.
+- **split scheme — resolved (simplified):** train on all other trading pairs (full universe incl. delisted — see [training symbol universe](#training-symbol-universe-survivorship) above), validate on BTC/USDT. This is a cross-symbol (leave-one-symbol-out) split, not a temporal one — since train and validation are entirely different assets, there's no same-symbol window overlap to leak across, so the walk-forward-vs-embargo machinery isn't needed. Use the full BTC/USDT history as the validation set.
   Alt:
   - walk-forward / random-split-with-embargo within a single symbol's own history — previous approach, dropped as unnecessary complexity now that validation is cross-symbol
   - rotating leave-one-symbol-out across all pairs rather than always BTC/USDT — viable generalization check, deferred; BTC/USDT fixed as the validation symbol since it's the primary target market

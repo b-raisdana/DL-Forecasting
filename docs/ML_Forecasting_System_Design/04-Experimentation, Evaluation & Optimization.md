@@ -92,11 +92,12 @@ Avoiding data leakage
 Applies to every A/B decision in this project's docs (normalization scheme, activation function, architecture candidate, class-weight/focal choice) — one shared discipline so results aren't noise:
 
 - **min 3 seeds/config**, 5 preferred if budget allows.
-- **paired stat test** across matched folds (paired t-test / Wilcoxon) — require a confidence interval excluding zero, not eyeballed means.
+- **paired stat test** across matched folds (paired t-test / Wilcoxon) — require a confidence interval excluding zero, not eyeballed means. N here is seeds/folds (independent retrains), unaffected by same-symbol label overlap below.
 - compare **backtested-KPI distributions**, never a single train-loss number.
 - reserve multi-seed re-run budget for **top finalists post-search only** (too expensive per-trial during search) — factor into `estimate_total_budget()`/`max_trials_for_budget()`.
+- **overlapping-sample correction, when a stat is computed directly over per-candle rows** (dev-diagnostic per-head losses, bootstrap resampling of the val set below) rather than over seeds/folds: same-symbol samples' label windows overlap (240-min horizon over 5-min candles — see [02 § overlapping labels](02-Data, Label & Feature Engineering.md#overlapping-labels)), so raw row count overstates independence. Use that section's per-sample uniqueness weights: weight rows by uniqueness before computing/bootstrapping the statistic, and report **effective N = Σ uniqueness**, never raw row count, alongside any such significance claim.
 
-Alt: single seed — rejected, can't separate signal from noise. Bootstrap resampling of the val set — cheaper, complementary, combinable with the 3-seed approach. 10+ seeds per candidate during search — rejected, too expensive; finalists-only instead.
+Alt: single seed — rejected, can't separate signal from noise. Bootstrap resampling of the val set — cheaper, complementary, combinable with the 3-seed approach; must apply the uniqueness correction above since it resamples raw rows. 10+ seeds per candidate during search — rejected, too expensive; finalists-only instead.
 
 ### model-selection pipeline
 

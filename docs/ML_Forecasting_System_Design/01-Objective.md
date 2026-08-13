@@ -38,4 +38,4 @@
 
 ## Open gaps
 
-Rationale behind these choices (why 240 minutes, why regression-then-rule over direct classification, why no loss-weighting) is undocumented — see [05-Weakness Analysis.md §A1–A4](<05-Weakness Analysis.md>) (importance 1–2).
+Rationale behind these choices (why 240 minutes, why regression-then-rule over direct classification, why no loss-weighting) is undocumented — see [05-Weakness Analysis.md §A3–A4](<05-Weakness Analysis.md>) (importance 1–2).
