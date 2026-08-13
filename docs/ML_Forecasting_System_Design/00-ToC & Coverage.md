@@ -144,6 +144,8 @@ The existing architecture document already covers candidate model families, inpu
   - hybrid architectures.
 - Matching architecture characteristics to observed market-pattern requirements.
 
+The [Decision Framework](04-Experimentation, Evaluation & Optimization.md#decision-framework) tiers candidates for funding; the observed-characteristic → mechanism mapping this section asked for now lives in [03 § architecture-selection methodology](03-Model & Architecture Engineering.md#architecture-selection-methodology), feeding that framework's `domain_fit` factor.
+
 ### 3.2 Capacity selection
 
 - How to determine appropriate:
@@ -154,11 +156,15 @@ The existing architecture document already covers candidate model families, inpu
   - number of blocks.
 - Relationship between model capacity, dataset size, and overfitting.
 
-### 3.3 Architecture component independence **missing**
+Capacity-ladder protocol (train/val-gap-driven, finalists-only) now in [03 § capacity sizing](03-Model & Architecture Engineering.md#capacity-sizing).
+
+### 3.3 Architecture component independence
 
 - How to determine whether an architectural component contributes independently.
 - Interaction testing between components.
 - Avoiding conclusions based on a component that only helps because of another component.
+
+Per-stage zeroing/interaction protocol, reusing the [unified super-architecture skeleton](03-Model & Architecture Engineering.md#unified-super-architecture-skeleton), now in [03 § component-independence testing](03-Model & Architecture Engineering.md#component-independence-testing).
 
 ### 3.4 Combination-strategy decision rules
 
@@ -171,7 +177,7 @@ The existing architecture document already covers candidate model families, inpu
   - mixture-of-experts.
 - Quantifying whether additional complexity produces enough incremental value.
 
-### 3.5 Architecture failure diagnosis **missing**
+### 3.5 Architecture failure diagnosis
 
 - Diagnosing whether poor performance comes from:
   - insufficient capacity
@@ -182,7 +188,9 @@ The existing architecture document already covers candidate model families, inpu
   - bad labels
   - insufficient context.
 
-### 3.6 Architecture robustness **missing**
+Seven-cause checklist with a cheapest-first testing order now in [03 § architecture failure diagnosis](03-Model & Architecture Engineering.md#architecture-failure-diagnosis).
+
+### 3.6 Architecture robustness
 
 - Stability of architecture rankings across:
   - random seeds
@@ -191,15 +199,21 @@ The existing architecture document already covers candidate model families, inpu
   - label variants.
 - Detecting architecture choices that win only under one experimental condition.
 
+Distinguished from the general ≥3-seeds-per-config discipline in [statistical validity of comparisons](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons) — that tests one split, this tests whether the *ranking* survives a second axis of variation. Protocol in [03 § cross-seed and cross-condition robustness](03-Model & Architecture Engineering.md#cross-seed-and-cross-condition-robustness).
+
 ### 3.7 Parameter-count vs effective-capacity analysis
 
 - Measuring actual computational/representational cost rather than using parameter count alone.
 - Comparing attention complexity, sequence length, activation memory, and throughput.
 
-### 3.8 Architecture simplification **missing**
+Required per-candidate comparison (activation memory, measured throughput at matched param count, wall-clock examples/sec) now in [03 § param-count vs effective-capacity analysis](03-Model & Architecture Engineering.md#param-count-vs-effective-capacity-analysis), extending the worked example under [hardware constraints](03-Model & Architecture Engineering.md#hardware-constraints).
+
+### 3.8 Architecture simplification
 
 - When a simpler model should be preferred despite slightly lower statistical performance.
 - Minimum-complexity rule for accepting architectural improvements.
+
+Minimum-complexity rule (prefer the simpler candidate unless the more complex one clears the paired-test CI *and* isn't attributable to one dominant component) now in [03 § simplification rule](03-Model & Architecture Engineering.md#simplification-rule), generalizing the combination-strategy doc's existing single-backend-wins default.
 
 ---
 
@@ -207,29 +221,7 @@ The existing architecture document already covers candidate model families, inpu
 
 The existing material covers losses, class-weight/focal alternatives, regularization, training dynamics, mixed precision/checkpointing, and the architecture-specific training interface. fileciteturn3file8L331-L347 fileciteturn3file7L273-L277
 
-### 4.1 Training-strategy selection **missing**
-
-- How to compare:
-  - training from scratch
-  - pretraining
-  - transfer learning
-  - multi-stage training.
-- Criteria for deciding whether additional training stages are justified.
-
-### 4.2 Batch-size strategy **missing**
-
-- Effect of batch size on:
-  - convergence
-  - generalization
-  - gradient noise
-  - GPU efficiency.
-- Distinguishing the largest feasible batch from the best-performing batch.
-
-### 4.3 Epoch / training-budget selection **missing**
-
-- How to determine sufficient training duration.
-- Early stopping criteria.
-- Minimum training budget before a trial can be fairly compared or pruned.
+Training-strategy selection, batch-size strategy, epoch/budget selection, loss-weight selection, training stability, sampling strategy, and augmentation are now covered in [04 § Training Engineering](04-Experimentation, Evaluation & Optimization.md#training-engineering).
 
 ### 4.4 Initialization and reproducibility **missing**
 
@@ -237,33 +229,6 @@ The existing material covers losses, class-weight/focal alternatives, regulariza
 - Random seed control.
 - Deterministic vs nondeterministic GPU behavior.
 - Measuring seed sensitivity.
-
-### 4.5 Loss-weight selection **missing**
-
-- Systematic selection of multi-head loss weights.
-- Whether loss weighting should be fixed, tuned, normalized, or dynamically adjusted.
-- Ensuring one target does not dominate optimization.
-
-### 4.6 Training stability **missing**
-
-- Detecting:
-  - exploding/vanishing gradients
-  - unstable validation behavior
-  - NaN/Inf
-  - collapse of individual heads.
-- Recovery and exclusion criteria.
-
-### 4.7 Training-data sampling strategy **missing**
-
-- Random vs chronological sampling within the allowed training set.
-- Uniform vs regime-aware sampling.
-- Oversampling rare but important market events.
-- Avoiding sampling strategies that distort market frequency.
-
-### 4.8 Training augmentation **missing**
-
-- Whether synthetic perturbations or time-series augmentation are useful.
-- Criteria for accepting augmentation without creating unrealistic market behavior.
 
 ---
 
@@ -591,7 +556,7 @@ Crypto markets can shift between trend/range/volatility regimes, so a model that
 | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | Problem & Objective Engineering                              | Core definition exists; target-selection and objective-alignment methodology need expansion                                                  |
 | Data, Label & Feature Engineering                            | Substantial coverage; data provenance, feature stability, leakage depth, and systematic target/input selection need expansion                |
-| Model & Architecture Engineering                             | Substantial coverage; architecture diagnosis, capacity, robustness, and simplification need expansion                                        |
+| Model & Architecture Engineering                             | Strong coverage, incl. architecture-selection mapping, capacity sizing, component-independence testing, failure diagnosis, cross-condition robustness, effective-capacity analysis, simplification rule |
 | Training Engineering                                         | Core mechanisms exist; training-strategy, stability, initialization, sampling, and loss-weight methodology need expansion                    |
 | Experimentation, Evaluation & Optimization Engineering       | Strongest-covered area; experiment hierarchy, budget allocation, stopping rules, error taxonomy, and optimization-overfitting need expansion |
 | Deployment, Monitoring & Continuous Learning                 | Explicitly excluded                                                                                                                          |

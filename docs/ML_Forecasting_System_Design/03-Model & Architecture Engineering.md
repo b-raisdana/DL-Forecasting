@@ -14,6 +14,10 @@ Two views of the same design space live here: a **pipeline-stage view** (what bu
 
 Full scoring factors, tiers, and combination formula for sorting candidates below into fund-now / test-later / parked broken out to [prioritization framework](04-Experimentation, Evaluation & Optimization.md#decision-framework). Use it when adding a new candidate anywhere in this doc, so tiering stays consistent rather than vibes-based per bullet — it's the general form of the judgment already made informally throughout the bullets below (e.g. ModernTCN "worth promoting straight into Stage-1 profiling" vs. KAN blocks "parked... pending evidence").
 
+#### architecture diagnosis, capacity and robustness
+
+That framework decides which candidates get funded/tested. It doesn't cover what to do with a candidate once it's trained: matching mechanism to observed data characteristics before scoring it, sizing depth/width against dataset size, testing whether a multi-stage candidate's components each pull weight, diagnosing why a trained candidate underperforms, checking a ranking survives beyond the split it was picked on, comparing candidates on measured cost rather than param count alone, and when a more-complex winner isn't worth adopting. Broken out to [Architecture diagnosis, capacity & robustness](#architecture-diagnosis-capacity-and-robustness) below for size.
+
 #### input / feature embedding
 
 Full detail broken out to [input features & embedding](#input--feature-embedding). Embedding options in play:
@@ -514,6 +518,90 @@ Pseudocode for the "combined/super model" strategies named in the main doc's [co
 
 - **differentiable/block-level NAS (DARTS-style)** — no separate pseudocode here: this is exactly the [unified super-architecture skeleton](#unified-super-architecture-skeleton)'s `stage_config`, but with each slot's choice made a differentiable softmax mixture over block options during search, discretized to a hard `stage_config` after convergence, instead of hand-picked per the presets in [architecture candidates](#architecture-candidates). Deferred per the main doc; the skeleton above is already what a future NAS pass would search over, so adopting it later needs no new architecture design, only a search loop over the existing `stage_config` space.
 - **single hybrid backend with block-level composability** — already covered: this is the hybrid CNN→Transformer candidate in [architecture candidates](#architecture-candidates), i.e. one `stage_config` with two non-zero middle slots, not a separate multi-encoder fusion case. Listed in the main doc only to flag the naming ambiguity — no separate design needed here.
+
+## Architecture diagnosis, capacity and robustness
+
+Companion to [prioritization framework](04-Experimentation, Evaluation & Optimization.md#decision-framework): that framework decides which candidates get compute (tiering, before training). This section covers what happens after a candidate is trained — matching mechanism to data characteristics before scoring, sizing capacity against dataset size, testing component independence, diagnosing underperformance, checking ranking robustness beyond one split, comparing candidates on measured cost rather than param count, and a rule for when a more-complex winner isn't worth adopting. Addresses [05 A11](05-Weakness Analysis.md).
+
+### architecture-selection methodology
+
+The [prioritization framework](04-Experimentation, Evaluation & Optimization.md#decision-framework)'s `domain_fit` factor already asks "does this candidate's mechanism target something this data actually exhibits" — this makes that mapping explicit and required before scoring, rather than left implicit in prose the way it currently is (e.g. ModernTCN's grouped-conv reasoning under [local feature extraction](#local-feature-extraction)).
+
+**characteristic → mechanism mapping**, filled in per candidate before scoring:
+
+| observed data characteristic (from [02](02-Data, Label & Feature Engineering.md)) | mechanism that targets it | current candidates |
+| --- | --- | --- |
+| long-range dependency, unknown window (target pattern anywhere in the fed sequence) | attention / state-space, not fixed pooling | Transformer, Mamba/S4, long-window-focus attention |
+| multi-scale local pattern | dilated / multi-kernel conv | TCN, ModernTCN, InceptionTime |
+| genuinely multivariate feature channels (relative-HLC, volume, top-distance, ATR) | cross-variable-aware mechanism, not per-channel/shared-filter conv | ModernTCN (grouped conv), iTransformer (inverted attention) |
+| noisy OHLCV signal | mechanisms explicitly targeting signal/noise separation | Differential Attention |
+| pattern speed/scale invariance | multi-dilation, no fixed receptive field | TCN, attention (see [multi-timeframe fusion](#multi-timeframe-fusion) → pattern speed-invariance) |
+
+- A candidate with no row here isn't disqualified, but its `domain_fit` score should reflect that it's a generic capability bump rather than a targeted fit (see [scoring factors](04-Experimentation, Evaluation & Optimization.md#scoring-factors) factor 5).
+  Alt: score novelty/benchmark reputation only, skip the explicit mapping — rejected; this is what happens informally per-bullet today and is what let this gap exist in the first place. The mapping forces a falsifiable hypothesis ("this should help because X") that [architecture failure diagnosis](#architecture-failure-diagnosis) below can then confirm or reject empirically instead of guessing post-hoc.
+
+### capacity sizing
+
+No formal depth/width-vs-dataset-size rule exists beyond "S1/S2/S3 are illustrative starting points, `profile_trial_cost()` measures real cost" ([architecture candidates](#architecture-candidates) intro) and the param-count-is-negligible finding under [hardware constraints](#hardware-constraints). That finding answers "does it fit the GPU," not "is it the right size for the data" — capacity can be VRAM-affordable and still over/underfit the ~1yr, cross-symbol training set.
+
+- **capacity ladder, not just profile shape**: S1/S2/S3 vary depth/width/context shape at roughly matched capacity (see [architecture candidates](#architecture-candidates) intro). Add a capacity ladder within the winning shape — e.g. 0.5×/1×/2× width at fixed depth — to find where val-KPI plateaus or degrades. Finalists only, from the same budget reserve as [statistical validity](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons)'s multi-seed re-run — not run during the main search.
+- **train/val gap as the empirical signal**: at each rung, track train-loss vs. val-KPI gap. Gap flat or shrinking as capacity grows → not yet over capacity. Gap growing while val-KPI stalls or worsens → that rung is excess capacity; the rung below is the ceiling for this dataset size.
+- **directional prior, not a hard cap**: classic params-vs-N guidance (params ≲ O(N)) doesn't transfer cleanly to modern regularized DL, which routinely exceeds N params without overfitting — treat as a sanity flag (worth a second look if params/N is unusually large vs. the S1–S3 range already profiled), not a rejection rule.
+  Alt: fixed capacity by literature convention (copy a published config) — rejected, no evidence that config matches this dataset's actual size or noise level.
+
+### component-independence testing
+
+Guards against crediting a combined candidate's win to "the architecture" when really one stage did the work and the rest are along for the ride (00-ToC §3.3).
+
+- **the mechanism already exists, it just needs a protocol**: the [unified super-architecture skeleton](#unified-super-architecture-skeleton)'s `stage_config` zeroing is the tool. For any candidate with 2+ non-zero middle stages (the hybrid CNN→Transformer, any future combined/super model), zero each non-zero stage individually and compare **backtested KPI**, not train-loss, against the full candidate — reuse the [statistical validity](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons) ≥3-seed paired-test discipline per zeroing config, not one run each.
+- **interaction check, when a component is only motivated by another already being present** (e.g. attention-after-conv-stem in the hybrid candidate, motivated by the conv stem shortening the effective sequence first — see [local feature extraction](#local-feature-extraction) "conv stem ahead of a Transformer"): test the suspected components in isolation too (attention alone, without the conv stem — not only single-zeroing from the full config). Targeted to stage pairs the [architecture-selection methodology](#architecture-selection-methodology) mapping explicitly motivated jointly, not full factorial over every stage combination — unaffordable within the single-GPU budget.
+- **output**: a per-stage marginal-contribution table (one row per zeroing config, backtested-KPI delta vs. the full candidate ± CI) attached to any combined-candidate write-up before it's credited as beating the single-backend floor.
+  Alt: judge the combined candidate's overall KPI alone, skip per-stage attribution — rejected, this is exactly how a dominant single stage gets mistaken for a validated combination.
+
+### architecture failure diagnosis
+
+When a candidate underperforms — loses to a simpler floor (naive, LSTM, GBM-on-flattened) or underperforms its literature reputation — work this checklist before discarding the candidate or the hypothesis behind it. Architecture-specific instance of 00-ToC §5.7's general "measure → identify cause → targeted retest" loop.
+
+1. **insufficient capacity** — train and val loss both high, both plateaued early. → one rung up the [capacity sizing](#capacity-sizing) ladder, retest.
+2. **excessive capacity** — train loss low, val loss high or diverging, gap grows with capacity. → one rung down, or confirm a smaller model matches current performance (feeds the [simplification rule](#simplification-rule)).
+3. **inappropriate inductive bias** — capacity looks appropriate (train/val gap reasonable) but a structurally simpler floor still wins. → the mechanism may not match this data; revisit the candidate's row (or lack of one) in [architecture-selection methodology](#architecture-selection-methodology) rather than re-tuning hyperparameters. Most expensive item to accept — implies the candidate is structurally wrong, not just mistuned — so rule out 4–7 first.
+4. **optimization difficulty** — loss curve unstable, non-monotonic, or NaN/Inf despite reasonable capacity/bias. → gradient flow (residual connections around new blocks, per [design layers to pass](#design-layers-to-pass) step 5), LR/warmup, mixed-precision numerics; ties to 00-ToC §4.6 training stability.
+5. **bad input representation** — swap embedding/normalization (per [input / feature embedding](#input--feature-embedding)) and re-check ranking. If a different architecture wins under one embedding but not another, the failure may be representation-level, not architecture-level.
+6. **bad labels** — cross-check against label-quality/noise measurement (00-ToC §2.3); a label-noise ceiling looks identical to "no architecture can fit this" from inside the architecture comparison alone.
+7. **insufficient context** — shorten/lengthen the input window (00-ToC §2.8); performance may be context-length-bound, not architecture-bound.
+
+Cheapest-first order: 5/6/7 (representation/labels/context) are cheap swaps reusing the existing architecture; 1/2 (capacity) is a hyperparameter resweep; 3 (inductive bias) — the actual "this architecture is wrong for this problem" conclusion — comes last, only once 4–7 are ruled out.
+
+### cross-seed and cross-condition robustness
+
+Distinct from [statistical validity of comparisons](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons)'s "≥3 seeds, paired test excluding zero": that establishes whether config A beats config B on one split. This asks whether the **ranking** across architectures holds beyond the split it was measured on.
+
+- **protocol**: after [model-selection pipeline](04-Experimentation, Evaluation & Optimization.md#model-selection-pipeline) step 2 (finalists re-run across ≥3 seeds), re-run the top 2–3 finalists' seed comparison across one more axis of variation beyond seed — a second train-period slice (reuses the rolling-slice check named in [05 A17](05-Weakness Analysis.md), once built) or a second training-symbol subset — and confirm the **ranking**, not just each config's absolute KPI, holds.
+- A ranking that flips under the second condition is not a resolved winner yet, even if each run individually cleared the paired-test bar on its own slice — treat as "insufficient evidence to pick a winner," not "pick whichever wins more slices" (that reintroduces the multiple-comparison problem [05 A14](05-Weakness Analysis.md) already flags).
+- **budget**: 2–3 finalists × 1 extra axis, from the same "finalists post-search only" reserve already carved out under [statistical validity](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons) — not a second full search.
+  Alt: trust the single-split ranking once it clears the paired-test bar — rejected as sole criterion, conflates "beats its peer on this slice" with "reliably beats its peer."
+
+### param-count vs effective-capacity analysis
+
+Extends the one-off worked example under [hardware constraints](#hardware-constraints) (Transformer S2 param math, ~2.7M params, negligible against 8GB) into a required per-candidate comparison, since that example's own conclusion is that param count isn't the binding constraint — activation memory is.
+
+Required alongside the [design checklist](#per-candidate-requirements)'s existing "param-count order-of-magnitude estimate," all obtainable from the same `profile_trial_cost()` pass already run for [hyperparam search-space bounds](04-Experimentation, Evaluation & Optimization.md#hyperparam-search-space-bounds):
+
+- **activation memory** — batch × seq × d_model, the term the hardware-constraints worked example already flags as dominant.
+- **attention/sequence complexity, measured not assumed** — sub-quadratic candidates (Mamba/S4, Informer, linear attention) should report measured throughput at matched param count on this card, not just cite their asymptotic complexity class; an O(n) mechanism with a large constant factor can lose to O(n²) at this project's sequence length (≤256/tf × 6 tf branches).
+- **wall-clock throughput** (examples/sec at the VRAM-fitting batch size) — the actual per-trial cost `estimate_total_budget()` needs.
+
+Purpose: stop a param-count-cheap candidate from being credited with "efficiency" purely on asymptotic reputation if its measured profile on this hardware/sequence-length doesn't actually beat a param-count-larger candidate — asymptotic complexity is a prior for what to test, not a substitute for the profiler's number.
+Alt: param count alone as the capacity/cost proxy — rejected, the hardware-constraints worked example already shows it's off by orders of magnitude from the actual binding constraint on this hardware.
+
+### simplification rule
+
+Formalizes what's already this doc's implicit default for backend combination ([combination strategy](#combination-strategy): "status: unresolved... default assumption = single-backend-wins... adopted only on measured evidence") into a general rule covering every capacity/component/combination decision, not just that one axis.
+
+- **rule**: given two candidates whose backtested-KPI distributions are not distinguishable by the [statistical validity](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons) paired test (CI includes zero), prefer the simpler one — fewer non-zero `stage_config` slots, lower param count, cheaper [combination strategy](#combination-strategy) tier (single-backend-wins < late-ensembling < MoE/distillation, ascending cost).
+- **complexity must clear the noise floor, not just beat the mean** — a more complex candidate is accepted over a simpler one only if (a) it wins outside the paired-test CI, **and** (b) [component-independence testing](#component-independence-testing) shows the win isn't attributable to one dominant stage a simpler candidate could also carry (in which case, adopt that one stage into the simpler candidate instead of the whole combination).
+- Applies at every layer this doc scores candidates: activation choice, capacity rung, attention mechanism, backend-combination strategy.
+  Alt: prefer whichever candidate has the single highest point-estimate KPI, complexity untiebroken — rejected, this is the same backtest-overfitting risk [05 A14](05-Weakness Analysis.md) already flags: with enough candidates tested, some more-complex one wins by noise alone.
 
 ## Glossary
 
