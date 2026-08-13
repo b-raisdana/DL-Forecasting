@@ -32,7 +32,7 @@
     "hypothesis": "Adding an explicit linear/MLP projection of the per-candle feature vector to d_model, ahead of the existing CNN-LSTM backbone (currently no explicit embedding stage), improves backtested KPIs over the current zeroed-embedding baseline — the highest-adjusted-score embedding candidate in 04's tiered table and 03's stated default first step for every Stage-1 candidate."
   },
   "related_designsets": {
-    "architecture_design": ["Tier-1_000.arch_sz_n_train_hparams_sel.json"],
+    "architecture_design": ["Tier-1_000.train_hparams_sel.json"],
     "input_data_feature": ["input-data-feature/Tier-1_000.win_len_n_feat_params_sel.json"],
     "outcome_label_target_head": ["outcome-label-target-head/Tier-1_000.lbl_thr_n_loss_params_sel.json"]
   },
@@ -136,7 +136,7 @@
     "02-Data, Label & Feature Engineering.md#normalization-strategy",
     "02-Data, Label & Feature Engineering.md#validation--traintest-splitting",
     "02-Data, Label & Feature Engineering.md#overlapping-labels",
-    "Tier-1_000.arch_sz_n_train_hparams_sel.json",
+    "Tier-1_000.train_hparams_sel.json",
     "input-data-feature/Tier-1_000.win_len_n_feat_params_sel.json",
     "outcome-label-target-head/Tier-1_000.lbl_thr_n_loss_params_sel.json",
     "99-Weakness Analysis.md"

@@ -32,7 +32,7 @@
     "hypothesis": "Grouping contiguous candles into patches before projecting to d_model (shortening the effective sequence length fed to downstream stages) improves backtested KPIs over the current zeroed-embedding baseline -- the second-highest-adjusted-score embedding candidate in 04's tiered table (adjusted 9, one point behind linear/MLP projection's adjusted 10, on the tooling modifier for lacking a mature drop-in library). Caveat, stated rather than silently ignored: 03's own rationale for this candidate is reducing attention's O(n^2) VRAM cost specifically, but this project's current Tier-1 reference backbone (CNN-LSTM, no-attention variant) has no attention stage -- so this run tests patch embedding's secondary effects only (shortened sequence into the conv/LSTM stages, patch-level local aggregation), not its primary motivating benefit. A more informative test of the attention-cost claim would pair this candidate with an attention-bearing backbone once one is promoted to reference status."
   },
   "related_designsets": {
-    "architecture_design": ["Tier-1_000.arch_sz_n_train_hparams_sel.json", "Tier-1_001.lin_mlp_embed_sel.json"],
+    "architecture_design": ["Tier-1_000.train_hparams_sel.json", "Tier-1_001.lin_mlp_embed_sel.json"],
     "input_data_feature": ["input-data-feature/Tier-1_000.win_len_n_feat_params_sel.json"],
     "outcome_label_target_head": ["outcome-label-target-head/Tier-1_000.lbl_thr_n_loss_params_sel.json"]
   },
@@ -138,7 +138,7 @@
     "02-Data, Label & Feature Engineering.md#normalization-strategy",
     "02-Data, Label & Feature Engineering.md#validation--traintest-splitting",
     "02-Data, Label & Feature Engineering.md#overlapping-labels",
-    "Tier-1_000.arch_sz_n_train_hparams_sel.json",
+    "Tier-1_000.train_hparams_sel.json",
     "Tier-1_001.lin_mlp_embed_sel.json",
     "input-data-feature/Tier-1_000.win_len_n_feat_params_sel.json",
     "outcome-label-target-head/Tier-1_000.lbl_thr_n_loss_params_sel.json",

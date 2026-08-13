@@ -4,7 +4,7 @@
   "category": "input-data-feature",
   "type": "parameter-search-bundle",
   "bundle_scope": {
-    "topic": "per-tf window/sequence-length scheme (uniform / independent-per-tf / tapering-schedule) and candidate feature-set additions/screening parameters",
+    "topic": "per-tf window/sequence-length scheme alternatives (independent-per-tf / tapering-schedule) and candidate feature-set additions/screening parameters. Excludes the current default values (uniform-256/tf window, v1 feature schema): those are stated inline in every design-set's own `window`/`features` fields, never restated here — this bundle documents only the not-yet-adopted alternatives and the shared screening methodology.",
     "parameter_optimization_source": ["Window parameters", "Feature parameters"],
     "applies_to": "every Optuna trial's input-shape dimension across every architecture-design candidate, plus the feature-screening pipeline run once per candidate-feature-pool addition"
   },
@@ -14,21 +14,6 @@
   },
   "search_space": {
     "tier_1": [
-      {
-        "parameter": "per_tf_window_length_scheme",
-        "options": [
-          "uniform — one shared length across all 6 branches (today's default), single categorical Optuna dim, e.g. {64,128,256,512}",
-          "current placeholder default: 256 candles/tf, uniform, not evidence-picked"
-        ],
-        "rationale": "doc's own current default and simplest search dim; every other window scheme is tested against this baseline",
-        "source_anchor": "03-Model & Architecture Engineering.md#multi-timeframe-fusion"
-      },
-      {
-        "parameter": "feature_schema_v1_base_fields",
-        "options": ["relative-HLC/ATR, gap/ATR, height/ATR, volume/ATR, peak-valley confirmed-tf flag + strength, multi-tf top time/price distances, distance-from-anchor — already-resolved v1 schema, not itself searched"],
-        "rationale": "already-resolved base feature set every candidate uses; stated here so the bundle is a complete input-shape spec, not implying it's an open search dimension",
-        "source_anchor": "02-Data, Label & Feature Engineering.md#candle-feature-schema"
-      },
       {
         "parameter": "feature_screening_method",
         "options": ["MI screen (sklearn.mutual_info_classif/regression) against each label head first — no GPU; ambiguous cases: small LightGBM/XGBoost w/ vs w/o candidate; full DL run reserved for candidates passing both"],
@@ -73,8 +58,6 @@
   "known_risks": ["A5", "A12"],
   "doc_refs": [
     "03-Model & Architecture Engineering.md#multi-timeframe-fusion",
-    "03-Model & Architecture Engineering.md#hardware-constraints",
-    "02-Data, Label & Feature Engineering.md#candle-feature-schema",
     "02-Data, Label & Feature Engineering.md#feature-set-completeness--testing",
     "02-Data, Label & Feature Engineering.md#candidate-feature-pool",
     "02-Data, Label & Feature Engineering.md#candidate-feature-screening-method",

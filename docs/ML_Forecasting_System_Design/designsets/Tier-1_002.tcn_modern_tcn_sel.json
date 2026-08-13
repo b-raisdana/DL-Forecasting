@@ -32,7 +32,7 @@
     "hypothesis": "Swapping the current plain/vanilla stacked-Conv1D local-extraction block for a dilated-causal TCN/ModernTCN block (multi-scale receptive field via dilation, optionally large-kernel/grouped-conv for cross-variable interaction) improves backtested KPIs over the current plain_cnn baseline — the single highest-adjusted-score candidate across every architecture-design layer in 04's tiered table (raw/adjusted 11), and the doc's own 'worth promoting straight into Stage-1 profiling' call given the genuinely multivariate feature schema (relative-HLC, volume/ATR, gap, multi-tf top-distance channels)."
   },
   "related_designsets": {
-    "architecture_design": ["Tier-1_000.arch_sz_n_train_hparams_sel.json"],
+    "architecture_design": ["Tier-1_000.train_hparams_sel.json"],
     "input_data_feature": ["input-data-feature/Tier-1_000.win_len_n_feat_params_sel.json"],
     "outcome_label_target_head": ["outcome-label-target-head/Tier-1_000.lbl_thr_n_loss_params_sel.json"]
   },
@@ -143,7 +143,7 @@
     "02-Data, Label & Feature Engineering.md#normalization-strategy",
     "02-Data, Label & Feature Engineering.md#validation--traintest-splitting",
     "02-Data, Label & Feature Engineering.md#overlapping-labels",
-    "Tier-1_000.arch_sz_n_train_hparams_sel.json",
+    "Tier-1_000.train_hparams_sel.json",
     "input-data-feature/Tier-1_000.win_len_n_feat_params_sel.json",
     "outcome-label-target-head/Tier-1_000.lbl_thr_n_loss_params_sel.json",
     "99-Weakness Analysis.md"

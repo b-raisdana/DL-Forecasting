@@ -1,11 +1,11 @@
 {
-  "designset_id": "Tier-1_000.arch_sz_n_train_hparams_sel",
+  "designset_id": "Tier-1_000.train_hparams_sel",
   "status": "proposed",
   "category": "architecture-design",
   "type": "parameter-search-bundle",
   "bundle_scope": {
-    "topic": "model-architecture sizing (S1/S2/S3 depth/width/context profile shape) and training hyperparameters — batch size, epoch/early-stopping budget, mixed-precision, optimizer, learning rate, dropout, weight decay",
-    "parameter_optimization_source": ["Model parameters", "Training parameters", "Learning rate", "Dropout", "Weight decay", "Optimizer"],
+    "topic": "training hyperparameters, backbone-agnostic — batch size, epoch/early-stopping budget, mixed-precision, optimizer, learning rate, dropout, weight decay. Excludes model/backbone sizing (S1/S2/S3 profile, d_model, hidden_channels, num_layers, ...): those hyperparameter names and values are backbone-specific, so they're stated inline in each single-candidate row's own `architecture.hyperparam_profile`, never centralized here — a shared bundle entry would either duplicate what's already candidate-specific or be too vague to be useful (see e.g. Tier-1_002.tcn_modern_tcn_sel.json's own hidden_channels/kernel_size/num_dilated_levels).",
+    "parameter_optimization_source": ["Training parameters", "Learning rate", "Dropout", "Weight decay", "Optimizer"],
     "applies_to": "every Optuna trial across every architecture-design candidate (whole-architecture and sub-component rows alike), per 04 § optimization strategy's single-study-across-arch-and-hparams design"
   },
   "related_designsets": {
@@ -33,18 +33,6 @@
         "source_anchor": "04-Experimentation, Evaluation & Optimization.md#epoch--training-budget-selection"
       },
       {
-        "parameter": "model_sizing",
-        "options": [
-          "S1 = depth-heavy profile",
-          "S2 = width-heavy profile",
-          "S3 = context-heavy profile",
-          "hyperparameter names: d_model, num_heads, num_encoder_layers, d_ff, hidden_channels (per-candidate, matched to its stage_config)",
-          "target order ~0.1M-5M params per candidate — negligible against the 8GB budget; activation memory (batch x seq x d_model), not param count, is the actual binding constraint"
-        ],
-        "rationale": "every Stage-1 architecture candidate must state a hyperparam profile table (S1/S2/S3) and a param-count order-of-magnitude estimate per the design checklist; the hardware-constraints worked example already shows param count itself isn't the binding constraint",
-        "source_anchor": "03-Model & Architecture Engineering.md#architecture-candidates"
-      },
-      {
         "parameter": "mixed_precision_amp",
         "options": ["on by default for every trial — near-free win, not a fallback, not a competing search arm"],
         "rationale": "doc treats this as always-on infrastructure applied under whichever architecture/hparam combo wins, same category as FlashAttention",
@@ -66,7 +54,7 @@
       },
       {
         "parameter": "gradient_checkpointing",
-        "options": ["trade compute for VRAM if the Tier-1 batch/sizing search turns out VRAM-bound"],
+        "options": ["trade compute for VRAM if the Tier-1 batch-size search turns out VRAM-bound"],
         "rationale": "named fallback, slows training — only invoked if Tier-1 search is VRAM-constrained, not a default-on lever",
         "source_anchor": "03-Model & Architecture Engineering.md#hardware-constraints"
       },
@@ -127,7 +115,6 @@
     "04-Experimentation, Evaluation & Optimization.md#epoch--training-budget-selection",
     "04-Experimentation, Evaluation & Optimization.md#optimization-strategy",
     "04-Experimentation, Evaluation & Optimization.md#cross-architecture-fairness",
-    "03-Model & Architecture Engineering.md#architecture-candidates",
     "03-Model & Architecture Engineering.md#hardware-constraints",
     "03-Model & Architecture Engineering.md#per-candidate-requirements",
     "99-Weakness Analysis.md"

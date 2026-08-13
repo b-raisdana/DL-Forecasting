@@ -18,6 +18,7 @@ Goal: fewest tokens, zero information loss.
 - Headers only where they aid navigation; don't nest past 3 levels.
 - Don't restate the file's own title/purpose in the opening paragraph.
 - Code/config snippets: show only the minimal illustrative piece, not a full file, unless the full file is the point.
+- Glossary/definition-list sections: for each entry, confirm the term is actually used elsewhere — in this file, or (for a shared glossary linked from other docs, e.g. `02-Data, Label & Feature Engineering.md#glossary`) in any file that links to it. Drop entries for terms that appear nowhere else.
 
 ## Never compact away
 

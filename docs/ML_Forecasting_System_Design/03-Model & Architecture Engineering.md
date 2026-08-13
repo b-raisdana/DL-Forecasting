@@ -2,7 +2,7 @@
 
 ## Data feed design
 
-Candle-level feature schema, the feature-set completeness-testing workflow (ablation, MI/GBM candidate screening, candidate feature pool), and screening methodology are broken out to [input features & embedding](02-Data, Label & Feature Engineering.md#candle-feature-schema) for size.
+Candle-level feature schema, the feature-set completeness-testing workflow (ablation, MI/GBM candidate screening, candidate feature pool), and screening methodology are defined in [input features & embedding](02-Data, Label & Feature Engineering.md#candle-feature-schema).
 
 ## Model architecture & selection
 
@@ -22,18 +22,18 @@ That framework decides which candidates get funded/tested. It doesn't cover what
 
 Full detail broken out to [input features & embedding](#input--feature-embedding). Embedding options in play:
 
-- linear/MLP projection of the per-candle feature vector → `d_model` (current default, shared first step across all Stage-1 candidates)
+- linear/MLP projection of the per-candle feature vector → `d_model` (default, shared first step across all Stage-1 candidates)
 - per-tf learned tf-id embedding (flat/shared-encoder archs only; implicit via branch identity otherwise)
 - PatchTST-style patch embedding (cheap lever on the attention VRAM cost flagged under [hardware constraints](#hardware-constraints))
 
 - linear/MLP projection of the per-candle feature vector → `d_model` — shared first step across all Stage-1 candidates.
 - per-tf embedding — learned tf-id embedding for flat/shared-encoder archs; implicit via branch identity for per-tf-branch archs (see the timeframe-in-minutes resolution under [candle feature schema](02-Data, Label & Feature Engineering.md#candle-feature-schema) above).
 - **PatchTST-style patch embedding** — groups contiguous candles into patches before projecting, shortening the effective sequence length fed to attention. Directly relevant given the VRAM-cost note under [hardware constraints](#hardware-constraints) → "max feasible model size" (full attention over the concatenated multi-tf sequence is the dominant cost, not param count) — patching is a cheap lever on that cost. This is the patching _mechanism_ trained from scratch as part of the Stage-1 candidate, distinct from the pretrained PatchTST-based checkpoints covered (and excluded) under [TSFMs](04-Experimentation, Evaluation & Optimization.md#time-series-foundation-models-tsfms).
-  Alt: raw per-candle projection, no patching — simpler, longer effective sequence into attention; current default.
+  Alt: raw per-candle projection, no patching — simpler, longer effective sequence into attention; the resolved default.
 
 #### local feature extraction
 
-- **plain/vanilla 1D conv** (non-causal, non-dilated, same-padding stacked `Conv1D`) — the simplest possible learned local-extraction baseline, and worth naming explicitly since it's easy to jump straight to TCN/dilation and never test whether that added complexity earns its keep. This is also what the existing (pre-planning-doc) code already implements — `cnn_lstm_block()` in [cnn_lstm_attention_model.py](../../app/ai_modelling/cnn_lstm_attention/cnn_lstm_attention_model.py) and [cnn_lstm_model.py](../../app/ai_modelling/cnn_lstm/cnn_lstm_model.py) both stack same-padding `Conv1D` layers ahead of LSTM — see "current Stage-1 candidate set" below for that architecture as a whole.
+- **plain/vanilla 1D conv** (non-causal, non-dilated, same-padding stacked `Conv1D`) — the simplest possible learned local-extraction baseline, and worth naming explicitly since it's easy to jump straight to TCN/dilation and never test whether that added complexity earns its keep.
 - dilated causal conv (TCN) — multi-scale local pattern extraction, cheap.
 - **residual-CNN time-series-classification baselines** — three separately-implemented network topologies from the UCR/UEA time-series-classification benchmark literature, distinct lineage from the NLP-derived TCN/ModernTCN line above; different classes in any TSC library (e.g. `aeon`/`tsai`), not one function with a parameter choice — see [prioritization framework](04-Experimentation, Evaluation & Optimization.md#local-feature-extraction) for why each is scored independently rather than as one candidate:
   - **ResNet** — stacked residual conv blocks. The oldest and weakest of the three here (InceptionTime generally supersedes it in TSC benchmarks).
@@ -52,7 +52,7 @@ Full detail broken out to [input features & embedding](#input--feature-embedding
 
 Everything above answers "which conv block" for the one fixed pre-sequential slot. This axis answers "where in the pipeline" — a different, orthogonal question the skeleton didn't previously expose as a lever (see [unified super-architecture skeleton](#unified-super-architecture-skeleton) → `local_extraction_post`):
 
-- **pre-sequential only (current default)** — conv extracts local candlestick/volatility patterns from raw normalized features before the sequential/attention stage sees them. Already the resolved baseline, scored in [local feature extraction](04-Experimentation, Evaluation & Optimization.md#local-feature-extraction) above, not re-scored here.
+- **pre-sequential only (default)** — conv extracts local candlestick/volatility patterns from raw normalized features before the sequential/attention stage sees them. Already the resolved baseline, scored in [local feature extraction](04-Experimentation, Evaluation & Optimization.md#local-feature-extraction) above, not re-scored here.
 - **post-attention only** (`local_extraction_post`, pre-sequential slot zeroed) — same `local_extract()` block library, called on the sequential/attention stage's contextualized output instead of the raw input: a local-refinement/smoothing pass over already-temporally-mixed representations, Conformer-style (conv module after self-attention, common in speech/ASR hybrids). Untested for this project specifically.
 - **both (sandwich)** — pre- and post- slots both non-zero. Most expensive of the three (two conv stacks), and confounds two individually-unproven levers in one trial — poor experimental discipline before either is tested alone, per this doc's own [statistical validity](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons) one-axis-at-a-time principle.
 
@@ -60,10 +60,10 @@ Scored in [prioritization framework](04-Experimentation, Evaluation & Optimizati
 
 #### sequential encoding
 
-- LSTM recurrence — sanity-check floor, sequential context without attention's O(n²) cost. This is what the existing code already runs (`cnn_lstm_model.py`), so it's the floor, not just an option.
+- LSTM recurrence — sanity-check floor: mature, low-risk, well-understood mechanism, sequential context without attention's O(n²) cost.
   - **GRU** — `tf.keras.layers.GRU`, a separate layer class from `LSTM` (merged forget/input gate, no separate cell state, ~25% fewer parameters), not a parameter of the same layer — see [prioritization framework](04-Experimentation, Evaluation & Optimization.md#tool-identity-test-when-a-xy-grouping-stays-one-row) for why this and xLSTM/ConvLSTM below get the same "alt within the floor role" treatment despite one being a different class and the others being config choices. Tested as an alt within this same floor role, not a new pipeline stage.
   - **xLSTM** — modernized LSTM (exponential gating, matrix memory), recently used as the backbone of at least one zero-shot time-series foundation model. Not a mechanism swap in the strict sense (still recurrent) — the relevant question is "is a modernized recurrent block worth it," tested as an alt within this same floor role rather than a new pipeline stage.
-  - **ConvLSTM** — convolutional gates inside the recurrent cell itself, a genuinely different mechanism from stacking a separate conv stage ahead of a plain LSTM (which is what the existing CNN-LSTM(-attention) code already does — see "current Stage-1 candidate set" below). Worth testing as an alt within this floor role, not a separate pipeline stage.
+  - **ConvLSTM** — convolutional gates inside the recurrent cell itself, a genuinely different mechanism from stacking a separate conv stage ahead of a plain LSTM (the CNN-LSTM(-attention) pattern — see "current Stage-1 candidate set" below). Worth testing as an alt within this floor role, not a separate pipeline stage.
 - state-space — linear-time long-context alternative to attention. Two separately-implemented mechanisms, not one function with a parameter (see [prioritization framework](04-Experimentation, Evaluation & Optimization.md#sequential-encoding)):
   - **Mamba** — input-selective scan (`mamba_ssm`), the current standard-bearer for this family; directly targets the flagged O(n²)/VRAM ceiling.
   - **S4** — fixed, HiPPO-initialized state matrices, computed via convolution; largely superseded by Mamba in the literature, kept as a lower-priority alt rather than a co-equal option.
@@ -112,7 +112,7 @@ Full strategy list lives in the standalone "multi-timeframe fusion" section belo
 
 Full hyperparameter profiles (S1/S2/S3 = depth-heavy/width-heavy/context-heavy per architecture), search-space-bounds methodology, and the cross-architecture-fairness protocol live in [Stage-1 candidate sets](#stage-1-candidate-sets). Architecture options currently in the set:
 
-- **CNN-LSTM(-attention)** — the architecture already implemented pre-planning-doc, not a new proposal: plain (non-causal, non-dilated) `Conv1D` stack → LSTM stack → (attention variant only) self-attention → pooling → dense heads, per branch. See [cnn_lstm_model.py](../../app/ai_modelling/cnn_lstm/cnn_lstm_model.py) (no attention) and [cnn_lstm_attention_model.py](../../app/ai_modelling/cnn_lstm_attention/cnn_lstm_attention_model.py) (with attention). Named explicitly here so the existing baseline is measured against the newer candidates below in the same Optuna study, not left as an untracked assumption of "obviously superseded."
+- **CNN-LSTM(-attention)** — plain (non-causal, non-dilated) `Conv1D` stack → LSTM stack → (attention variant only) self-attention → pooling → dense heads, per branch. Named explicitly here so it's measured against the newer candidates below in the same Optuna study, not left as an untracked assumption of "obviously superseded."
 - Transformer w/ per-tf embedding + cross-tf attention
 - TCN — dilated convs for multi-scale, good single-GPU baseline; **ModernTCN** (large-kernel/grouped-conv variant, see "local feature extraction" above) is a direct, low-risk upgrade path for this line — worth profiling alongside/in place of plain TCN rather than as a separate candidate slot.
 - hybrid CNN→Transformer
@@ -164,8 +164,8 @@ This same menu applies to both axes: fusing across backend **types** (this secti
 
 ## Multi-timeframe fusion
 
-- **per-tf window length (context length) — Optuna search dimension, not fixed:** current default 256 candles/tf, uniform across all 6 branches — a placeholder, not evidence-picked. Longer context = more pattern history but higher O(n²) attention/VRAM cost ([hardware constraints](#hardware-constraints)) and more overfitting risk vs. ~1yr of data; shorter = cheaper but risks cutting off relevant history.
-  - **uniform** — one shared length across all branches (today's default), single categorical dim, e.g. {64,128,256,512}.
+- **per-tf window length (context length) — Optuna search dimension, not fixed:** default 256 candles/tf, uniform across all 6 branches — a placeholder, not evidence-picked. Longer context = more pattern history but higher O(n²) attention/VRAM cost ([hardware constraints](#hardware-constraints)) and more overfitting risk vs. ~1yr of data; shorter = cheaper but risks cutting off relevant history.
+  - **uniform** — one shared length across all branches (the default), single categorical dim, e.g. {64,128,256,512}.
   - **independent per-tf** — one dim per branch; larger search space, lets e.g. noisy 5min diverge from data-scarce 1W.
   - **tapering schedule** (illustrative, unproven) — candle count halves as tf increases, e.g. 2048@5min / 1024@15min / 512@1H / 256@4H / 128@1D / 64@1W. Wall-clock lookback still _grows_ across the schedule (each tf step is 3–7× longer than the last, outpacing the 2× count-halving) — biases toward fine resolution at the fast/noisy end, short lookback at the slow end; opposite bias from holding count constant. Test against the uniform baseline, not assumed better.
   - **cost interaction:** a longer/non-uniform schedule sharply raises attention-over-concat-seq cost for that branch specifically — the [hardware constraints](#hardware-constraints) VRAM prior (currently sized off the 256/tf default) must be reprofiled per candidate schedule via `profile_trial_cost()`, not assumed.
@@ -353,8 +353,8 @@ hyperparam sets below are illustrative starting candidates for `profile_trial_co
 
 Per the [design checklist](#per-candidate-requirements), each candidate below states its `stage_config` (relative to the skeleton above) before its hyperparam profile, plus a short pseudocode block only for what's distinct from a plain skeleton pass-through.
 
-- **CNN-LSTM(-attention)** — the pre-existing baseline, not a new proposal; see [current Stage-1 candidate set](#current-stage-1-candidate-set). Included here mainly as a worked illustration of the skeleton itself: the two variants that already exist in code — [cnn_lstm_model.py](../../app/ai_modelling/cnn_lstm/cnn_lstm_model.py) and [cnn_lstm_attention_model.py](../../app/ai_modelling/cnn_lstm_attention/cnn_lstm_attention_model.py) — differ from each other by exactly one `stage_config` value (`attention: 0` vs `attention: "self_attn"`), which is the zeroing mechanism working as designed, not a coincidence.
-  - `stage_config`: `{embedding: 0, local_extraction: "plain_cnn", sequential: "rnn", attention: 0 | "self_attn", local_extraction_post: 0, fusion: "concat_mlp", global_repr: "pool"}` — `embedding: 0` because the existing code feeds raw per-candle features straight into the conv stack, no separate linear-projection stage. `local_extraction_post: 0` is the new [placement](#local-feature-extraction--placement) slot, reserved but nulled for this candidate (matches the pre-existing code exactly; not yet a funded test).
+- **CNN-LSTM(-attention)** — see [current Stage-1 candidate set](#current-stage-1-candidate-set). A useful worked illustration of the skeleton itself: its plain and attention variants differ by exactly one `stage_config` value (`attention: 0` vs `attention: "self_attn"`), which is the zeroing mechanism working as designed, not a coincidence.
+  - `stage_config`: `{embedding: 0, local_extraction: "plain_cnn", sequential: "rnn", attention: 0 | "self_attn", local_extraction_post: 0, fusion: "concat_mlp", global_repr: "pool"}` — `embedding: 0` since this candidate feeds raw per-candle features straight into the conv stack, no separate linear-projection stage. `local_extraction_post: 0` is the new [placement](#local-feature-extraction--placement) slot, reserved but nulled for this candidate; not yet a funded test.
   - distinguishing block (plain, non-causal, non-dilated conv — the base option the TCN/ModernTCN candidates below build on top of), sized by an explicit per-layer list rather than a depth-count + growth-formula pair (see [precise sizing convention](designsets/PROMPT.md#precise-sizing-convention) for why):
 
     ```python
@@ -367,10 +367,10 @@ Per the [design checklist](#per-candidate-requirements), each candidate below st
         return x
     ```
 
-    current implemented default (`cnn_lstm_model.py`/`cnn_lstm_trainer.py`, `cnn_filters=64, cnn_count=4, cnn_kernel_growing_steps=2`, formula `filters=cnn_filters*(i+1)`, `kernel_size=3+i*cnn_kernel_growing_steps`): `conv_layers = [(64,3), (128,5), (192,7), (256,9)]`. `local_extraction_post` for this candidate: `conv_layers = []` (reserved, nulled).
+    illustrative starting config: `conv_layers = [(64,3), (128,5), (192,7), (256,9)]` (filters growing per layer, kernel widening per layer). `local_extraction_post` for this candidate: `conv_layers = []` (reserved, nulled).
 
   - per-branch tail (both variants): `sequential_encode_rnn()` (LSTM stack, `return_sequences=True`) → optionally `attend_self_attn()` if `attention != 0` → optionally `local_extract_plain_cnn()` again if `local_extraction_post != 0` → `BatchNormalization` → `GlobalAveragePooling1D` → `Dense(64)` → `Dense(128)`; branches `fuse(kind="concat_mlp")` → `Dense(256)` + `LeakyReLU` → per-head `Dense`.
-  - S1/S2/S3 profiles not yet assigned — backfill via `profile_trial_cost()` same as the others before including it in the Optuna study, not hand-picked; the `conv_layers` list above is the current-default anchor, not a profiled S1/S2/S3 spread yet.
+  - S1/S2/S3 profiles not yet assigned — backfill via `profile_trial_cost()` same as the others before including it in the Optuna study, not hand-picked; the `conv_layers` list above is a starting-point anchor, not a profiled S1/S2/S3 spread yet.
     Alt:
   - **residual-CNN time-series-classification baselines** as the `local_extraction` block instead of the plain stacked-conv above — same slot, three separate implementations, not one: **ResNet** (residual skip connections), **FCN** (global-pooled fully-conv stack, no residual), **InceptionTime** (multi-kernel-size Inception modules); see [local feature extraction](#local-feature-extraction) and the scoring in [prioritization framework](04-Experimentation, Evaluation & Optimization.md#local-feature-extraction). None yet reduced to a `stage_config`-ready block here — flagged as a follow-up, not designed in this pass.
   - **ConvLSTM** in place of `sequential: "rnn"` — convolutional gates inside the recurrent cell itself, a different mechanism than conv-then-LSTM stacking; see [sequential encoding](#sequential-encoding). Same follow-up status as the residual-CNN alt above.
