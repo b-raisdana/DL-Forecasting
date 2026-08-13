@@ -2,7 +2,7 @@
 
 Closing the gap between [input-features.md](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md) (the candle feature schema + feature
 screening spec) and what actually feeds the model today. Current focus topic — see
-[master-todo.md](master-todo.md).
+[00-master-todo.md](00-master-todo.md).
 
 - [TODO — input data / channels preparation](#todo--input-data--channels-preparation)
   - [todo](#todo)
@@ -19,7 +19,7 @@ screening spec) and what actually feeds the model today. Current focus topic —
 
 Ordered so each step is small and independently testable. Steps marked **(decision)** need a one-line
 confirmation before implementing since they affect input shape (and therefore every downstream model
-candidate in [model-architecture.md](model-architecture.md)); everything else is a direct fix against
+candidate in [04-model-architecture.md](04-model-architecture.md)); everything else is a direct fix against
 the already-written spec in [input-features.md](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md). Steps 1-4 (audit, relative-HLC,
 volume/ATR, peak/valley reuse decision) are done — see [done (reference)](#done-reference).
 
@@ -34,7 +34,7 @@ volume/ATR, peak/valley reuse decision) are done — see [done (reference)](#don
 2. **Add the no-lookahead regression test** for this pipeline stage: perturbing FUTURE-slice data must
    never change a computed peak/valley/top-distance feature at or before the anchor candle. Companion to
    the label-side version of this test in
-   [training-data-labels.md](training-data-labels.md#todo) — same discipline, different pipeline stage.
+   [02-training-data-labels.md](02-training-data-labels.md#todo) — same discipline, different pipeline stage.
 3. Implement the **multi-tf top-distance fields** (2 and 3 higher tfs' top time/price distances: signed
    time offset, top volume strength, abs-time, natural/normal price distance, abs-price) per the
    tf-ordered-list (5min/15min/1H/4H/1D/1W as actual input series; 1M/4M/1Y confirmation-only). Depends
@@ -45,13 +45,13 @@ volume/ATR, peak/valley reuse decision) are done — see [done (reference)](#don
 5. **(decision) `distance from anchor candle (minutes)`** and **timeframe-in-minutes** fields — per the
    schema, `timeframe-in-minutes` is a config option gated on architecture (included for flat/shared-encoder
    archs, excluded for per-tf-branch archs). Confirm which architecture branch
-   [model-architecture.md](model-architecture.md) is building toward before wiring this field in or out.
+   [04-model-architecture.md](04-model-architecture.md) is building toward before wiring this field in or out.
    a. [next-step] according to the scope of this doc these features should be avialble. the decision is responciblity of optimization.
 6. Once steps 1-5 land, **run the ablation pass**: permutation importance against the new full set,
    against the priority-ordered suspicion queue already named in the spec (candle-height/ATR flagged as
    the most likely redundant-but-cheap field). Needs a trained model to permute against — sequence
    this after a first Stage-1 candidate exists in
-   [model-architecture.md](model-architecture.md), not before.
+   [04-model-architecture.md](04-model-architecture.md), not before.
 7. **Run the candidate-feature MI/GBM screen** against the candidate pool (OBV — already implemented,
    confirm it's actually screened not just present; ICHIMUKU — same; MACD, ADX, VWAP, volatility-regime
    trio, session/time cyclical, structural counts — all unimplemented). Use
@@ -65,13 +65,13 @@ volume/ATR, peak/valley reuse decision) are done — see [done (reference)](#don
    reflect what's already screened-and-kept, or these existing indicators need to go through the same
    MI screen as new candidates before being trusted as load-bearing. Don't assume either way.
 9. Implement **input/feature embedding** stage: linear/MLP projection to `d_model` (the shared default
-   across Stage-1 candidates in [model-architecture.md](model-architecture.md)); defer PatchTST-style
+   across Stage-1 candidates in [04-model-architecture.md](04-model-architecture.md)); defer PatchTST-style
    patch embedding and per-tf tf-id embedding until the architecture-branch decision in step 5 is made,
    since both are conditional on it.
 10. **Data-quality pass on the CCXT feed** (see appendix): add gap detection, restated/adjusted-candle
     detection, and delisted-pair survivorship-bias handling for the "train on all other pairs" set,
     named but unbuilt. Natural home: a data-quality subsection under
-    [infrastructure.md](infrastructure.md)'s repository pattern, or its own check module — not scoped to
+    [03-infrastructure.md](03-infrastructure.md)'s repository pattern, or its own check module — not scoped to
     a single file here since it touches the fetch/cache layer, not just the feature schema.
 
 ## done (reference)
@@ -186,7 +186,7 @@ in this list. The model today trains on raw OHLCV + this fixed technical-indicat
 `app/Model/TechnicalAnalysis/PeakValley.py` (plus `AtrMovementPivots.py`, `PivotsHelper.py`,
 `SupportResistance.py`, `BullBearSide.py`, `RBD.py`) implement peak/valley/pivot detection elsewhere in
 the codebase — likely for the `BullBearSide`/base-pattern strategy machinery (see
-[training-data-labels.md § secondary mechanism](training-data-labels.md#secondary-unrelated-mechanism-livebacktest-bracket-orders)),
+[training-data-labels.md § secondary mechanism](02-training-data-labels.md#secondary-unrelated-mechanism-livebacktest-bracket-orders)),
 not for ML feature generation. Nothing in `classic_indicator_columns()` or `training_x_columns`
 consumes it. Reuse-vs-parallel-implementation was decided in the peak/valley reuse decision below (done
 step 4); the causal-cap wrapper itself is todo step 1.

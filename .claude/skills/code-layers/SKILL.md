@@ -7,7 +7,7 @@ description: Use when adding a new module/file under app/, or deciding where cod
 
 Layer by dependency direction (Clean/Onion-style). Domain depends on nothing in-house. Arrows point
 inward. (The directory-rename/cleanup migration this layering implies is tracked as a todo, not repeated
-here — see [docs/todos/infrastructure.md](../../../docs/todos/infrastructure.md).)
+here — see [docs/todos/infrastructure.md](../../../docs/todos/03-infrastructure.md).)
 
 ## the 4 layers, outside in
 

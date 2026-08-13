@@ -1,7 +1,7 @@
 """Characterization tests for profit_loss_adder.py.
 
 Pin today's *actual* output on a small deterministic fixture, ahead of the spec-alignment work in
-docs/todos/training-data-labels.md. These are not spec-conformance checks — expected values were
+docs/todos/02-training-data-labels.md. These are not spec-conformance checks — expected values were
 captured by running the real functions, not hand-derived — so a genuine behavior change should make
 exactly the affected test(s) fail; that failure is the point (confirm it's intentional, then re-capture).
 """

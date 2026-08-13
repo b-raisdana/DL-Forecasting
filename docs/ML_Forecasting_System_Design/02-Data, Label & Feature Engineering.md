@@ -276,8 +276,8 @@ Purged validation
 - `TP1`-`TP4` = discrete execution scale-out levels between entry and the `MFE` endpoint (see [TP / MAE / OM labels](#tp--mae--om-labels))
 - HISTORY / NOW / FUTURE = already-closed candles / the candle we're in / not-yet-started candles
 - SL / TP = stop loss / take profit
-- ATR = pandas-ta.ATR(256)
-- anchor candle = last candle of a 256-candle window; the "as of" point for a prediction (training or live)
+- ATR = pandas-ta.ATR(256) — the 256-period default currently matches the per-tf window-length default below; now that window length is a tunable/possibly-per-tf search dimension (see [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion) → "per-tf window length"), whether ATR period should track it or stay independently fixed is an open decision, not yet resolved
+- anchor candle = last candle common to all per-tf input windows (each window extends backward from this shared point); the "as of" point for a prediction (training or live). Per-tf window length defaults to 256 candles, uniform across branches, but is now a tunable search dimension — see [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion) → "per-tf window length"
 - tf-ordered-list = 5min, 15min, 1H, 4H, 1D, 1W, 1M, 4M, 1Y
 - tf = timeframe
 - natural price distance = signed distance from a top: + = price higher than the top, − = lower (not adjusted for peak vs. valley)

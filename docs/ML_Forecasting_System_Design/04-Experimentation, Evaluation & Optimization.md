@@ -30,11 +30,11 @@ Low statistical loss does not imply profitability. Per-head statistical metrics 
 
 No single blended loss — measured per output head, since each has a different error shape:
 
-| head                                     | candidates to test                                  | notes                                                                                                                                                    |
-| ---------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| head                                     | candidates to test                                                                                                                                                                                                                                                 | notes                                                                                                                                                                                                                                                                            |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | price levels (TP, SL / MAE, OM, aux MFE) | **baseline (point):** quantile/pinball loss (primary) + MAE/MSE companion. **alternative (probabilistic `MFE`/`MAE`):** distributional NLL, moments added incrementally — Gaussian (mean+std) → skew-normal/Johnson-SU (+skew) → skew-t/Pearson-system (+kurtosis) | quantile loss reused by [uncertainty-native GBM variants](03-Model & Architecture Engineering.md#uncertainty-native-gbm-variants--confidence-metric-gap); probabilistic alt defined in [02 § model output targets](02-Data, Label & Feature Engineering.md#model-output-targets) |
-| probabilities / confidence               | Brier vs log-loss                                   | see [confidence & calibration metrics](#confidence--calibration-metrics)                                                                                 |
-| action (Long/Short/None)                 | cross-entropy vs focal vs class-weighted-CE         | tuning scope (which loss, per-target gamma) lives in [class imbalance handling](02-Data, Label & Feature Engineering.md#class-imbalance-handling)        |
+| probabilities / confidence               | Brier vs log-loss                                                                                                                                                                                                                                                  | see [confidence & calibration metrics](#confidence--calibration-metrics)                                                                                                                                                                                                         |
+| action (Long/Short/None)                 | cross-entropy vs focal vs class-weighted-CE                                                                                                                                                                                                                        | tuning scope (which loss, per-target gamma) lives in [class imbalance handling](02-Data, Label & Feature Engineering.md#class-imbalance-handling)                                                                                                                                |
 
 Per-head metrics feed Optuna's scalar objective only as a **weighted-sum interim proxy** (matches the existing `val_loss` use in `compute_fitness()`) until the backtest module exists — real selection always stays at the backtested-KPI stage below.
 Alt: single blended loss — rejected, already flagged insufficient. Per-head multi-objective Optuna — more complex, deferred (single-GPU budget). AUC-ROC — viable companion/secondary diagnostic to F1, not primary.
@@ -64,7 +64,7 @@ Alt: Sharpe as primary — rejected, penalizes wanted upside vol. Calmar as prim
 ### terminology: "MAE" means two different things here
 
 - **Here (statistical):** Mean Absolute Error — a companion loss for price-level heads, alongside quantile/pinball loss.
-- **In [training-data.md](02-Data, Label & Feature Engineering.md#glossary) and [todos/training-data-labels.md](../todos/training-data-labels.md#what-drawdown-actually-measures-mae-not-peak-retracement) (trading):** Maximum Adverse Excursion — the worst adverse price move from entry before the best-case exit, used to derive SL/labels. Unrelated to the statistical metric above; always read from context.
+- **In [training-data.md](02-Data, Label & Feature Engineering.md#glossary) and [todos/training-data-labels.md](../todos/02-training-data-labels.md#what-drawdown-actually-measures-mae-not-peak-retracement) (trading):** Maximum Adverse Excursion — the worst adverse price move from entry before the best-case exit, used to derive SL/labels. Unrelated to the statistical metric above; always read from context.
 
 ### glossary
 
@@ -139,7 +139,7 @@ Training parameters
 Feature parameters
 Label parameters
 Threshold parameters
-Window parameters
+Window parameters — per-tf sequence/context length (uniform vs. independent-per-tf vs. tapering-schedule; see [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion) → "per-tf window length"), not fixed a priori
 
 ## Hyperparameter Optimization
 
@@ -151,7 +151,7 @@ Loss-function parameters
 
 ### hyperparam search-space bounds
 
-not fixed a priori — `profile_trial_cost()` measures real wall-clock/VRAM per arch+hparam combo on this card; `max_trials_for_budget()` derives trial cap. Search-space priors: seq len capped 256/tf; batch size s.t. largest arch/seq combo fits VRAM at batch≥8; hidden-dim/depth kept modest vs ~1yr data (small vs NLP-scale). Concrete bounds from profiler's first pass, not hand-picked.
+not fixed a priori — `profile_trial_cost()` measures real wall-clock/VRAM per arch+hparam combo on this card; `max_trials_for_budget()` derives trial cap. Search-space priors: per-tf window length (seq len) is itself an Optuna dim (placeholder default 256/tf uniform; independent-per-tf and tapering-schedule alts also candidates — see [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion) → "per-tf window length"), capped per profiler-measured VRAM/wall-clock feasibility rather than a fixed value; batch size s.t. largest arch/seq combo fits VRAM at batch≥8; hidden-dim/depth kept modest vs ~1yr data (small vs NLP-scale). Concrete bounds from profiler's first pass, not hand-picked.
 Alt:
 
 - fixed ranges from DL-literature defaults w/o profiling — rejected, wrong hardware/dataset scale
@@ -159,7 +159,7 @@ Alt:
 
 ## Training Engineering
 
-Training-process decisions distinct from architecture choice ([03](03-Model & Architecture Engineering.md)) and from what/how metrics are measured (above): training-strategy selection, batch-size strategy, epoch/budget selection, loss-weight selection, training stability, sampling strategy, augmentation. Seed control / GPU determinism is a separate, prerequisite gap (05-Weakness Analysis.md § A12) this section's discipline (≥3 seeds, paired stat test) already assumes rather than re-derives.
+Training-process decisions distinct from architecture choice ([03](03-Model & Architecture Engineering.md)) and from what/how metrics are measured (above): training-strategy selection, batch-size strategy, epoch/budget selection, loss-weight selection, training stability, sampling strategy, augmentation. Seed control / GPU determinism is a separate, prerequisite gap (99-Weakness Analysis.md § A12) this section's discipline (≥3 seeds, paired stat test) already assumes rather than re-derives.
 
 ### training-strategy selection
 
@@ -511,7 +511,7 @@ Score each 0–2: 0 = absent/weak, 1 = moderate, 2 = strong. **Score in context,
 2. **field dominance / standard-of-practice** — is it the current default choice in the relevant application area (time-series forecasting, NLP-derived sequence modeling, tabular ML), independent of project-specific evidence? De-facto standards carry lower integration risk.
 3. **modernity / replacement trajectory** — is it a newer technique explicitly designed to supersede something already in the candidate set (ModernTCN→TCN, MLA→GQA)? Adopting it should retire complexity, not just add a parallel option.
 4. **resource fit (hardware/compute budget)** — narrowly: does it run within the single-GPU VRAM/RAM/wall-clock ceiling that governs every candidate (see [hardware constraints](03-Model & Architecture Engineering.md#hardware-constraints))? This is a feasibility check, not a value judgment — it doesn't ask whether the technique is _worth_ its cost, only whether the cost is affordable at all.
-5. **domain/problem fit** — two things bundled deliberately: (a) _structural_ fit — does the technique's required input shape (multivariate channels, multi-tf branches, ~256-candle sequences, "needs a graph," "assumes univariate") match what this project actually has, and (b) _characteristic_ fit — does its benefit target something this data actually exhibits (non-stationary, noisy OHLCV, genuinely multivariate schema) rather than a generic capability bump never tested against this kind of noise. A technique that structurally can't consume this input at all (e.g. a graph-structured model with no graph in the data) scores 0 here regardless of how well-regarded it is elsewhere.
+5. **domain/problem fit** — two things bundled deliberately: (a) _structural_ fit — does the technique's required input shape (multivariate channels, multi-tf branches, per-tf window-length sequences — placeholder default 256/tf, now itself a search dimension, see [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion) → "per-tf window length" — "needs a graph," "assumes univariate") match what this project actually has, and (b) _characteristic_ fit — does its benefit target something this data actually exhibits (non-stationary, noisy OHLCV, genuinely multivariate schema) rather than a generic capability bump never tested against this kind of noise. A technique that structurally can't consume this input at all (e.g. a graph-structured model with no graph in the data) scores 0 here regardless of how well-regarded it is elsewhere.
 6. **marginal impact vs. cost** — a _value_ judgment layered on top of the two feasibility checks above: given it fits (resource_fit) and applies (domain_fit), does adopting it directly close a gap already flagged elsewhere (O(n²)/VRAM ceiling, confidence-metric gap, class imbalance) cheaply, or is it a large lift for a small/speculative gain? Two candidates can both score well on resource_fit/domain_fit and still diverge sharply here — a technique can be cheap and applicable but bring only a marginal, already-covered benefit (e.g. Mish activation), or bring the exact fix to a bottleneck this doc already names (e.g. Perceiver-style latent-bottleneck attention against the flagged multi-tf VRAM cost).
 
 **modifiers (lower tier, never raise it):**

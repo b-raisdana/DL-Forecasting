@@ -3,9 +3,9 @@
 Closing the gap between [model-architecture-planning.md](../ML_Forecasting_System_Design/03-Model & Architecture Engineering.md) +
 [model-architecture-candidate-sets.md](../ML_Forecasting_System_Design/03-Model & Architecture Engineering.md#stage-1-candidate-sets) +
 [prioritization-framework.md](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#decision-framework) (the architecture-search design) and what's
-actually built today. See [master-todo.md](master-todo.md) for how this fits the overall plan — this
-topic is downstream of [input-data-channels.md](input-data-channels.md) (input shape) and
-[training-data-labels.md](training-data-labels.md) (output shape), so sequence it after those stabilize.
+actually built today. See [00-master-todo.md](00-master-todo.md) for how this fits the overall plan — this
+topic is downstream of [01-input-data-channels.md](01-input-data-channels.md) (input shape) and
+[02-training-data-labels.md](02-training-data-labels.md) (output shape), so sequence it after those stabilize.
 
 - [TODO — model architecture \& selection](#todo--model-architecture--selection)
   - [todo](#todo)
@@ -25,16 +25,16 @@ topic is downstream of [input-data-channels.md](input-data-channels.md) (input s
    refactor-with-regression-test step (reuse whatever test harness exists for
    `cnn_lstm_model.py`/`cnn_lstm_attention_model.py`; add one first if none exists), proving the
    skeleton reproduces the current baseline before anything new is built on it.
-3. Wait for [input-data-channels.md](input-data-channels.md) todo step 9 (architecture-branch decision:
+3. Wait for [01-input-data-channels.md](01-input-data-channels.md) todo step 9 (architecture-branch decision:
    per-tf-branch vs. flat/shared-encoder) before wiring `embedding: "linear"` + per-tf tf-id embedding —
    the two decisions are coupled; don't build the embedding stage twice.
-4. Wait for [training-data-labels.md](training-data-labels.md) todo step 10 (final label/target column
+4. Wait for [02-training-data-labels.md](02-training-data-labels.md) todo step 10 (final label/target column
    names) before wiring the `head()` stage's action/MAE-OM/MFE/confidence outputs — head shapes are
    defined by that file, not this one, per
    [training-data.md § model output targets](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#model-output-targets).
 5. **Add the naive/persistence baseline** ("no change"/carry-forward last signal) — not a `stage_config`
    at all, the mandatory floor every learned candidate must beat. Cheapest possible first thing to wire
-   once the eval harness in [evaluation-metrics.md](evaluation-metrics.md) can score it.
+   once the eval harness in [05-evaluation-metrics.md](05-evaluation-metrics.md) can score it.
 6. **Add the Tier-1 Stage-1 candidates from
    [prioritization-framework.md § current Stage-1 candidate set](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#current-stage-1-candidate-set)**
    not yet in code, each as its own `stage_config` + pseudocode block already drafted in
@@ -57,7 +57,7 @@ topic is downstream of [input-data-channels.md](input-data-channels.md) (input s
    [prioritization-framework.md](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#decision-framework): 9 full Stage-1 architectures, 4
    activation functions, 6 GBM-family techniques, 2 embedding options, 2 global-repr options, 2
    multi-tf fusion options — each gated behind its own ≥3-seed statistical-validity protocol (see
-   [evaluation-metrics.md](evaluation-metrics.md)). `estimate_total_budget()` exists per-study; nothing
+   [05-evaluation-metrics.md](05-evaluation-metrics.md)). `estimate_total_budget()` exists per-study; nothing
    rolls the other tracks (normalization → activation → fusion → GBM screen...) into one ordered plan
    with a total wall-clock estimate against the single 8GB-laptop-GPU budget. Write a short roadmap:
    ordered test phases, dependency arrows between them, estimated GPU-hours per phase, running total.
@@ -65,10 +65,10 @@ topic is downstream of [input-data-channels.md](input-data-channels.md) (input s
     rolling z-score, hybrid ATR+log-return) are untested per
     [model-architecture-planning.md § normalization strategy](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#normalization-strategy).
     Run once step 1's skeleton exists, using the ≥3-seed protocol from
-    [evaluation-metrics.md § statistical validity](evaluation-metrics.md#todo).
+    [evaluation-metrics.md § statistical validity](05-evaluation-metrics.md#todo).
 11. **Class-imbalance prevalence measurement** — actual prevalence (% candles peak/valley per horizon,
     % positions clearing `OM > 1`) isn't known yet; measure empirically via a data-profiling script once
-    [training-data-labels.md](training-data-labels.md) lands, before finalizing the class-weight/focal
+    [02-training-data-labels.md](02-training-data-labels.md) lands, before finalizing the class-weight/focal
     choice in [model-architecture-planning.md § class imbalance handling](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#class-imbalance-handling).
 12. **(decision) Cross-symbol validation split — potential leakage via shared calendar time.**
     [model-architecture-planning.md § validation & train/test splitting](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#validation--traintest-splitting)
@@ -118,7 +118,7 @@ Verified against `app/` directly on 2026-08-12.
   is pseudocode only, not yet transcribed into `app/`.
 - **Deployment/live layer is essentially absent, and the one thing that exists is disconnected.**
   `BasePatternStrategy` (see
-  [training-data-labels.md § secondary mechanism](training-data-labels.md#secondary-unrelated-mechanism-livebacktest-bracket-orders))
+  [training-data-labels.md § secondary mechanism](02-training-data-labels.md#secondary-unrelated-mechanism-livebacktest-bracket-orders))
   is the only live/backtest order-placement code that exists, and it's unrelated to the anchor-candle ML
   labels. No documented or implemented path from "trained model produces a prediction" to "an order gets
   placed." Compounding this, transaction costs/spread/slippage/latency, risk/position sizing beyond TP

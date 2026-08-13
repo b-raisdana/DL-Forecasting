@@ -2,7 +2,7 @@
 
 Closing the gap between [training-data.md](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md) (the MAE/MFE/OM label spec) and what
 `profit_loss_adder.py`/`training_datasets.py` actually compute today. See
-[master-todo.md](master-todo.md) for how this topic fits the overall plan.
+[00-master-todo.md](00-master-todo.md) for how this topic fits the overall plan.
 
 - [TODO — training data / label preparation](#todo--training-data--label-preparation)
   - [todo](#todo)
@@ -23,7 +23,7 @@ hand to an agentic coding session one at a time. Written against the current MAE
 earlier quantile-search draft this file's predecessor, `current-code.md`, was originally written
 against). Steps marked **(decision)** change cross-cutting behavior (label shape/count, window size,
 what `V` means) and are worth a one-line confirmation before implementing, since they ripple into
-[model-architecture.md](model-architecture.md) and the model's input/output shapes; everything else is
+[04-model-architecture.md](04-model-architecture.md) and the model's input/output shapes; everything else is
 a direct, self-contained code fix against the already-written spec.
 
 1. **(decision, partially done) Fix window granularity/size.** All call sites pass `structure_tf='4h'`,
@@ -77,12 +77,12 @@ a direct, self-contained code fix against the already-written spec.
    currently hardcode `[short_signal, long_signal]`; replace with the spec's primary targets (`MAE`,
    `OM`) + auxiliary (`MFE`) for the winning direction, plus the entry-price target (step 2) and the
    Long/Short/None action head. Coordinate column naming with
-   [model-architecture.md](model-architecture.md).
+   [04-model-architecture.md](04-model-architecture.md).
 10. **Add a no-lookahead regression test.** Assert that perturbing FUTURE-slice data never changes a
     computed label at or before the anchor candle — the causal-by-construction claims below (anchor
     candle, entry price) are currently backed only by manual reasoning, not a test. Place under
     `app/tests/regression/` per the `pytest` skill, tagged `regression`; wire into whatever CI
-    gate `xenon` runs, per [infrastructure.md](infrastructure.md).
+    gate `xenon` runs, per [03-infrastructure.md](03-infrastructure.md).
 11. **Cleanup pass.** Delete now-fully-dead code (`zz_stop_loss`, `singular_stop_loss`, `tops_mean` if
     nothing else calls them, the old flat-`order_fee`/`max_risk` weighted-profit path once steps 5/7
     land); trim `quantile_maxes()`'s 50-way scaffolding if step 4's exact computation no longer needs
@@ -250,4 +250,4 @@ anchor-candle ML labels above:
   filled SL re-emits the original signal so the pattern keeps getting retried.
 
 No documented path connects a trained model's prediction to this strategy placing an order — see
-[model-architecture.md](model-architecture.md) for the deployment-layer gap this leaves open.
+[04-model-architecture.md](04-model-architecture.md) for the deployment-layer gap this leaves open.

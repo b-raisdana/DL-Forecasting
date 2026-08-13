@@ -154,7 +154,13 @@ This same menu applies to both axes: fusing across backend **types** (this secti
 
 ## Multi-timeframe fusion
 
-- each series 256 candles
+- **per-tf window length (context length) — Optuna search dimension, not fixed:** current default 256 candles/tf, uniform across all 6 branches — a placeholder, not evidence-picked. Longer context = more pattern history but higher O(n²) attention/VRAM cost ([hardware constraints](#hardware-constraints)) and more overfitting risk vs. ~1yr of data; shorter = cheaper but risks cutting off relevant history.
+  - **uniform** — one shared length across all branches (today's default), single categorical dim, e.g. {64,128,256,512}.
+  - **independent per-tf** — one dim per branch; larger search space, lets e.g. noisy 5min diverge from data-scarce 1W.
+  - **tapering schedule** (illustrative, unproven) — candle count halves as tf increases, e.g. 2048@5min / 1024@15min / 512@1H / 256@4H / 128@1D / 64@1W. Wall-clock lookback still _grows_ across the schedule (each tf step is 3–7× longer than the last, outpacing the 2× count-halving) — biases toward fine resolution at the fast/noisy end, short lookback at the slow end; opposite bias from holding count constant. Test against the uniform baseline, not assumed better.
+  - **cost interaction:** a longer/non-uniform schedule sharply raises attention-over-concat-seq cost for that branch specifically — the [hardware constraints](#hardware-constraints) VRAM prior (currently sized off the 256/tf default) must be reprofiled per candidate schedule via `profile_trial_cost()`, not assumed.
+  - **method:** same profiler-driven, backtested-KPI discipline as every other Optuna dimension (per [hyperparam search-space bounds](04-Experimentation, Evaluation & Optimization.md#hyperparam-search-space-bounds)).
+    Alt: fixed 256/tf, untested — rejected as final answer now that length is a flagged search dimension; kept as placeholder default until profiled.
 - from anchor backwards: first 6 of tf-ordered-list (5min–1W) — the actual input series; 1M/4M/1Y are peak/valley-confirmation-only, per [candle feature schema](02-Data, Label & Feature Engineering.md#candle-feature-schema)
 - overlap: ≤1 higher-tf candle may overlap a lower-tf series.
 - domain assumption: pattern meaning is scale-invariant across tf (15min compress-price-pattern ≈ 1H compress-price-pattern); combining tfs clarifies the "real truth" behind any one tf's pattern.
@@ -181,7 +187,7 @@ This same menu applies to both axes: fusing across backend **types** (this secti
   Alt:
   - build entry-timing into v1 — rejected for now, adds complexity before baseline validated
   - separate downstream "timing" model post-Long/Short — viable future step, deferred
-- **higher-tf "in progress" candles — decision:** use only completed candles — lowest tf 15min; 1H candles = 256×15min prior so most-recent is fully closed; same for higher tfs. Sidesteps partial-candle state and cross-tf boundary-alignment leakage by construction.
+- **higher-tf "in progress" candles — decision:** use only completed candles — lowest tf 15min; each higher tf's most-recent candle is closed by construction once the lowest-tf window covers at least one full higher-tf interval, true regardless of the specific per-tf window length chosen (see "per-tf window length" above); same for higher tfs. Sidesteps partial-candle state and cross-tf boundary-alignment leakage by construction.
 
 ## Auxiliary tabular models (GBM-family)
 
@@ -231,7 +237,7 @@ This doc is where every candidate/combined-model design has to actually fit, so 
 - **max feasible model size**
   - don't hand-calculate — `profile_trial_cost()`/`estimate_total_budget()`/`max_trials_for_budget()`
   - measure real wall-clock+VRAM on this exact card.
-    - Rough prior only: 4tf×256candles×few scalars is a modest seq length; 8GB should fit small/med Transformer/TCN at batch 16–64 w/ mixed precision; VRAM more likely bound by hidden-dim/full-attention-over-concat-seq than seq length itself. If full cross-attention doesn't fit, caps toward cheaper fusion alternatives (per-tf encoders + light fusion) — see [multi-timeframe fusion](#multi-timeframe-fusion).
+    - Rough prior only, at the 256/tf uniform default: 6tf×256candles×few scalars is a modest seq length; 8GB should fit small/med Transformer/TCN at batch 16–64 w/ mixed precision; VRAM more likely bound by hidden-dim/full-attention-over-concat-seq than seq length itself. Since per-tf window length is now a search dimension (see [multi-timeframe fusion](#multi-timeframe-fusion) → "per-tf window length"), this prior doesn't hold for longer/non-uniform schedules (e.g. 2048@5min) — `profile_trial_cost()` must be rerun per candidate schedule, not assumed from this default. If full cross-attention doesn't fit, caps toward cheaper fusion alternatives (per-tf encoders + light fusion) — see [multi-timeframe fusion](#multi-timeframe-fusion).
   - Alt:
     - gradient checkpointing — fallback if needed, slows training
     - mixed precision AMP — near-free win, enable by default, not as fallback
@@ -373,7 +379,7 @@ Per the [design checklist](#per-candidate-requirements), each candidate below st
   - num_heads: S1:4, S2:8, S3:16
   - num_encoder_layers: S1:8, S2:2, S3:4
   - d_ff (feedforward dim): S1:640, S2:1024, S3:768
-  - seq_len per tf (capped 256/tf): 256 (all profiles)
+  - seq_len per tf: 256 uniform (placeholder default, all profiles) — now an Optuna search dimension, not fixed; see [multi-timeframe fusion](#multi-timeframe-fusion) → "per-tf window length" for the uniform/independent-per-tf/tapering-schedule alts
   - dropout: 0.1 (all profiles)
 
 - **TCN** — cheaper, dilated convs for multi-scale, good single-GPU baseline
@@ -524,7 +530,7 @@ Pseudocode for the "combined/super model" strategies named in the main doc's [co
 
 ## Architecture diagnosis, capacity and robustness
 
-Companion to [prioritization framework](04-Experimentation, Evaluation & Optimization.md#decision-framework): that framework decides which candidates get compute (tiering, before training). This section covers what happens after a candidate is trained — matching mechanism to data characteristics before scoring, sizing capacity against dataset size, testing component independence, diagnosing underperformance, checking ranking robustness beyond one split, comparing candidates on measured cost rather than param count, and a rule for when a more-complex winner isn't worth adopting. Addresses [05 A11](05-Weakness Analysis.md).
+Companion to [prioritization framework](04-Experimentation, Evaluation & Optimization.md#decision-framework): that framework decides which candidates get compute (tiering, before training). This section covers what happens after a candidate is trained — matching mechanism to data characteristics before scoring, sizing capacity against dataset size, testing component independence, diagnosing underperformance, checking ranking robustness beyond one split, comparing candidates on measured cost rather than param count, and a rule for when a more-complex winner isn't worth adopting. Addresses [05 A11](99-Weakness Analysis.md).
 
 ### architecture-selection methodology
 
@@ -532,13 +538,13 @@ The [prioritization framework](04-Experimentation, Evaluation & Optimization.md#
 
 **characteristic → mechanism mapping**, filled in per candidate before scoring:
 
-| observed data characteristic (from [02](02-Data, Label & Feature Engineering.md)) | mechanism that targets it | current candidates |
-| --- | --- | --- |
-| long-range dependency, unknown window (target pattern anywhere in the fed sequence) | attention / state-space, not fixed pooling | Transformer, Mamba/S4, long-window-focus attention |
-| multi-scale local pattern | dilated / multi-kernel conv | TCN, ModernTCN, InceptionTime |
-| genuinely multivariate feature channels (relative-HLC, volume, top-distance, ATR) | cross-variable-aware mechanism, not per-channel/shared-filter conv | ModernTCN (grouped conv), iTransformer (inverted attention) |
-| noisy OHLCV signal | mechanisms explicitly targeting signal/noise separation | Differential Attention |
-| pattern speed/scale invariance | multi-dilation, no fixed receptive field | TCN, attention (see [multi-timeframe fusion](#multi-timeframe-fusion) → pattern speed-invariance) |
+| observed data characteristic (from [02](02-Data, Label & Feature Engineering.md))   | mechanism that targets it                                          | current candidates                                                                                |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| long-range dependency, unknown window (target pattern anywhere in the fed sequence) | attention / state-space, not fixed pooling                         | Transformer, Mamba/S4, long-window-focus attention                                                |
+| multi-scale local pattern                                                           | dilated / multi-kernel conv                                        | TCN, ModernTCN, InceptionTime                                                                     |
+| genuinely multivariate feature channels (relative-HLC, volume, top-distance, ATR)   | cross-variable-aware mechanism, not per-channel/shared-filter conv | ModernTCN (grouped conv), iTransformer (inverted attention)                                       |
+| noisy OHLCV signal                                                                  | mechanisms explicitly targeting signal/noise separation            | Differential Attention                                                                            |
+| pattern speed/scale invariance                                                      | multi-dilation, no fixed receptive field                           | TCN, attention (see [multi-timeframe fusion](#multi-timeframe-fusion) → pattern speed-invariance) |
 
 - A candidate with no row here isn't disqualified, but its `domain_fit` score should reflect that it's a generic capability bump rather than a targeted fit (see [scoring factors](04-Experimentation, Evaluation & Optimization.md#scoring-factors) factor 5).
   Alt: score novelty/benchmark reputation only, skip the explicit mapping — rejected; this is what happens informally per-bullet today and is what let this gap exist in the first place. The mapping forces a falsifiable hypothesis ("this should help because X") that [architecture failure diagnosis](#architecture-failure-diagnosis) below can then confirm or reject empirically instead of guessing post-hoc.
@@ -579,8 +585,8 @@ Cheapest-first order: 5/6/7 (representation/labels/context) are cheap swaps reus
 
 Distinct from [statistical validity of comparisons](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons)'s "≥3 seeds, paired test excluding zero": that establishes whether config A beats config B on one split. This asks whether the **ranking** across architectures holds beyond the split it was measured on.
 
-- **protocol**: after [model-selection pipeline](04-Experimentation, Evaluation & Optimization.md#model-selection-pipeline) step 2 (finalists re-run across ≥3 seeds), re-run the top 2–3 finalists' seed comparison across one more axis of variation beyond seed — a second train-period slice (reuses the rolling-slice check named in [05 A17](05-Weakness Analysis.md), once built) or a second training-symbol subset — and confirm the **ranking**, not just each config's absolute KPI, holds.
-- A ranking that flips under the second condition is not a resolved winner yet, even if each run individually cleared the paired-test bar on its own slice — treat as "insufficient evidence to pick a winner," not "pick whichever wins more slices" (that reintroduces the multiple-comparison problem [05 A14](05-Weakness Analysis.md) already flags).
+- **protocol**: after [model-selection pipeline](04-Experimentation, Evaluation & Optimization.md#model-selection-pipeline) step 2 (finalists re-run across ≥3 seeds), re-run the top 2–3 finalists' seed comparison across one more axis of variation beyond seed — a second train-period slice (reuses the rolling-slice check named in [05 A17](99-Weakness Analysis.md), once built) or a second training-symbol subset — and confirm the **ranking**, not just each config's absolute KPI, holds.
+- A ranking that flips under the second condition is not a resolved winner yet, even if each run individually cleared the paired-test bar on its own slice — treat as "insufficient evidence to pick a winner," not "pick whichever wins more slices" (that reintroduces the multiple-comparison problem [05 A14](99-Weakness Analysis.md) already flags).
 - **budget**: 2–3 finalists × 1 extra axis, from the same "finalists post-search only" reserve already carved out under [statistical validity](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons) — not a second full search.
   Alt: trust the single-split ranking once it clears the paired-test bar — rejected as sole criterion, conflates "beats its peer on this slice" with "reliably beats its peer."
 
@@ -591,7 +597,7 @@ Extends the one-off worked example under [hardware constraints](#hardware-constr
 Required alongside the [design checklist](#per-candidate-requirements)'s existing "param-count order-of-magnitude estimate," all obtainable from the same `profile_trial_cost()` pass already run for [hyperparam search-space bounds](04-Experimentation, Evaluation & Optimization.md#hyperparam-search-space-bounds):
 
 - **activation memory** — batch × seq × d_model, the term the hardware-constraints worked example already flags as dominant.
-- **attention/sequence complexity, measured not assumed** — sub-quadratic candidates (Mamba/S4, Informer, linear attention) should report measured throughput at matched param count on this card, not just cite their asymptotic complexity class; an O(n) mechanism with a large constant factor can lose to O(n²) at this project's sequence length (≤256/tf × 6 tf branches).
+- **attention/sequence complexity, measured not assumed** — sub-quadratic candidates (Mamba/S4, Informer, linear attention) should report measured throughput at matched param count on this card, not just cite their asymptotic complexity class; an O(n) mechanism with a large constant factor can lose to O(n²) at this project's sequence length (256/tf placeholder default × 6 tf branches; larger and non-uniform once per-tf window length is tuned — see [multi-timeframe fusion](#multi-timeframe-fusion) → "per-tf window length").
 - **wall-clock throughput** (examples/sec at the VRAM-fitting batch size) — the actual per-trial cost `estimate_total_budget()` needs.
 
 Purpose: stop a param-count-cheap candidate from being credited with "efficiency" purely on asymptotic reputation if its measured profile on this hardware/sequence-length doesn't actually beat a param-count-larger candidate — asymptotic complexity is a prior for what to test, not a substitute for the profiler's number.
@@ -604,7 +610,7 @@ Formalizes what's already this doc's implicit default for backend combination ([
 - **rule**: given two candidates whose backtested-KPI distributions are not distinguishable by the [statistical validity](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons) paired test (CI includes zero), prefer the simpler one — fewer non-zero `stage_config` slots, lower param count, cheaper [combination strategy](#combination-strategy) tier (single-backend-wins < late-ensembling < MoE/distillation, ascending cost).
 - **complexity must clear the noise floor, not just beat the mean** — a more complex candidate is accepted over a simpler one only if (a) it wins outside the paired-test CI, **and** (b) [component-independence testing](#component-independence-testing) shows the win isn't attributable to one dominant stage a simpler candidate could also carry (in which case, adopt that one stage into the simpler candidate instead of the whole combination).
 - Applies at every layer this doc scores candidates: activation choice, capacity rung, attention mechanism, backend-combination strategy.
-  Alt: prefer whichever candidate has the single highest point-estimate KPI, complexity untiebroken — rejected, this is the same backtest-overfitting risk [05 A14](05-Weakness Analysis.md) already flags: with enough candidates tested, some more-complex one wins by noise alone.
+  Alt: prefer whichever candidate has the single highest point-estimate KPI, complexity untiebroken — rejected, this is the same backtest-overfitting risk [05 A14](99-Weakness Analysis.md) already flags: with enough candidates tested, some more-complex one wins by noise alone.
 
 ## Glossary
 

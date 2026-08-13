@@ -1,6 +1,6 @@
 # ML_Forecasting_System_Design — Topic Coverage & Gaps
 
-See [05-Weakness Analysis.md](05-Weakness Analysis.md) for importance-rated gaps and missing technique comparisons built on this doc.
+See [99-Weakness Analysis.md](99-Weakness Analysis.md) for importance-rated gaps and missing technique comparisons built on this doc.
 
 ## 1. Problem & Objective Engineering
 
@@ -118,6 +118,8 @@ The existing data document covers Binance OHLCV, historical depth, completed-can
   - different windows per timeframe.
 - Relationship between context length, useful information, compute cost, and overfitting.
 
+Per-tf window length is now flagged as an Optuna search dimension (uniform / independent-per-tf / tapering-schedule candidates), not fixed at the prior 256/tf default — see [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion) → "per-tf window length". Still missing: the systematic comparison methodology itself (this section's actual ask) — the doc above names candidate schemes and the profiler-driven discipline to test them, not yet a completed comparison.
+
 ### 2.9 Multi-symbol generalization **missing**
 
 - Formal testing methodology for:
@@ -199,7 +201,7 @@ Seven-cause checklist with a cheapest-first testing order now in [03 § architec
   - label variants.
 - Detecting architecture choices that win only under one experimental condition.
 
-Distinguished from the general ≥3-seeds-per-config discipline in [statistical validity of comparisons](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons) — that tests one split, this tests whether the *ranking* survives a second axis of variation. Protocol in [03 § cross-seed and cross-condition robustness](03-Model & Architecture Engineering.md#cross-seed-and-cross-condition-robustness).
+Distinguished from the general ≥3-seeds-per-config discipline in [statistical validity of comparisons](04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons) — that tests one split, this tests whether the _ranking_ survives a second axis of variation. Protocol in [03 § cross-seed and cross-condition robustness](03-Model & Architecture Engineering.md#cross-seed-and-cross-condition-robustness).
 
 ### 3.7 Parameter-count vs effective-capacity analysis
 
@@ -213,7 +215,7 @@ Required per-candidate comparison (activation memory, measured throughput at mat
 - When a simpler model should be preferred despite slightly lower statistical performance.
 - Minimum-complexity rule for accepting architectural improvements.
 
-Minimum-complexity rule (prefer the simpler candidate unless the more complex one clears the paired-test CI *and* isn't attributable to one dominant component) now in [03 § simplification rule](03-Model & Architecture Engineering.md#simplification-rule), generalizing the combination-strategy doc's existing single-backend-wins default.
+Minimum-complexity rule (prefer the simpler candidate unless the more complex one clears the paired-test CI _and_ isn't attributable to one dominant component) now in [03 § simplification rule](03-Model & Architecture Engineering.md#simplification-rule), generalizing the combination-strategy doc's existing single-backend-wins default.
 
 ---
 
@@ -552,14 +554,14 @@ Crypto markets can shift between trend/range/volatility regimes, so a model that
 
 ## Coverage Summary
 
-| Area                                                         | Current status                                                                                                                               |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Problem & Objective Engineering                              | Core definition exists; target-selection and objective-alignment methodology need expansion                                                  |
-| Data, Label & Feature Engineering                            | Substantial coverage; data provenance, feature stability, leakage depth, and systematic target/input selection need expansion                |
+| Area                                                         | Current status                                                                                                                                                                                          |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Problem & Objective Engineering                              | Core definition exists; target-selection and objective-alignment methodology need expansion                                                                                                             |
+| Data, Label & Feature Engineering                            | Substantial coverage; data provenance, feature stability, leakage depth, and systematic target/input selection need expansion                                                                           |
 | Model & Architecture Engineering                             | Strong coverage, incl. architecture-selection mapping, capacity sizing, component-independence testing, failure diagnosis, cross-condition robustness, effective-capacity analysis, simplification rule |
-| Training Engineering                                         | Core mechanisms exist; training-strategy, stability, initialization, sampling, and loss-weight methodology need expansion                    |
-| Experimentation, Evaluation & Optimization Engineering       | Strongest-covered area; experiment hierarchy, budget allocation, stopping rules, error taxonomy, and optimization-overfitting need expansion |
-| Deployment, Monitoring & Continuous Learning                 | Explicitly excluded                                                                                                                          |
-| Decision/System Architecture                                 | Explicitly excluded                                                                                                                          |
-| Security / MLOps / RL / LLM / AutoML / Production validation | Explicitly excluded                                                                                                                          |
-| Transaction costs / risk sizing / regime retraining          | Deferred                                                                                                                                     |
+| Training Engineering                                         | Core mechanisms exist; training-strategy, stability, initialization, sampling, and loss-weight methodology need expansion                                                                               |
+| Experimentation, Evaluation & Optimization Engineering       | Strongest-covered area; experiment hierarchy, budget allocation, stopping rules, error taxonomy, and optimization-overfitting need expansion                                                            |
+| Deployment, Monitoring & Continuous Learning                 | Explicitly excluded                                                                                                                                                                                     |
+| Decision/System Architecture                                 | Explicitly excluded                                                                                                                                                                                     |
+| Security / MLOps / RL / LLM / AutoML / Production validation | Explicitly excluded                                                                                                                                                                                     |
+| Transaction costs / risk sizing / regime retraining          | Deferred                                                                                                                                                                                                |

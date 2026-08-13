@@ -71,7 +71,7 @@ MVC doesn't fit (no request/response UI cycle) — layer by dependency direction
 Application (dataset generation, training, prediction, optimization, backtesting orchestration) →
 Infrastructure (exchange/data-fetch, model-artifact persistence, config, logging) → Presentation
 (plotting, entrypoints). Full layer-to-module mapping and placement rules: the `code-layers` skill;
-migration order/cleanup plan: [todos/infrastructure.md](todos/infrastructure.md#todo) item 12.
+migration order/cleanup plan: [todos/infrastructure.md](todos/03-infrastructure.md#todo) item 12.
 
 ### SOA
 

@@ -2,7 +2,7 @@
 
 Closing the gap between [error-rating-and-evaluation.md](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md) (the metrics
 philosophy: per-head dev diagnostics vs. backtested trading KPIs as the real target) and what actually
-exists to compute either. See [master-todo.md](master-todo.md). This is the single biggest structural
+exists to compute either. See [00-master-todo.md](00-master-todo.md). This is the single biggest structural
 gap in the whole project: every model-selection decision elsewhere is provisionally routed through
 `val_loss` because the thing that's supposed to replace it doesn't exist yet.
 
@@ -14,15 +14,15 @@ gap in the whole project: every model-selection decision elsewhere is provisiona
 
 1. **Write a `backtest-module-design.md`** before any code: fill-simulation assumptions (matching
    [training-data.md § targeting bid price](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#targeting-bid-price)'s limit-order
-   entry model once that lands, see [training-data-labels.md](training-data-labels.md)), position
+   entry model once that lands, see [02-training-data-labels.md](02-training-data-labels.md)), position
    accounting across overlapping label windows (multiple anchor candles can each open a hypothetical
    position — decide how concurrent/overlapping simulated positions are accounted for, capital
    allocation per position), and walk-forward mechanics against the resolved
    [validation & train/test splitting](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#validation--traintest-splitting)
    scheme. Do this before sinking GPU-hours into Stage-1 profiling
-   ([model-architecture.md](model-architecture.md)) that this module will eventually have to re-judge.
+   ([04-model-architecture.md](04-model-architecture.md)) that this module will eventually have to re-judge.
 2. **Integrate `vectorbt`** (named but "not yet integrated, no imports in codebase" per
-   [infrastructure.md § vectorbt](infrastructure.md#todo)) as the backtest engine, or explicitly decide
+   [infrastructure.md § vectorbt](03-infrastructure.md#todo)) as the backtest engine, or explicitly decide
    against it and name the alternative — currently an open placeholder, not a resolved choice.
 3. **Implement `expectancy/trade`** (primary KPI) from simulated trades — average R-multiple/% gained
    per trade opportunity including losers, per
@@ -35,7 +35,7 @@ gap in the whole project: every model-selection decision elsewhere is provisiona
 7. **Wire per-head statistical metrics** (dev diagnostics, not selection criteria) per
    [error-rating-and-evaluation.md § per-head statistical metrics](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#per-head-statistical-metrics-dev-diagnostics):
    quantile/pinball loss + MAE/MSE companion for price-level heads (TP/SL/MAE/OM/aux-MFE once
-   [training-data-labels.md](training-data-labels.md) lands), Brier vs. log-loss for
+   [02-training-data-labels.md](02-training-data-labels.md) lands), Brier vs. log-loss for
    probability/confidence heads, cross-entropy vs. focal vs. class-weighted-CE for the action head.
 8. **Replace the `val_loss` interim proxy in `compute_fitness()`** (see appendix) with the weighted-sum
    per-head metric from step 7 once it exists, still explicitly interim until the backtest module (steps
@@ -45,8 +45,8 @@ gap in the whole project: every model-selection decision elsewhere is provisiona
    backtested-KPI distributions never a single train-loss number, per
    [error-rating-and-evaluation.md § statistical validity of comparisons](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#statistical-validity-of-comparisons).
    This is the shared discipline every A/B decision across
-   [model-architecture.md](model-architecture.md) and
-   [input-data-channels.md](input-data-channels.md) depends on — build once, reuse everywhere, don't
+   [04-model-architecture.md](04-model-architecture.md) and
+   [01-input-data-channels.md](01-input-data-channels.md) depends on — build once, reuse everywhere, don't
    let each topic reinvent it.
 10. **Wire the model-selection pipeline end to end**: search-time per-head losses → finalist re-run
     across ≥3 seeds → backtested-KPI comparison → Validation A + Validation B selection (both must
@@ -60,14 +60,14 @@ gap in the whole project: every model-selection decision elsewhere is provisiona
     (quantile GBM first — reuses the pinball-loss work from step 7 — then NGBoost), **or** the
     primary-DL-head probabilistic `MFE`/`MAE` alternative (mean/std/skew/kurtosis, added incrementally —
     see [training-data.md § model output targets](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#model-output-targets),
-    [05 B9](../ML_Forecasting_System_Design/05-Weakness Analysis.md)), which derives TP/SL
+    [05 B9](../ML_Forecasting_System_Design/99-Weakness Analysis.md)), which derives TP/SL
     probability/risk directly from the fitted distribution instead of a separate GBM detour. Implement
     Brier score / log-loss / calibration-curve (ECE) measurement against whichever is picked, per
     [error-rating-and-evaluation.md § confidence & calibration metrics](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#confidence--calibration-metrics).
 12. **Add the no-lookahead regression test to CI**, once written in
-    [input-data-channels.md](input-data-channels.md) todo step 6 and
-    [training-data-labels.md](training-data-labels.md) todo step 11 — wire both into whatever gate
-    `xenon` already runs, per [infrastructure.md](infrastructure.md), so this stays a permanent CI check
+    [01-input-data-channels.md](01-input-data-channels.md) todo step 6 and
+    [02-training-data-labels.md](02-training-data-labels.md) todo step 11 — wire both into whatever gate
+    `xenon` already runs, per [03-infrastructure.md](03-infrastructure.md), so this stays a permanent CI check
     rather than a one-off script.
 
 ## appendix: current implementation status
@@ -75,7 +75,7 @@ gap in the whole project: every model-selection decision elsewhere is provisiona
 Verified against `app/` directly on 2026-08-12.
 
 - **`compute_fitness()`** ([optuna_optimizer.py](../../app/ai_modelling/parameter_optimizser/optuna_optimizer.py) —
-  confirmed present by direct grep, see [model-architecture.md](model-architecture.md)'s appendix) is
+  confirmed present by direct grep, see [04-model-architecture.md](04-model-architecture.md)'s appendix) is
   the only scoring mechanism that exists. Per
   [model-architecture-planning.md § optimization strategy](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#optimization-strategy),
   it's `val_loss`-based — the training-time proxy, explicitly interim per the docs' own framing, not the
@@ -84,10 +84,10 @@ Verified against `app/` directly on 2026-08-12.
   [infrastructure.md § vectorbt](../infrastructure.md#vectorbt--not-yet-integrated) as "planned... not
   in `requirements.txt`, no imports in codebase yet." Every selection decision described in
   [error-rating-and-evaluation.md](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md) is therefore aspirational, not
-  implemented — a fully worked-out evaluation *philosophy* with no evaluation *mechanism*.
+  implemented — a fully worked-out evaluation _philosophy_ with no evaluation _mechanism_.
 - **No per-head metric wiring exists** — no quantile/pinball loss, no Brier/log-loss, no per-head
   cross-entropy/focal split. The model trains against whatever single loss Keras is configured with for
-  `long_signal`/`short_signal` (see [training-data-labels.md](training-data-labels.md) appendix), not a
+  `long_signal`/`short_signal` (see [02-training-data-labels.md](02-training-data-labels.md) appendix), not a
   per-head breakdown.
 - **No confidence/calibration mechanism exists** — matches the "open gap" framing already in
   [error-rating-and-evaluation.md § confidence & calibration metrics](../ML_Forecasting_System_Design/04-Experimentation, Evaluation & Optimization.md#confidence--calibration-metrics)
