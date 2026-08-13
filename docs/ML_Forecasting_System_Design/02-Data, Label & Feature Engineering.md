@@ -126,9 +126,9 @@ Multi-horizon labels
 ### where can be a position?
 
 - NOW candle timeframe: 5 minutes.
-- for each NOW candle, use 4hours FUTURE knowledge (training-time only, not available at inference) to decide the candle's label: Long, Short, or None
+- for each NOW candle, use 240 minutes FUTURE knowledge (training-time only, not available at inference) to decide the candle's label: Long, Short, or None
 - earliest possible entry: the 5-minute candle immediately following NOW (a position cannot open before NOW has closed; verify with 1-minute candles during backtesting)
-- look forward boundary: 4H, exclusive of the boundary instant — e.g. NOW = 9:55-10:00 means the position must close before 14:00; the candle 13:55-14:00 is in-bounds, 14:00-14:05 is Timeout
+- look forward boundary: 240 minutes from NOW's close (a rolling window, not the next 4H candle), exclusive of the boundary instant — e.g. NOW = 10:20-10:25 means the position must close before 14:25; the candle 14:20-14:25 is in-bounds, 14:25-14:30 is Timeout
 - simulate opening a position at the targeted bid price (see targeting bid price) in each direction, applying trading overhead (see trading overhead): compute `MFE`, `SL`, `MAE`, `OM` per direction (see TP / MAE / OM labels)
 - a direction is a valid label only if `OM > 1` (MFE exceeds MAE — some favorable edge over adverse risk); if neither direction clears it, the candle is labeled None
 - tie-break when both directions clear `OM > 1`: pick whichever has the higher `OM`, zero the other direction's signal
@@ -155,7 +155,7 @@ Multi-horizon labels
 
 Per direction, computed from the FUTURE window (see [where can be a position?](#where-can-be-a-position)); favorable/adverse flips by direction — Long: favorable = higher price, adverse = lower price; Short: favorable = lower price, adverse = higher price.
 
-- `MFE` = maximum favorable price excursion during the 4H horizon
+- `MFE` = maximum favorable price excursion during the 240-minute horizon
 - `TP4 = E ± MFE` — the MFE endpoint (`+` Long, `-` Short)
 - `SL`, `MAE` = see [risk factors](#risk-factors)
 - `Risk = MAE × (1 + F) × V` (`V` = position volume, `F` = fee rate — see [trading overhead](#trading-overhead))
@@ -233,7 +233,7 @@ Purged validation
   Alt:
   - walk-forward / random-split-with-embargo within a single symbol's own history — previous approach, dropped as unnecessary complexity now that validation is cross-symbol
   - rotating leave-one-symbol-out across all pairs rather than always BTC/USDT — viable generalization check, deferred; BTC/USDT fixed as the validation symbol since it's the primary target market
-- **final holdout — resolved:** reserve the most-recent contiguous block of BTC/USDT (≥ several weeks, enough trade outcomes at 4H scale); never touches training-pair selection or any tuning decision; used exactly once, after arch/hparams/normalization/threshold are locked in from the BTC/USDT validation split, for final reported KPIs. Materially worse holdout result than validation = overfitting-to-tuning signal → investigate, don't re-tune against it (would require a fresh holdout).
+- **final holdout — resolved:** reserve the most-recent contiguous block of BTC/USDT (≥ several weeks, enough trade outcomes at 240-minute scale); never touches training-pair selection or any tuning decision; used exactly once, after arch/hparams/normalization/threshold are locked in from the BTC/USDT validation split, for final reported KPIs. Materially worse holdout result than validation = overfitting-to-tuning signal → investigate, don't re-tune against it (would require a fresh holdout).
   Alt: no separate final holdout, reporting the BTC/USDT validation KPIs directly as final (rejected — still risks overfitting through repeated validation-set tuning).
 
 ## Glossary
