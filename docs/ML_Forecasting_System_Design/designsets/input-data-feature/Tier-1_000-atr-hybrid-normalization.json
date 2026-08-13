@@ -1,6 +1,7 @@
 {
   "designset_id": "Tier-1_000-atr-hybrid-normalization",
   "status": "proposed",
+  "category": "input-data-feature",
   "prioritization": {
     "tier": 1,
     "raw": 9,

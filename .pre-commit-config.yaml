@@ -50,3 +50,10 @@ repos:
         entry: python -m pytest -m "unit or characterization or regression or smoke"
         pass_filenames: false
         files: ^(app/.*\.py|pytest\.ini)$
+
+      - id: sync-skill-files
+        name: sync mirrored skill files (single source of truth)
+        language: system
+        entry: sh scripts/git-hooks/sync-skill-files.sh
+        pass_filenames: false
+        files: ^(\.claude/skills/git-commit/SKILL\.md|\.github/git-commit/SKILL\.md)$
