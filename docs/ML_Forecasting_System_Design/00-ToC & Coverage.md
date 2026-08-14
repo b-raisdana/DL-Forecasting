@@ -146,7 +146,7 @@ The existing architecture document already covers candidate model families, inpu
   - hybrid architectures.
 - Matching architecture characteristics to observed market-pattern requirements.
 
-The [Decision Framework](04-Experimentation, Evaluation & Optimization.md#decision-framework) tiers candidates for funding; the observed-characteristic → mechanism mapping this section asked for now lives in [03 § architecture-selection methodology](03-Model & Architecture Engineering.md#architecture-selection-methodology), feeding that framework's `domain_fit` factor.
+The [Decision Framework](05-Prioritization Framework.md#decision-framework) tiers candidates for funding; the observed-characteristic → mechanism mapping this section asked for now lives in [03 § architecture-selection methodology](03-Model & Architecture Engineering.md#architecture-selection-methodology), feeding that framework's `domain_fit` factor.
 
 ### 3.2 Capacity selection
 

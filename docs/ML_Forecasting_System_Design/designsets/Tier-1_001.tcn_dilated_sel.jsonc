@@ -1,0 +1,258 @@
+{
+  "metadata": {
+    "design_set": "DS-02",
+    "name": "Plain TCN Dilated-Convolution Whole-Architecture Baseline",
+    "version": "1.0.0",
+    "description": "Whole-architecture Stage-1 candidate (current Stage-1 candidate set table, 05-Prioritization Framework.md#current-stage-1-candidate-set): plain dilated-causal-conv TCN, adjusted score 11 / Tier 1 — the doc's single highest Tier-1 score, tied with this same block's appearance in the local-feature-extraction table and with GBM-family's LightGBM row; both of those are already embedded in the Tier-1_000 reference (local_extraction=ModernTCN, auxiliary_model=LightGBM), so this whole-architecture row is the first queue entry that isn't already satisfied by the reference (see PROMPT.md step 3's skip rule). Per 03-Model & Architecture Engineering.md#architecture-candidates 'TCN' entry: stage_config {embedding:\"linear\", local_extraction:\"tcn_dilated\", sequential:0, attention:0, fusion:\"concat_mlp\", global_repr:\"pool\"} — no LSTM, no cross-tf attention, no Perceiver latent-bottleneck fusion, unlike the Tier-1_000 hybrid reference. Hyperparameters below are 03's own published S1 (depth-heavy) profile, copied verbatim rather than invented — unlike ModernTCN in the reference, plain TCN already has doc-stated numbers."
+  },
+  "preprocessed_input": "input-data-feature/Tier-1_000.hand-made.input.jsonc",
+  "outcome_heads": "outcome-label-target-head/Tier-1_000.hand-made.outcome.jsonc",
+  "auxiliary_features": {
+    "source": "preprocessed_input.candle_dataset, LAST candle only per timeframe branch (not the full window), flattened across all 6 branches",
+    "role": "shared tabular snapshot feeding prediction_head.MLP's optional_auxiliary_features input and the LightGBM specialist — GBM operates on flattened features, distinct from the sequence-respecting TCN branches"
+  },
+  "the_model": {
+    "per_timeframe_processing": {
+      "architecture": "independent_parallel_branches",
+      "branches": {
+        "5m_encoded_sequence": {
+          "temporal_encoder": [
+            {
+              "embedding": "linear_projection_to_d_model"
+            },
+            {
+              "local_feature_extraction": "TCN_dilated_causal_conv"
+            }
+          ]
+        },
+        "15m_encoded_sequence": {
+          "temporal_encoder": [
+            {
+              "embedding": "linear_projection_to_d_model"
+            },
+            {
+              "local_feature_extraction": "TCN_dilated_causal_conv"
+            }
+          ]
+        },
+        "1H_encoded_sequence": {
+          "temporal_encoder": [
+            {
+              "embedding": "linear_projection_to_d_model"
+            },
+            {
+              "local_feature_extraction": "TCN_dilated_causal_conv"
+            }
+          ]
+        },
+        "4H_encoded_sequence": {
+          "temporal_encoder": [
+            {
+              "embedding": "linear_projection_to_d_model"
+            },
+            {
+              "local_feature_extraction": "TCN_dilated_causal_conv"
+            }
+          ]
+        },
+        "1D_encoded_sequence": {
+          "temporal_encoder": [
+            {
+              "embedding": "linear_projection_to_d_model"
+            },
+            {
+              "local_feature_extraction": "TCN_dilated_causal_conv"
+            }
+          ]
+        },
+        "1W_encoded_sequence": {
+          "temporal_encoder": [
+            {
+              "embedding": "linear_projection_to_d_model"
+            },
+            {
+              "local_feature_extraction": "TCN_dilated_causal_conv"
+            }
+          ]
+        }
+      }
+    },
+    "fusion": {
+      "multitimeframe_fusion": {
+        "ConcatMLP": {
+          "mechanism": "concatenation_then_dense_projection",
+          "inputs": [
+            "5m_encoded_sequence",
+            "15m_encoded_sequence",
+            "1H_encoded_sequence",
+            "4H_encoded_sequence",
+            "1D_encoded_sequence",
+            "1W_encoded_sequence"
+          ],
+          "projection": {
+            "Dense": "d_model",
+            "activation": "gelu"
+          },
+          "role": "cheapest fusion mechanism per stage_config.fusion=\"concat_mlp\" — no cross-attention, no learned latent bottleneck; the natural first arch to profile before the pricier Perceiver/cross-attn options in the Tier-1_000 reference"
+        }
+      }
+    },
+    "dependency_modeling": {
+      "attention": "n/a — stage_config.attention = 0 for this candidate; the TCN dilated-conv stack (dilation = 2^level up to num_dilated_levels-1) already supplies the long-range receptive field, per 03-Model & Architecture Engineering.md#architecture-candidates 'TCN' entry",
+      "regularization_and_stabilization": {
+        "training_stability": {
+          "normalization": "none specified in 03's local_extract_tcn pseudocode — TCN relies on residual connections + dropout for stability, not an explicit LayerNorm/BatchNorm layer",
+          "residual_connections": {
+            "skip_connections": "enabled — per-dilation-level residual add (x = residual + y); a 1x1 Conv1D projects the residual when its channel count differs from hidden_channels"
+          },
+          "dropout": {
+            "standard_dropout": "searchable"
+          }
+        }
+      },
+      "global_representation": {
+        "pooling": "searchable"
+      },
+      "prediction_head": {
+        "MLP": {
+          "fusion_concatenation": {
+            "inputs": [
+              "deep_temporal_representation",
+              "optional_auxiliary_features"
+            ]
+          },
+          "each_layer": [
+            {
+              "Dense": "searchable",
+              "activation": "searchable"
+            },
+            {
+              "Dropout": "searchable"
+            }
+          ],
+          "MLP_depth": "searchable",
+          "MLP_width": "searchable"
+        },
+        "output_heads": {
+          "defined_in": "Tier-1_000.hand-made.outcome.jsonc"
+        }
+      },
+      "auxiliary_model": {
+        "tabular_model": {
+          "GBM": {
+            "LightGBM": {
+              "inputs": "auxiliary_features",
+              "quantile_regression_loss": "pinball",
+              "outputs": [
+                "q10",
+                "q50",
+                "q90"
+              ],
+              "integration": {
+                "external_ensemble": {
+                  "inside_tensorflow_graph": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ensemble": {
+      "model_combination": {
+        "deep_model_plus_GBM": {
+          "components": [
+            "Keras_temporal_model",
+            "LightGBM_tabular_model"
+          ],
+          "combination": {
+            "calibrated_ensemble": {
+              "weighting": "searchable"
+            }
+          }
+        }
+      }
+    },
+    "training": {
+      "optimization": {
+        "optimizer": "searchable",
+        "scheduler": {
+          "learning_rate_schedule": "searchable"
+        },
+        "mixed_precision": "enabled",
+        "gradient_clipping": {
+          "enabled": true,
+          "norm": "searchable"
+        }
+      }
+    }
+  },
+  "experiment_controller": {
+    "hyperparameter_optimization": {
+      "Optuna": {
+        "pruning": {
+          "enabled": true,
+          "role": "terminate_unpromising_trials_early"
+        }
+      }
+    }
+  },
+  "searchable_architecture_parameter_sets": {
+    // stepping convention (base * 4 / base / 4 per level): see PROMPT.md § Precise sizing convention
+    // TCN_hidden_channels/kernel_size/num_dilated_levels base values are 03-Model & Architecture Engineering.md's own published S1 (depth-heavy) profile for the "TCN" candidate, copied verbatim
+    "1-base": {
+      "input_set": 1, // 2, 3, 4 — selects a variation from preprocessed_input's "variations"
+      "TCN_hidden_channels": 40, // 10, 160
+      "TCN_kernel_size": 3, // 3, 9 - intentionally is not stepped by 4; 03's own S1/S2 use 3, S3 uses 9 for this candidate
+      "TCN_num_dilated_levels": 10, // 3, 12 - capped below raw x4's 40: dilation grows as 2^level, so past ~12 levels the receptive field already exceeds the whole per-tf window
+      // TCN's own dilated-conv block hardcodes ReLU internally (03's local_extract_tcn pseudocode) — not part of the shared "activation" dimension below, which governs the MLP head only
+      "MLP_depth": 4, // 2, 8 - intentionally is not stepped by 4.
+      "MLP_width": 512, // 128, 2048
+      "dropout": 0.1, // 0.0, 0.5
+      "activation": "GELU", // ReLU, LeakyReLU, ELU
+      "pooling_method": "searchable", // mean, max, attention — no last_token: stage_config.global_repr="pool" for this candidate (03's TCN entry), unlike LSTM's stage_config.global_repr="last_token"
+      "batch_size": 128, // 32, 512
+      "learning_rate": 0.0003, // 0.00001, 0.001
+      "weight_decay": 0.0001, // 0.0, 0.01
+      "optimizer": "AdamW", // SGD, Adam, RMSprop
+      "scheduler": "cosine", // step, exponential
+      "gradient_clip_norm": 1.0, // 0.1, 5.0
+      "outcome_set": 1, // 2 — selects a set from outcome_heads
+      "ensemble_weighting": "validation_optimized_scalar" // fixed_equal_weight, stacked_meta_learner
+    }
+  },
+  "complete_flow": [
+    "preprocessed_inputs",
+    "six_parallel_timeframe_branches",
+    "linear_embedding_projection",
+    "TCN_dilated_causal_conv_local_feature_extraction",
+    "concat_mlp_cross_timeframe_fusion",
+    "searchable_pooling",
+    "prediction_head",
+    "task_specific_prediction_heads",
+    "LightGBM_tabular_specialist",
+    "calibrated_deep_model_GBM_ensemble",
+    "Optuna_hyperparameter_optimization"
+  ],
+  "visualized": [
+    "INPUT",
+    "    │",
+    "    ▼",
+    "┌──────────────────────────────────────────────────────┐",
+    "│              SIX PARALLEL TIMEFRAME BRANCHES         │",
+    "│                                                      │",
+    "│  5m  → linear embed → TCN dilated conv ─┐            │",
+    "│ 15m  → linear embed → TCN dilated conv ─┤            │",
+    "│  1H  → linear embed → TCN dilated conv ─┤            │",
+    "│  4H  → linear embed → TCN dilated conv ─┼→ concat+MLP│",
+    "│  1D  → linear embed → TCN dilated conv ─┤   fusion   │",
+    "│  1W  → linear embed → TCN dilated conv ─┘            │",
+    "└──────────────────────────────────────────────────────┘",
+    "    │",
+    "    ▼",
+    "pooling (searchable)",
+    "    │",
+    "    ▼",
+    "MLP projection"
+  ]
+}
