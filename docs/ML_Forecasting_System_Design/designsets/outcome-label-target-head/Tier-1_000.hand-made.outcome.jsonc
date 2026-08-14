@@ -14,14 +14,12 @@
         "mean_std_pairs": {
             "heads": [
                 "mfe",
-                "rf" // rf = risk_fraction = mae/mfe (reciprocal of om). Bounded (0,1) by construction — a valid long/short label requires om>1, i.e. mfe>mae — typically well under 1, often <0.5 or <0.3
+                "rer" // rer = risk_edge_ratio = mae/(mfe-mae)
             ],
             "task": "heteroscedastic_regression",
-            "activation": "softplus on mfe's mean and std — unbounded non-negative excursion magnitude; sigmoid on rf's mean — bounded (0,1) risk fraction, softplus on rf's std — non-negative uncertainty. Same softplus/gaussian_nll support mismatch already accepted for mae/mfe non-negativity, extended to rf's (0,1) bound",
+            "activation": "softplus on mfe's mean and std; sigmoid on rer's mean; softplus on rer's std",
             "loss": "gaussian_nll (mean+std trained jointly per pair, not two independent MSE heads)",
             "loss_weight": 1.0
-            // mae = rf × mfe — derived, numerically stable: multiplying by a bounded (0,1) factor only shrinks error, never amplifies it. (Predicting mae directly and deriving mfe = mae / rf was rejected — dividing by a value routinely <0.3 amplifies prediction error.)
-            // om (Opportunity Multiple) = mfe/mae = 1/rf — derived from ground-truth mfe/mae for test-set confirmation; never a trained head, per 02-Data, Label & Feature Engineering.md § model output targets ("OM stays derived from MFE/MAE"). Avoid reconstructing om as 1/rf from predictions — same near-zero-denominator instability as above.
         },
     },
     "2": {
@@ -39,14 +37,12 @@
         "mean_std_skew_kurtosis_pairs": {
             "heads": [
                 "mfe",
-                "rf" // rf = risk_fraction = mae/mfe (reciprocal of om). Bounded (0,1) by construction — a valid long/short label requires om>1, i.e. mfe>mae — typically well under 1, often <0.5 or <0.3
+                "rer" // rer = risk_edge_ratio = mae/(mfe-mae)
             ],
             "task": "heteroscedastic_regression",
-            "activation": "softplus on mfe's mean/std — unbounded non-negative excursion magnitude; sigmoid on rf's mean — bounded (0,1) risk fraction, softplus on rf's std; skewness/kurtosis shape params constrained per the chosen skew-t/Pearson-system parameterization",
+            "activation": "softplus on mfe's mean/std; sigmoid on rer's mean; softplus on rer's std; skewness/kurtosis per the chosen skew-t/Pearson-system parameterization",
             "loss": "skew-t / Pearson-system NLL (4-parameter head per target — mean, std, skewness, kurtosis trained jointly, not four independent heads; final stage of the incremental moment build-out from mean_std_pairs, added only if it earns its keep — see 02-Data, Label & Feature Engineering.md § model output targets)",
             "loss_weight": 1.0
-            // mae = rf × mfe — derived, numerically stable (multiplying by a bounded (0,1) factor only shrinks error). Predicting mae directly and deriving mfe = mae / rf was rejected — dividing by a value routinely <0.3 amplifies prediction error.
-            // om (Opportunity Multiple) = mfe/mae = 1/rf — derived from ground-truth mfe/mae for test-set confirmation only — never a trained head, per 02-Data, Label & Feature Engineering.md § model output targets. Avoid reconstructing om as 1/rf from predictions, same near-zero-denominator instability as above.
         }
     }
 }

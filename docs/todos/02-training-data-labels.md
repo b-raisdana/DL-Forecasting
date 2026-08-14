@@ -64,12 +64,12 @@ a direct, self-contained code fix against the already-written spec.
    neither the old double-secure formula nor the new risk-side-only one).
 6. **Add `OM = MFE / MAE`.** Trivial once steps 3-4 land — a new column, no new logic beyond the
    division.
-7. **Replace the direction-validity gate with `OM > 1`.** Swap `profit_n_loss()`'s current "loser"
-   condition (`weighted_profit <= 0 or risk > max_risk`) for `OM <= 1` per
+7. **Replace the direction-validity gate with `OM > 5`.** Swap `profit_n_loss()`'s current "loser"
+   condition (`weighted_profit <= 0 or risk > max_risk`) for `OM <= 5` per
    [training-data.md § where can be a position?](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#where-can-be-a-position). Confirm
-   whether `max_risk` is still needed for anything else before removing it, or whether `OM > 1` fully
+   whether `max_risk` is still needed for anything else before removing it, or whether `OM > 5` fully
    replaces its role.
-8. **Single-label tie-break by `OM`.** When both directions have `OM > 1`, zero the signal of whichever
+8. **Single-label tie-break by `OM`.** When both directions have `OM > 5`, zero the signal of whichever
    has the lower `OM`, per the same spec section. Small, self-contained change once step 7 lands.
 9. **Wire the new primary/auxiliary targets into `training_datasets.py`.** `training_y_columns` and the
    `ys` construction at

@@ -8,7 +8,7 @@ The following areas are explicitly outside the current scope of the project.
 
 Idea: Pretrain the model on the project's large pool of unlabeled OHLCV before supervised training.
 Methods: Masked reconstruction, contrastive learning, TS2Vec / TimeMAE-style pretraining.
-Rationale: Could exploit unlabeled candles when clean OM > 1 action labels are scarce.
+Rationale: Could exploit unlabeled candles when clean OM > 5 action labels are scarce.
 Pipeline: Unlabeled OHLCV → Self-supervised pretraining → Fine-tuning → Trading heads
 Decision: Excluded from current architecture scope.
 Reason: Adds significant complexity and an additional training stage; not considered necessary for the current design.

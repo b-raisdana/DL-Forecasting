@@ -67,7 +67,7 @@ topic is downstream of [01-input-data-channels.md](01-input-data-channels.md) (i
     Run once step 1's skeleton exists, using the ≥3-seed protocol from
     [evaluation-metrics.md § statistical validity](05-evaluation-metrics.md#todo).
 11. **Class-imbalance prevalence measurement** — actual prevalence (% candles peak/valley per horizon,
-    % positions clearing `OM > 1`) isn't known yet; measure empirically via a data-profiling script once
+    % positions clearing `OM > 5`) isn't known yet; measure empirically via a data-profiling script once
     [02-training-data-labels.md](02-training-data-labels.md) lands, before finalizing the class-weight/focal
     choice in [model-architecture-planning.md § class imbalance handling](../ML_Forecasting_System_Design/02-Data, Label & Feature Engineering.md#class-imbalance-handling).
 12. **(decision) Cross-symbol validation split — potential leakage via shared calendar time.**

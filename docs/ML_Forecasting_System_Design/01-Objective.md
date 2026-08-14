@@ -3,7 +3,7 @@
 ## Trading prediction problem
 
 - **Price prediction**: not used — no raw-price target.
-- **Direction prediction**: derived, not modeled directly — Long/Short/None comes from a post-hoc rule (`OM > 1`, tie-break = higher `OM`) applied to regression outputs, not a classification head. See [02 § Label design](<02-Data, Label & Feature Engineering.md#label-design>).
+- **Direction prediction**: derived, not modeled directly — Long/Short/None comes from a post-hoc rule (`OM > 5`, tie-break = higher `OM`) applied to regression outputs, not a classification head. See [02 § Label design](<02-Data, Label & Feature Engineering.md#label-design>).
 - **Position prediction**: the direction call _is_ the position decision (Long/Short/None).
 - **Entry/exit prediction**: bundled, not separate — entry price + SL + full TP1–TP4 ladder are all committed as one decision at NOW-candle close (see [targeting bid price](<02-Data, Label & Feature Engineering.md#targeting-bid-price>)).
 - **Multi-horizon prediction**: named in spec ("Multi-horizon labels") but unresolved — horizon is fixed at 240 minutes (a rolling window from NOW, not the next 4H candle); systematic horizon selection is an open gap ([00-ToC §1.2](<00-ToC & Coverage.md>)).
@@ -30,7 +30,7 @@
 ## Problem decomposition
 
 - **One model vs multiple models**: one model today. MoE / late-ensemble is a Tier-2 candidate in [04](<04-Experimentation, Evaluation & Optimization.md>), unresolved.
-- **Direction + magnitude**: regression-then-rule, not joint heads — magnitude (`MAE`/`OM`/`MFE`) is regressed; direction is derived from `OM > 1`.
+- **Direction + magnitude**: regression-then-rule, not joint heads — magnitude (`MAE`/`OM`/`MFE`) is regressed; direction is derived from `OM > 5`.
 - **Entry + exit**: bundled into one decision at NOW close (entry + SL + TP1–TP4), not predicted separately.
 - **Trend + reversal**: out of scope — no such decomposition exists.
 - **Regime + prediction**: out of scope — no regime signal in the model (funding rate, changepoint/HMM regime detection are named-missing feature candidates, [05 A8/B6](<99-Weakness Analysis.md>)).

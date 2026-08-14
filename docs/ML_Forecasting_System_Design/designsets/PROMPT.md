@@ -151,7 +151,7 @@ Mandatory in every parameter-search bundle instead of the single-candidate table
   "objective": {"targets": ["MAE", "OM", "MFE"], "horizon_min": 240, "formulation": "point|probabilistic"},
   "data": {"symbol_universe": "...", "snapshot_policy": "...", "split_scheme": "4-way", "purge_embargo_candles": 48, "uniqueness_weighting": true},
   "features": {"schema_version": "...", "feature_set": "...", "screening_status": "..."},
-  "labels": {"scheme": "MFE/MAE/OM", "horizon_min": 240, "om_threshold": 1, "class_imbalance_handling": "..."},
+  "labels": {"scheme": "MFE/MAE/OM", "horizon_min": 240, "om_threshold": 5, "class_imbalance_handling": "..."},
   "normalization": {"scheme": "...", "params": {}},
   "window": {"scheme": "uniform|independent-per-tf|tapering", "per_tf_length": {}},
   "architecture": {"stage_config": {"embedding": 0, "local_extraction": 0, "sequential": 0, "attention": 0, "fusion": 0, "global_repr": 0, "heads": {}}, "backbone_name": "...", "hyperparam_profile": "S1|S2|S3|custom", "param_count_estimate": "...", "activation": "..."},
