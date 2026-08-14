@@ -30,36 +30,36 @@ Returns
 
 each candle includes:
 
-- relative-HLC:
-  - C / ATR
-  - (H - C) / ATR
-  - (C - L) / ATR
+- relative OHLC (ATR-normalized; formal field names in parens):
+  - `normal_close` = close / ATR
+  - `open_gap` = gap from last close, (O − last-C) / ATR
+  - `high_normal_diff` (`H_d`) = (high − close) / ATR
+  - `low_normal_diff` (`L_d`) = (low − close) / ATR — signed relative to close (typically ≤ 0); replaces the earlier `(C − L)/ATR` convention
 - close: absolute close price without any change
-- gap from last close (O - last-C) / ATR
-- candle height / ATR
-- volume / ATR(volume) — assumes the data source provides per-candle volume; confirm before relying on this field.
-- is a top? which tf (minutes of highest confirmed tf; + peak / − valley)
+- candle height / ATR (`size`) = `H_d + L_d` — derived from the two diffs above, not stored as its own field (already flagged redundant, see feature-set completeness below)
+- volume / ATR(volume) (`V` — distinct from the label-design `V` = position volume, see [glossary](#glossary)) — assumes the data source provides per-candle volume; confirm before relying on this field.
+- is an extermum? (`if_extermom_mins`) which tf (minutes of highest confirmed tf; + peak / − valley)
   - no lookahead — confirmed peak/valley tf capped by elapsed time to anchor candle (see glossary). E.g. candle 4mo before anchor can confirm as 4M peak if it stayed max to anchor; candle 1wk before anchor capped at 1W. Causal by construction.
   - if not = 0
-- timeframe in minutes — only for multi-tf shared architectures; omitted for per-timeframe-branch architectures (branch identity already encodes tf, field would be constant/redundant there). See [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion).
-- 2 and 3 higher tfs tops time and price distances
+- timeframe in minutes (`tf_minutes`) — only for multi-tf shared architectures; omitted for per-timeframe-branch architectures (branch identity already encodes tf, field would be constant/redundant there). See [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion).
+- 2 and 3 higher tfs tops time and price distances (`higher_extermum_distance`: `price_distance`/`time_distance` × `plus2TF`/`plus3TF` × peak/valley)
   - tf ordered list: 5min, 15min, 1H, 4H, 1D, 1W, 1M, 4M, 1Y — note: this list is only used for peak/valley timeframe confirmation and the fields below; only the first 6 (5min–1W) are actual input series, per [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion).
     - eg. for 15mins, it is 4H and 1D
   - dont overlook future but we know about input duration
-  - time: +/- ~ number of candles before/after the top
-  - top volume strength
+  - time: +/- ~ number of candles before/after the extermum
+  - extermum volume strength
   - abs-time
   - natural-price-distance
   - normal-price-distance
   - abs-price
-- distance from anchor candle (minutes)
-- price distance / ATR from nearest previous top
+- distance from anchor candle (minutes) (`minute-idx`)
+- price distance / ATR from nearest previous extermom
   - nearest_top_distance = min(distance / ATR(in the tf of the peak) for tfs)
     - abs
     - natural price distance
     - normal price distance
   - nearest_top_tf = tf number of minutes of nearest peak
-  - nearest top volume strength
+  - nearest extermum volume strength
   - the same for nearest_valley_distance, and nearest_valley_tf
 
 ### feature-set completeness — testing
@@ -276,13 +276,14 @@ Purged validation
 - `TP1`-`TP4` = discrete execution scale-out levels between entry and the `MFE` endpoint (see [TP / MAE / OM labels](#tp--mae--om-labels))
 - HISTORY / NOW / FUTURE = already-closed candles / the candle we're in / not-yet-started candles
 - SL / TP = stop loss / take profit
-- ATR = pandas-ta.ATR(256) — the 256-period default currently matches the per-tf window-length default below; now that window length is a tunable/possibly-per-tf search dimension (see [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion) → "per-tf window length"), whether ATR period should track it or stay independently fixed is an open decision, not yet resolved
+- ATR = pandas-ta.ATR(256, input=close) — the 256-period default currently matches the per-tf window-length default below; now that window length is a tunable/possibly-per-tf search dimension (see [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion) → "per-tf window length"), whether ATR period should track it or stay independently fixed is an open decision, not yet resolved
 - anchor candle = last candle common to all per-tf input windows (each window extends backward from this shared point); the "as of" point for a prediction (training or live). Per-tf window length defaults to 256 candles, uniform across branches, but is now a tunable search dimension — see [multi-timeframe fusion](03-Model & Architecture Engineering.md#multi-timeframe-fusion) → "per-tf window length"
 - tf-ordered-list = 5min, 15min, 1H, 4H, 1D, 1W, 1M, 4M, 1Y
 - tf = timeframe
-- natural price distance = signed distance from a top: + = price higher than the top, − = lower (not adjusted for peak vs. valley)
-- normal price distance = natural price distance with sign flipped for valleys, so + always means "away from the top" for both peaks and valleys
-- volume strength of tops = SUM(volume) / ATR(volume) of the 2-tf-lower candles (e.g. 4H top → 15min) within ±256 top-tf candles, restricted to candles whose [L,H] overlaps the top's price range (peak-high/valley-low ± 2-tf-lower ATR(256))
+- `plus2TF(tf)` / `plus3TF(tf)` = the 2nd/3rd higher timeframe above `tf` in the tf-ordered-list, e.g. `plus2TF(15min) = 4H`, `plus3TF(15min) = 1D`
+- natural price distance = signed distance from an extermum: + = price higher than the extermum, − = lower (not adjusted for peak vs. valley)
+- normal price distance = natural price distance with sign flipped for valleys, so + always means "away from the extermum" for both peaks and valleys
+- volume strength of tops = SUM(volume) / ATR(volume) of the 2-tf-lower candles (e.g. 4H extermum → 15min) within ±256 extermum-tf candles, restricted to candles whose [L,H] overlaps the extermum's price range (peak-high/valley-low ± 2-tf-lower ATR(256))
 - Stage-1 = the current architecture-search phase; picks one whole model architecture from the candidate set (see "model architecture & selection")
 - S1/S2/S3 = hyperparameter-profile labels per Stage-1 architecture candidate: depth-heavy / width-heavy / context-heavy (see [Stage-1 candidate sets](03-Model & Architecture Engineering.md#stage-1-candidate-sets))
 - GBM = gradient boosting machine (LightGBM/XGBoost/CatBoost family) — see "auxiliary tabular models (GBM-family)"

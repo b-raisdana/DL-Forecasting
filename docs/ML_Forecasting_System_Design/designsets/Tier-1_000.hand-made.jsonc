@@ -1,0 +1,304 @@
+{
+  "metadata": {
+    "design_set": "DS-01",
+    "name": "Six-Timeframe Hybrid Temporal Model",
+    "version": "1.0.0",
+    "description": "A hybrid temporal model that processes six different timeframes in parallel, extracts local and sequential features using ModernTCN and LSTM, fuses the information using a Perceiver architecture, models dependencies with Grouped Query Attention (GQA), and produces predictions through task-specific heads."
+  },
+  "preprocessed_input": "input-data-feature/Tier-1_000.hand-made.input.jsonc",
+  "outcome_heads": "outcome-label-target-head/Tier-1_000.hand-made.outcome.jsonc",
+  "auxiliary_features": {
+    "source": "preprocessed_input.candle_dataset, LAST candle only per timeframe branch (not the full window), flattened across all 6 branches",
+    "role": "shared tabular snapshot feeding prediction_head.MLP's optional_auxiliary_features input and the LightGBM specialist — GBM operates on flattened features, distinct from the sequence-respecting LSTM/ModernTCN branches"
+  },
+  "the_model": {
+    "per_timeframe_processing": {
+      "architecture": "independent_parallel_branches",
+      "branches": {
+        "5m_encoded_sequence": {
+          "temporal_encoder": [
+            {
+              "local_feature_extraction": "ModernTCN"
+            },
+            {
+              "sequential_encoding": "LSTM"
+            }
+          ]
+        },
+        "15m_encoded_sequence": {
+          "temporal_encoder": [
+            {
+              "local_feature_extraction": "ModernTCN"
+            },
+            {
+              "sequential_encoding": "LSTM"
+            }
+          ]
+        },
+        "1H_encoded_sequence": {
+          "temporal_encoder": [
+            {
+              "local_feature_extraction": "ModernTCN"
+            },
+            {
+              "sequential_encoding": "LSTM"
+            }
+          ]
+        },
+        "4H_encoded_sequence": {
+          "temporal_encoder": [
+            {
+              "local_feature_extraction": "ModernTCN"
+            },
+            {
+              "sequential_encoding": "LSTM"
+            }
+          ]
+        },
+        "1D_encoded_sequence": {
+          "temporal_encoder": [
+            {
+              "local_feature_extraction": "ModernTCN"
+            },
+            {
+              "sequential_encoding": "LSTM"
+            }
+          ]
+        },
+        "1W_encoded_sequence": {
+          "temporal_encoder": [
+            {
+              "local_feature_extraction": "ModernTCN"
+            },
+            {
+              "sequential_encoding": "LSTM"
+            }
+          ]
+        }
+      }
+    },
+    "fusion": {
+      "multitimeframe_fusion": {
+        "Perceiver": {
+          "mechanism": "latent_bottleneck_cross_attention",
+          "pre_fusion": {
+            "timeframe_identity_embedding": {
+              "learnable_additive_embedding": {
+                "one_per_branch": true,
+                "dim": "LSTM_hidden_units", // "broadcast-added to every time-step of that branch's encoded_sequence, before concatenation into all_timeframe_sequences",
+                "role": "lets cross-attention tell which timeframe a key/value token came from — concatenating the 6 branches otherwise carries no identity signal. Intra-branch order is left to the LSTM's own recurrence, not re-encoded here."
+              }
+            }
+          },
+          "inputs": [
+            "5m_encoded_sequence",
+            "15m_encoded_sequence",
+            "1H_encoded_sequence",
+            "4H_encoded_sequence",
+            "1D_encoded_sequence",
+            "1W_encoded_sequence"
+          ],
+          "latent_representation": {
+            "learnable_latent_tokens": {
+              "Perceiver_latent_tokens": "searchable"
+            }
+          },
+          "cross_attention": {
+            "query": "latent_tokens",
+            "key": "all_timeframe_sequences",
+            "value": "all_timeframe_sequences"
+          },
+          "role": "compress_and_integrate_cross_timeframe_information"
+        }
+      }
+    },
+    "dependency_modeling": {
+      "attention": {
+        "GQA": {
+          "mechanism": "grouped_query_attention",
+          "purpose": [
+            "model_dependencies_between_latent representations",
+            "capture_global interactions",
+            "refine cross-timeframe representation"
+          ],
+          "layers": "searchable",
+          "heads": "searchable",
+          "kv_heads": "searchable"
+        }
+      },
+      "regularization_and_stabilization": {
+        "training_stability": {
+          "normalization": {
+            "LayerNorm": {
+              "placement": "pre_norm"
+            }
+          },
+          "residual_connections": {
+            "skip_connections": "enabled"
+          },
+          "dropout": {
+            "standard_dropout": "searchable"
+          }
+        }
+      },
+      "global_representation": {
+        "pooling": "searchable"
+      },
+      "prediction_head": {
+        "MLP": {
+          "fusion_concatenation": {
+            "inputs": [
+              "deep_temporal_representation",
+              "optional_auxiliary_features"
+            ]
+          },
+          "each_layer": [
+            {
+              "Dense": "searchable",
+              "activation": "searchable"
+            },
+            {
+              "Dropout": "searchable"
+            }
+          ],
+          "MLP_depth": "searchable",
+          "MLP_width": "searchable"
+        },
+        "output_heads": {
+          "defined_in": "Tier-1_000.hand-made.outcome.jsonc"
+        }
+      },
+      "auxiliary_model": {
+        "tabular_model": {
+          "GBM": {
+            "LightGBM": {
+              "inputs": "auxiliary_features",
+              "quantile_regression_loss": "pinball",
+              "outputs": [
+                "q10",
+                "q50",
+                "q90"
+              ],
+              "integration": {
+                "external_ensemble": {
+                  "inside_tensorflow_graph": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ensemble": {
+      "model_combination": {
+        "deep_model_plus_GBM": {
+          "components": [
+            "Keras_temporal_model",
+            "LightGBM_tabular_model"
+          ],
+          "combination": {
+            "calibrated_ensemble": {
+              "weighting": "searchable"
+            }
+          }
+        }
+      }
+    },
+    "training": {
+      "optimization": {
+        "optimizer": "searchable",
+        "scheduler": {
+          "learning_rate_schedule": "searchable"
+        },
+        "mixed_precision": "enabled",
+        "gradient_clipping": {
+          "enabled": true,
+          "norm": "searchable"
+        }
+      }
+    }
+  },
+  "experiment_controller": {
+    "hyperparameter_optimization": {
+      "Optuna": {
+        "pruning": {
+          "enabled": true,
+          "role": "terminate_unpromising_trials_early"
+        }
+      }
+    }
+  },
+  "searchable_architecture_parameter_sets": {
+    // stepping convention (base * 4 / base / 4 per level): see PROMPT.md § Rules
+    "1-base": {
+      "input_set": 1, // 2, 3, 4 — selects a variation from preprocessed_input's "variations"
+      "ModernTCN_kernel_size": 7, // 3, 11
+      "ModernTCN_depth": 8, // 2, 32
+      "ModernTCN_channels": 128, // 32, 512
+      "LSTM_layers": 4, // 1 - intentionally is not stepped by 4.
+      "LSTM_hidden_units": 256, // 64, 1024
+      "LSTM_bidirectional": false, // true
+      "Perceiver_latent_tokens": 64, // 16, 256
+      "Perceiver_latent_dim": 512, // 256, 2048
+      "Perceiver_cross_attention_layers": 8, // 2, 32
+      "GQA_layers": 8, // 2, 32
+      "GQA_heads": 8, // 32
+      "GQA_kv_heads": 2, // 8
+      // GQA model dimension = Perceiver_latent_dim
+      // Perceiver_latent_dim % GQA_heads == 0
+      // GQA_heads % GQA_kv_heads == 0
+      // GQA_kv_heads < GQA_heads
+      "MLP_depth": 4, // 2, 8 - intentionally is not stepped by 4.
+      "MLP_width": 512, // 128, 2048
+      "dropout": 0.1, // 0.0, 0.5
+      "activation": "GELU", // ReLU, LeakyReLU, ELU
+      "pooling_method": "last_token", // mean, max, attention
+      "batch_size": 128, // 32, 512
+      "learning_rate": 0.0003, // 0.00001, 0.001
+      "weight_decay": 0.0001, // 0.0, 0.01
+      "optimizer": "AdamW", // SGD, Adam, RMSprop
+      "scheduler": "cosine", // step, exponential
+      "gradient_clip_norm": 1.0, // 0.1, 5.0
+      "outcome_set": 1, // 2 — selects a set from outcome_heads
+      "ensemble_weighting": "validation_optimized_scalar" // fixed_equal_weight, stacked_meta_learner — see 03-Model & Architecture Engineering.md § combination strategies late_ensemble()
+    }
+  },
+  "complete_flow": [
+    "preprocessed_inputs",
+    "six_parallel_timeframe_branches",
+    "ModernTCN_local_feature_extraction",
+    "LSTM_sequential_encoding",
+    "Perceiver_cross_timeframe_fusion",
+    "GQA_global_dependency_modeling",
+    "searchable_pooling",
+    "prediction_head",
+    "task_specific_prediction_heads",
+    "LightGBM_tabular_specialist",
+    "calibrated_deep_model_GBM_ensemble",
+    "Optuna_hyperparameter_optimization"
+  ],
+  "visualized": [
+    "INPUT",
+    "    │",
+    "    ▼",
+    "┌────────────────────────────────────────────────────┐",
+    "│             SIX PARALLEL TIMEFRAME BRANCHES        │",
+    "│                                                    │",
+    "│  5m  → ModernTCN → LSTM ─┐                       │",
+    "│ 15m  → ModernTCN → LSTM ─┤                       │",
+    "│  1H  → ModernTCN → LSTM ─┤                       │",
+    "│  4H  → ModernTCN → LSTM ─┼→ Perceiver            │",
+    "│  1D  → ModernTCN → LSTM ─┤   latent bottleneck   │",
+    "│  1W  → ModernTCN → LSTM ─┘   cross-attention     │",
+    "└────────────────────────────────────────────────────┘",
+    "    │",
+    "    ▼",
+    "GQA / Attention",
+    "    │",
+    "    ▼",
+    "pooling",
+    "    │",
+    "    ▼",
+    "MLP projection"
+  ]
+}

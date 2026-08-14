@@ -198,3 +198,4 @@ Mandatory in every parameter-search bundle instead of the single-candidate table
 - If a topic's project-wide default has no doc-resolved value yet, use the doc's own stated placeholder/default and note it in `known_risks`, not a fabricated number.
 - A bundle's `search_space` must list every feasible option 04 names for that topic (not just the current default) — the point of a bundle is completeness, unlike a single-candidate row which isolates one axis.
 - `related_designsets` paths must point to files that already exist — this is why [step 0](#selection-algorithm) generates all 3 bundles before any `architecture-design` row that would need to cite them.
+- When a candidate's `hyperparam_profile`/`searchable_architecture_parameter_sets` states a base numeric value with implied search bounds, step those bounds by ×4 (not ×2) from the base in each direction — deliberately coarse now, to be fine-tuned with smaller steps later.

@@ -1,0 +1,96 @@
+{
+  "base_definitions": {
+    "extremum_highest_TF_minutes": "highest timeframe in minutes where the candle is an extremum (peak or valley). eg. for a 5-min candle that is a valley in 1H, it is -60.0",
+    "nearest_": "price-ranked eligible past extremum (peak or valley) with the smallest absolute price distance from the current close, subject to being at least plus2TF/plus3TF before NOW",
+    "last_": "time-ranked most recent eligible past extremum (peak or valley) in time, subject to being at least plus2TF/plus3TF before NOW",
+    "LAST": "the last 5-min candle before NOW assumed latest ended candle for training",
+    "tf ordered list": [
+      "5min",
+      "15min",
+      "1H",
+      "4H",
+      "1D",
+      "1W",
+      "1M",
+      "4M",
+      "1Y"
+    ],
+    "time_assumptions": {
+      "1M": "30D",
+      "1Y": "365D"
+    },
+    "plus2TF": "2nd higher timeframe. eg. plus2TF(5m)=1H plus2TF(1H)=1D",
+    "plus3TF": "3rd higher timeframe. eg. plus3TF(5m)=4H plus3TF(1H)=1W",
+    "ATR": "pandas-ta.ATR(high, low, close, length=256) of the candle's own timeframe at that candle",
+    "candle_dataset": {
+      "relative_OHLC": {
+        "relative_normal_close": "(close - LAST(close)) / ATR for LAST it is 0.0",
+        "open_gap": "(open - previous_candle_close) / ATR",
+        "high_normal_diff": "(high - close) / ATR",
+        "low_normal_diff": "(close - low) / ATR",
+        "size": "high_normal_diff + low_normal_diff"
+      },
+      "V": "log((volume + ε) / (same_tf_SMA(volume) + ε, 256))",
+      // "tf_minutes": "timeframe in number of minutes",
+      "higher_extremum_distance": {
+        "price_normal_distance": {
+          "plus2TF": {
+            "peak": "signed price distance of the close of the candle being encoded to nearest_plus2TF peak high / ATR(plus2TF)",
+            "valley": "signed price distance of the close of the candle being encoded to nearest_plus2TF valley low / ATR(plus2TF)"
+          },
+          "plus3TF": {
+            "peak": "signed price distance of the close of the candle being encoded to nearest_plus3TF peak high / ATR(plus3TF)",
+            "valley": "signed price distance of the close of the candle being encoded to nearest_plus3TF valley low / ATR(plus3TF)"
+          }
+        },
+        "time_distance": {
+          "plus2TF": {
+            "peak": "log1p(elapsed minutes from last_plus2TF peak / plus2TF_minutes)",
+            "valley": "log1p(elapsed minutes from last_plus2TF valley / plus2TF_minutes)"
+          },
+          "plus3TF": {
+            "peak": "log1p(elapsed minutes from last_plus3TF peak / plus3TF_minutes)",
+            "valley": "log1p(elapsed minutes from last_plus3TF valley / plus3TF_minutes)"
+          }
+        }
+      },
+      // "age_minutes": "minutes before NOW. eg. for LAST it is +5.0",
+      // "candle_offset": "age_minutes / tf_minutes - 1. eg. for LAST it is +0.0",
+      "extremum_weight": "if the candle is an extremum, assign a signed extremum weight = sign × log1p(extremum_highest_TF_minutes / tf_minutes) × min(1, age_minutes / extremum_highest_TF_minutes); positive for peaks, negative for valleys, zero if not an extremum"
+    }
+  },
+  "variations": {
+    "1": {
+      "5": "256 5min candle_dataset in this tf",
+      "15": "256 15min candle_dataset in this tf",
+      "60": "256 1H candle_dataset in this tf",
+      "240": "256 4H candle_dataset in this tf",
+      "1440": "256 1D candle_dataset in this tf",
+      "10080": "256 1W candle_dataset in this tf"
+    },
+    "2": {
+      "5": "128 5min candle_dataset in this tf",
+      "15": "128 15min candle_dataset in this tf",
+      "60": "128 1H candle_dataset in this tf",
+      "240": "128 4H candle_dataset in this tf",
+      "1440": "128 1D candle_dataset in this tf",
+      "10080": "128 1W candle_dataset in this tf"
+    },
+    "3": {
+      "5": "256 5min candle_dataset in this tf",
+      "15": "256 15min candle_dataset in this tf",
+      "60": "128 1H candle_dataset in this tf",
+      "240": "128 4H candle_dataset in this tf",
+      "1440": "64 1D candle_dataset in this tf",
+      "10080": "64 1W candle_dataset in this tf"
+    },
+    "4": {
+      "5": "512 5min candle_dataset in this tf",
+      "15": "512 15min candle_dataset in this tf",
+      "60": "256 1H candle_dataset in this tf",
+      "240": "128 4H candle_dataset in this tf",
+      "1440": "64 1D candle_dataset in this tf",
+      "10080": "64 1W candle_dataset in this tf"
+    }
+  }
+}
