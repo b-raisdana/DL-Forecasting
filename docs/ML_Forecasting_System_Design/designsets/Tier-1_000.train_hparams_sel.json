@@ -4,7 +4,7 @@
   "category": "architecture-design",
   "type": "parameter-search-bundle",
   "bundle_scope": {
-    "topic": "training hyperparameters, backbone-agnostic — batch size, epoch/early-stopping budget, mixed-precision, optimizer, learning rate, dropout, weight decay. Excludes model/backbone sizing (S1/S2/S3 profile, d_model, hidden_channels, num_layers, ...): those hyperparameter names and values are backbone-specific, so they're stated inline in each single-candidate row's own `architecture.hyperparam_profile`, never centralized here — a shared bundle entry would either duplicate what's already candidate-specific or be too vague to be useful (see e.g. Tier-1_002.tcn_modern_tcn_sel.json's own hidden_channels/kernel_size/num_dilated_levels).",
+    "topic": "training hyperparameters, backbone-agnostic — batch size, epoch/early-stopping budget, mixed-precision, optimizer, learning rate, dropout, weight decay. Excludes model/backbone sizing (S1/S2/S3 profile, d_model, hidden_channels, num_layers, ...): those hyperparameter names and values are backbone-specific, so they're stated inline in each single-candidate row's own `architecture.hyperparam_profile`, never centralized here — a shared bundle entry would either duplicate what's already candidate-specific or be too vague to be useful.",
     "parameter_optimization_source": ["Training parameters", "Learning rate", "Dropout", "Weight decay", "Optimizer"],
     "applies_to": "every Optuna trial across every architecture-design candidate (whole-architecture and sub-component rows alike), per 04 § optimization strategy's single-study-across-arch-and-hparams design"
   },
@@ -18,9 +18,9 @@
         "parameter": "batch_size",
         "options": [
           "Optuna-searched, ranged from profiler-measured per-arch/seq VRAM feasibility ceiling (profile_trial_cost()) down to floor 8-16",
-          "rough untested prior at the 256/tf uniform default: batch 16-64 fits small/med Transformer/TCN w/ mixed precision on the 8GB card"
+          "rough untested prior at the 256/tf uniform default: 6tf x 256candles x few scalars is a modest seq length; 8GB should fit small/med Transformer/TCN at batch 16-64 w/ mixed precision"
         ],
-        "rationale": "batch size is the primary VRAM lever, not param count (see hardware-constraints worked example); doc explicitly rejects pinning at max-feasible since largest != best-performing",
+        "rationale": "batch size, not param count, is the primary VRAM lever (every S1/S2/S3 profile is order ~0.1M-5M params, negligible against the 8GB card); doc explicitly rejects pinning at max-feasible since largest != best-performing",
         "source_anchor": "04-Experimentation, Evaluation & Optimization.md#batch-size-strategy"
       },
       {
