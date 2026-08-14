@@ -20,7 +20,7 @@
             "activation": "softplus on mfe's mean and std; sigmoid on rer's mean; softplus on rer's std",
             "loss": "gaussian_nll (mean+std trained jointly per pair, not two independent MSE heads)",
             "loss_weight": 1.0
-        },
+        }
     },
     "2": {
         "action_head": {
