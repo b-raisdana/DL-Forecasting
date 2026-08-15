@@ -3,7 +3,7 @@
     "design_set": "DS-02",
     "name": "Plain TCN Dilated-Convolution Whole-Architecture Baseline",
     "version": "1.0.0",
-    "description": "Whole-architecture Stage-1 candidate (current Stage-1 candidate set table, 05-Prioritization Framework.md#current-stage-1-candidate-set): plain dilated-causal-conv TCN, adjusted score 11 / Tier 1 — the doc's single highest Tier-1 score, tied with this same block's appearance in the local-feature-extraction table and with GBM-family's LightGBM row; both of those are already embedded in the Tier-1_000 reference (local_extraction=ModernTCN, auxiliary_model=LightGBM), so this whole-architecture row is the first queue entry that isn't already satisfied by the reference (see PROMPT.md step 3's skip rule). Per 03-Model & Architecture Engineering.md#architecture-candidates 'TCN' entry: stage_config {embedding:\"linear\", local_extraction:\"tcn_dilated\", sequential:0, attention:0, fusion:\"concat_mlp\", global_repr:\"pool\"} — no LSTM, no cross-tf attention, no Perceiver latent-bottleneck fusion, unlike the Tier-1_000 hybrid reference. Hyperparameters below are 03's own published S1 (depth-heavy) profile, copied verbatim rather than invented — unlike ModernTCN in the reference, plain TCN already has doc-stated numbers."
+    "description": "Whole-architecture Stage-1 candidate: plain dilated-causal-conv TCN, no LSTM, no cross-tf attention, no Perceiver latent-bottleneck fusion — per 03-Model & Architecture Engineering.md#architecture-candidates 'TCN' entry, stage_config {embedding:\"linear\", local_extraction:\"tcn_dilated\", sequential:0, attention:0, fusion:\"concat_mlp\", global_repr:\"pool\"}. Tier 1, adjusted score 11 (05-Prioritization Framework.md#current-stage-1-candidate-set) — the doc's single highest Tier-1 score. Hyperparameters below are 03's own published S1 (depth-heavy) profile for this candidate, copied verbatim — chosen over S2/S3 because, with sequential/attention zeroed, TCN's dilated-conv stack is the sole source of long-range context, and S1's own numbers (kernel_size=3, num_dilated_levels=10) compute to the largest receptive field of the three (receptive_field ≈ 1 + (kernel_size-1) × (2^num_dilated_levels-1) ≈ 2047 for S1, vs ≈15 for S2, ≈505 for S3), despite S1 carrying the 'depth-heavy' rather than 'context-heavy' label."
   },
   "preprocessed_input": "input-data-feature/Tier-1_000.hand-made.input.jsonc",
   "outcome_heads": "outcome-label-target-head/Tier-1_000.hand-made.outcome.jsonc",
@@ -93,15 +93,15 @@
             "Dense": "d_model",
             "activation": "gelu"
           },
-          "role": "cheapest fusion mechanism per stage_config.fusion=\"concat_mlp\" — no cross-attention, no learned latent bottleneck; the natural first arch to profile before the pricier Perceiver/cross-attn options in the Tier-1_000 reference"
+          "role": "compress_and_integrate_cross_timeframe_information — cheapest fusion mechanism per stage_config.fusion=\"concat_mlp\": no cross-attention, no learned latent bottleneck"
         }
       }
     },
     "dependency_modeling": {
-      "attention": "n/a — stage_config.attention = 0 for this candidate; the TCN dilated-conv stack (dilation = 2^level up to num_dilated_levels-1) already supplies the long-range receptive field, per 03-Model & Architecture Engineering.md#architecture-candidates 'TCN' entry",
+      // "attention" omitted: stage_config.attention = 0 for this candidate — the TCN dilated-conv stack (dilation = 2^level up to num_dilated_levels-1) already supplies the long-range receptive field, per 03-Model & Architecture Engineering.md#architecture-candidates "TCN" entry
       "regularization_and_stabilization": {
         "training_stability": {
-          "normalization": "none specified in 03's local_extract_tcn pseudocode — TCN relies on residual connections + dropout for stability, not an explicit LayerNorm/BatchNorm layer",
+          // "normalization" omitted: 03's local_extract_tcn pseudocode has no explicit LayerNorm/BatchNorm — TCN relies on residual connections + dropout for stability instead
           "residual_connections": {
             "skip_connections": "enabled — per-dilation-level residual add (x = residual + y); a 1x1 Conv1D projects the residual when its channel count differs from hidden_channels"
           },
