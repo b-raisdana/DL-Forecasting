@@ -45,7 +45,19 @@ are cross-cutting enablers other topics depend on rather than a pipeline stage o
    CSV/parquet/zip/npz, computed indicators) actually goes through a repository interface rather than
    calling storage/CCXT inline, per the pattern's own stated rule ("if two places implement their own
    read-or-fetch-and-cache logic for the same kind of data, that's the signal to introduce one"). Not yet
-   checked line-by-line anywhere in this project's docs.
+   checked line-by-line anywhere in this project's docs. **Partial finding, 2026-08-15**: computed
+   indicators and labels had *no* caching at all (worse than "not through a repository interface") —
+   `npz_batch.py`/`ram_batch.py`/`stream_loader.py` each load `mt_ohlcv` once per quarter then call
+   `train_data_of_mt_n_profit()` up to ~100× against that same object, recomputing
+   `classic_indicators`/`relative_candle`/`volume_feature` and the rolling-window label computation in
+   `profit_loss_adder.py` from scratch every call. Closed via
+   `training_datasets.py`'s new `_cached_training_frames()` (in-memory memo on `mt_ohlcv.attrs`, since
+   `pd.DataFrame` is unhashable) and a bounded in-process LRU added to `read_file()` itself
+   (`helper/data_preparation.py`) in front of its disk read. Both follow the new
+   [cache-or-generate skill](../../.claude/skills/cache-or-generate/SKILL.md) — read that first before
+   adding another cache. Still open: no actual `Repository` class exists anywhere (both fixes are free
+   functions, matching the pre-existing style, not the class-based interface the doc describes); full
+   line-by-line module audit against the pattern still not done.
 8. **Audit Dependency Injection adoption** the same way — confirm config/shared state is passed
    explicitly into constructors/functions rather than pulled from module-level globals mid-function,
    per [infrastructure.md § Dependency injection](../infrastructure.md#dependency-injection). Not yet
@@ -114,6 +126,26 @@ are cross-cutting enablers other topics depend on rather than a pipeline stage o
       `ModelArtifactRepository`, stop mutating `app_config.GLOBAL_CACHE` as a module-level singleton).
     Do the directory rename in small PRs per layer, after cleanup + the reverse-dependency fix so the
     rename doesn't carry dead code or forks along with it.
+13. **Continue the file-length split of `helper/data_preparation.py` and other files the new `loc`
+    ratchet vector flags** ([infrastructure.md § pre-commit](../infrastructure.md#pre-commit)). Treat `<300` lines as normal, `300-500` lines as a potential low-priority split todo, and `>500` lines as a warning/high-priority split todo. First cut
+    landed 2026-08-15: the PanderaDFM schema-casting cluster moved to `helper/schema_casting.py`
+    (re-exported from `data_preparation.py` for its 34 existing importers, so no caller updates were
+    needed yet - see todo step 7's repository-pattern audit for when those re-exports should be
+    resolved). Remaining `data_preparation.py` clusters, each a separate small commit, not all at once:
+    - file-cache/read (`read_file`, `read_with_timeframe`, `read_without_index`, `read_by_date`,
+      `single_timeframe`, the `_read_file_cache_*` memo) - the `cache-or-generate` skill's canonical
+      instance, so update that skill's file reference if this moves.
+    - timeframe/date-range (`df_timedelta_to_str`, `timedelta_to_str`, `to_timeframe`,
+      `check_time_in_cache`, `times_tester`, `multi_timeframe_times_tester`, `shift_timeframe`,
+      `trigger_timeframe`/`pattern_timeframe`/`anti_pattern_timeframe`/`anti_trigger_timeframe`,
+      `times_in_date_range`, `after_under_process_date`, `trim_to_date_range`, `expand_date_range`).
+    - misc symbol/index helpers (`map_symbol`, `FileInfoSet`/`extract_file_info`, `nearest_match`,
+      `concat`).
+
+    Other files already over the `loc` vector's 500-line threshold, same one-cluster-per-commit
+    approach: `Model/TechnicalAnalysis/PeakValley.py` (694 lines),
+    `ai_modelling/dataset_generator/profit_loss/profit_loss_adder.py` (657),
+    `Model/TechnicalAnalysis/BullBearSide.py` (636), `Model/TechnicalAnalysis/ftc.py` (579).
 
 ## appendix: current implementation status
 

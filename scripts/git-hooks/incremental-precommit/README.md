@@ -18,6 +18,7 @@ file it's in.
 | `mypy` | `mypy --config-file pyproject.toml app` | `Found N errors` |
 | `ruff` | `ruff check app --output-format=json` | violations in the JSON array |
 | `xenon` | `radon cc app -j` | blocks ranked worse than `B` (matches `.pre-commit-config.yaml`'s `--max-absolute B`) |
+| `loc` | walks `app/**/*.py` | sum of `max(0, line_count - 500)` per file - `<300` normal, `300-500` low-priority split todo, `>500` warning/high-priority split todo |
 
 ## ratcheting down
 

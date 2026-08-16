@@ -36,6 +36,8 @@ Instead of treating every candle as an isolated observation, segment price actio
 - Infrastructure orchestration
 - Production infrastructure engineering
 
+**Not excluded:** single-machine training-run observability (resource monitoring, throughput/cost profiling) on this project's own hardware — see [06-ML-Ops.md](06-ML-Ops.md). The exclusion above is about production/multi-machine infrastructure, not the local research-hardware practices this project already depends on (e.g. `profile_trial_cost()` throughout [03](<03-Model & Architecture Engineering.md>)).
+
 ## Reinforcement Learning
 
 - Q-learning
@@ -108,6 +110,8 @@ Instead of treating every candle as an isolated observation, segment price actio
 - Live/production deployment
 - Production monitoring and alerting
 - Online/continuous learning pipelines
+
+**Not excluded:** training-run resource monitoring (GPU/VRAM/RAM/CPU/disk utilization during local training on this project's own hardware) — an experimentation-infrastructure concern, not production ops. See [06-ML-Ops.md](06-ML-Ops.md).
 
 ## Decision/System Architecture
 

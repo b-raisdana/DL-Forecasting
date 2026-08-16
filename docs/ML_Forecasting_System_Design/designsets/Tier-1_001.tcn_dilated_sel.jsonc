@@ -3,7 +3,7 @@
     "design_set": "DS-02",
     "name": "Plain TCN Dilated-Convolution Whole-Architecture Baseline",
     "version": "1.0.0",
-    "description": "Whole-architecture Stage-1 candidate: plain dilated-causal-conv TCN, no LSTM, no cross-tf attention, no Perceiver latent-bottleneck fusion — per 03-Model & Architecture Engineering.md#architecture-candidates 'TCN' entry, stage_config {embedding:\"linear\", local_extraction:\"tcn_dilated\", sequential:0, attention:0, fusion:\"concat_mlp\", global_repr:\"pool\"}. Tier 1, adjusted score 11 (05-Prioritization Framework.md#current-stage-1-candidate-set) — the doc's single highest Tier-1 score. Hyperparameters below are 03's own published S1 (depth-heavy) profile for this candidate, copied verbatim — chosen over S2/S3 because, with sequential/attention zeroed, TCN's dilated-conv stack is the sole source of long-range context, and S1's own numbers (kernel_size=3, num_dilated_levels=10) compute to the largest receptive field of the three (receptive_field ≈ 1 + (kernel_size-1) × (2^num_dilated_levels-1) ≈ 2047 for S1, vs ≈15 for S2, ≈505 for S3), despite S1 carrying the 'depth-heavy' rather than 'context-heavy' label."
+    "description": "Whole-architecture Stage-1 candidate: plain dilated-causal-conv TCN, no LSTM, no cross-tf attention, no Perceiver latent-bottleneck fusion — per 03-Model & Architecture Engineering.md#architecture-candidates 'TCN' entry, stage_config {embedding:\"linear\", local_extraction:\"tcn_dilated\", sequential:0, attention:0, fusion:\"concat_mlp\", global_repr:\"pool\"}. Tier 1, adjusted score 11 (05-Prioritization Framework.md#current-stage-1-candidate-set) — the doc's single highest Tier-1 score. kernel_size=3 and num_dilated_levels=10 are 03's own published S1 (depth-heavy) profile for this candidate, copied verbatim — chosen over S2/S3 because, with sequential/attention zeroed, TCN's dilated-conv stack is the sole source of long-range context, and S1's own numbers compute to the largest receptive field of the three (receptive_field ≈ 1 + (kernel_size-1) × (2^num_dilated_levels-1) ≈ 2047 for S1, vs ≈15 for S2, ≈505 for S3), despite S1 carrying the 'depth-heavy' rather than 'context-heavy' label — that reasoning is untouched here since it depends only on kernel_size/num_dilated_levels. TCN_hidden_channels is widened ×16 from S1's literal 40 to 640 to make fuller use of the 8GB VRAM budget (this candidate was the most under-using of it, at ≈27%) — see memory_budget below, computed per PROMPT.md § Memory sizing convention; MLP_width/MLP_depth stay at 512/4 since the prediction head's shape is held constant across candidates."
   },
   "preprocessed_input": "input-data-feature/Tier-1_000.hand-made.input.jsonc",
   "outcome_heads": "outcome-label-target-head/Tier-1_000.hand-made.outcome.jsonc",
@@ -199,10 +199,11 @@
   },
   "searchable_architecture_parameter_sets": {
     // stepping convention (base * 4 / base / 4 per level): see PROMPT.md § Precise sizing convention
-    // TCN_hidden_channels/kernel_size/num_dilated_levels base values are 03-Model & Architecture Engineering.md's own published S1 (depth-heavy) profile for the "TCN" candidate, copied verbatim
+    // TCN_kernel_size/num_dilated_levels base values are 03-Model & Architecture Engineering.md's own published S1 (depth-heavy) profile for the "TCN" candidate, copied verbatim
+    // TCN_hidden_channels is S1's 40 scaled ×16 to make fuller use of the 8GB VRAM budget, per PROMPT.md § Memory sizing convention — see metadata.description and memory_budget
     "1-base": {
       "input_set": 1, // 2, 3, 4 — selects a variation from preprocessed_input's "variations"
-      "TCN_hidden_channels": 40, // 10, 160
+      "TCN_hidden_channels": 640, // 160, 2560
       "TCN_kernel_size": 3, // 3, 9 - intentionally is not stepped by 4; 03's own S1/S2 use 3, S3 uses 9 for this candidate
       "TCN_num_dilated_levels": 10, // 3, 12 - capped below raw x4's 40: dilation grows as 2^level, so past ~12 levels the receptive field already exceeds the whole per-tf window
       // TCN's own dilated-conv block hardcodes ReLU internally (03's local_extract_tcn pseudocode) — not part of the shared "activation" dimension below, which governs the MLP head only
@@ -219,6 +220,32 @@
       "gradient_clip_norm": 1.0, // 0.1, 5.0
       "outcome_set": 1, // 2 — selects a set from outcome_heads
       "ensemble_weighting": "validation_optimized_scalar" // fixed_equal_weight, stacked_meta_learner
+    }
+  },
+  "memory_budget": {
+    // order-of-magnitude estimate for this file's "1-base" config, per PROMPT.md § Memory sizing convention — not profiler-measured, profile_trial_cost() is ground truth
+    "hardware_reference": "RTX 4060 Laptop GPU, 8GB VRAM (8188 MiB), 64GB RAM — per 03-Model & Architecture Engineering.md#hardware-constraints",
+    "model_parameters": {
+      "vram_mb": 2306,
+      "basis": "TCN_hidden_channels widened ×16 from S1's literal 40 to 640 (see metadata.description) to make fuller use of the 8GB VRAM budget; kernel_size/num_dilated_levels unchanged. TCN dilated-conv residual blocks (2×kernel_size×channels² per level, kernel=3, channels=640, num_dilated_levels=10) ≈24.6M params/branch ×6 branches ≈147.5M; ConcatMLP fusion projection (6×640 concatenated → 640) ≈2.5M; MLP head (width=512, depth=4 — held constant across candidates, input=pooled 640 + auxiliary_features 6×15=90) ≈1.2M. Total ≈151.1M params × 16 bytes/param (fp32 weights+grad+AdamW's 2 moment buffers, per Memory sizing convention) ≈2306MB"
+    },
+    "transient_activation_memory": {
+      "vram_mb": 2405,
+      "basis": "TCN per branch (batch128×seq256×channels640×levels10×2B) ≈400MiB ×6 branches ≈2400MiB; ConcatMLP fusion + MLP head activations negligible (~5MiB). Total ≈2405MiB, fp16/bf16 under this file's mixed_precision=enabled setting — now close to Tier-1_000's ≈2.4GB despite this candidate having no cross-timeframe attention stage, because the channel width was widened specifically to close that gap"
+    },
+    "preloaded_input_label_cache": {
+      "ram_gb": "capacity-bound: ~485K samples against the RAM budget's 65% cache slice (41.6GB of 64GB)",
+      "basis": "same preprocessed_input (input_set=1) and outcome_heads (outcome_set=1) as Tier-1_000.hand-made.jsonc, so the same per-sample size applies: 1536 total candles (256/tf × 6tf) × 15 candle_dataset fields × 4 bytes (float32) ≈92,160 bytes + outcome_set=1 label bytes ≈20 bytes ≈92,180 bytes (~90KB)/sample. Total training sample count isn't doc-resolved (open-ended symbol universe, per 02-Data, Label & Feature Engineering.md § training symbol universe) — sized as capacity against the budget slice instead of a fabricated total, per Memory sizing convention"
+    },
+    "other_memory_consumers": {
+      "vram_mb": 2048,
+      "ram_gb": 22.4,
+      "basis": "fixed pipeline overhead, not candidate-specific — VRAM: CUDA/driver context (~5%) + pinned transfer buffer (~10%) + fragmentation headroom (~10%) of the 8188MiB card ≈2048MB; RAM: OS/dataloader-worker overhead (~10%) + pinned CPU→GPU staging (~15%) + headroom (~10%) of 64GB ≈22.4GB. LightGBM specialist's own training memory folds in here too — negligible against the cache slice at this feature scale"
+    },
+    "estimated_total": {
+      "vram_mb": 6759,
+      "vram_pct_of_8gb_card": "~83%",
+      "flag": "widened ×16 (see metadata.description) to make fuller use of the 8GB card — this candidate was the most under-using of it at the original channel width (≈27%). Now comparable to Tier-1_000's ≈82%, a deliberate consistent-utilization target across candidates so each makes similar use of the same hardware when it's its turn to train, still ≈17% below the card for the estimate's own order-of-magnitude uncertainty on top of the already-reserved other_memory_consumers slice. model_parameters and transient_activation_memory are now comparably sized (both ≈2.3-2.4GB), unlike the original narrow-channel config where fixed overhead dominated"
     }
   },
   "complete_flow": [

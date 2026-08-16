@@ -38,7 +38,7 @@ repos:
       # incremental-ratchet only blocks a REGRESSION in the project-wide count for each -
       # see scripts/git-hooks/incremental-precommit/README.md.
       - id: incremental-ratchet
-        name: incremental ratchet (mypy/ruff/xenon - blocks regressions only, see README)
+        name: incremental ratchet (mypy/ruff/xenon/loc - blocks regressions only, see README)
         language: system
         entry: python scripts/git-hooks/incremental-precommit/ratchet_check.py
         pass_filenames: false
@@ -56,4 +56,4 @@ repos:
         language: system
         entry: sh scripts/git-hooks/sync-skill-files.sh
         pass_filenames: false
-        files: ^(\.claude/skills/git-commit/SKILL\.md|\.github/git-commit/SKILL\.md)$
+        files: ^(\.claude/skills/[^/]+/SKILL\.md|\.codex/skills/[^/]+/SKILL\.md|\.github/git-commit/SKILL\.md)$

@@ -6,7 +6,7 @@
 - **Direction prediction**: derived, not modeled directly — Long/Short/None comes from a post-hoc rule (`OM > 5`, tie-break = higher `OM`) applied to regression outputs, not a classification head. See [02 § Label design](<02-Data, Label & Feature Engineering.md#label-design>).
 - **Position prediction**: the direction call _is_ the position decision (Long/Short/None).
 - **Entry/exit prediction**: bundled, not separate — entry price + SL + full TP1–TP4 ladder are all committed as one decision at NOW-candle close (see [targeting bid price](<02-Data, Label & Feature Engineering.md#targeting-bid-price>)).
-- **Multi-horizon prediction**: named in spec ("Multi-horizon labels") but unresolved — horizon is fixed at 240 minutes (a rolling window from NOW, not the next 4H candle); systematic horizon selection is an open gap ([00-ToC §1.2](<00-ToC & Coverage.md>)).
+- **Multi-horizon prediction**: named in spec ("Multi-horizon labels") but unresolved — horizon is fixed at 240 minutes (a rolling window from NOW, not the next 4H candle); systematic horizon selection is an open gap ([99-Weakness Analysis.md § A22](<99-Weakness Analysis.md>)).
 - **Classification vs regression vs ranking**: regression. Primary targets `MAE`, `OM` (continuous); auxiliary `MFE`. No classifier, no ranking.
 
 ## Objective definition
@@ -34,7 +34,7 @@
 - **Entry + exit**: bundled into one decision at NOW close (entry + SL + TP1–TP4), not predicted separately.
 - **Trend + reversal**: out of scope — no such decomposition exists.
 - **Regime + prediction**: out of scope — no regime signal in the model (funding rate, changepoint/HMM regime detection are named-missing feature candidates, [05 A8/B6](<99-Weakness Analysis.md>)).
-- **Multi-task learning**: not literal separate task heads — one head, multi-target regression (`MAE`, `OM`, `MFE`). Formal single- vs multi-task/complexity-control policy is unwritten ([00-ToC §1.4](<00-ToC & Coverage.md>)).
+- **Multi-task learning**: not literal separate task heads — one head, multi-target regression (`MAE`, `OM`, `MFE`). Formal single- vs multi-task/complexity-control policy is unwritten ([99-Weakness Analysis.md § A24](<99-Weakness Analysis.md>)).
 
 ## Open gaps
 

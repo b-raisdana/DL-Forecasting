@@ -4,14 +4,19 @@
 # kaleido
 pandas
 plotly
+jupyter
+ipykernel
+ipywidgets
+nbformat
 pydantic
 pyarrow
 numpy<2.0
+lightgbm
 # matplotlib
 scipy
 optuna
 scikit-learn
-# psutil
+psutil
 pytz
 loguru
 pandas_ta

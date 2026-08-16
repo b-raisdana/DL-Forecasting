@@ -40,6 +40,11 @@ def run(*args: str, cwd: Path = ROOT) -> str:
     return result.stdout
 
 
+def run_output(*args: str, cwd: Path = ROOT) -> str:
+    result = subprocess.run(args, cwd=cwd, capture_output=True, text=True, check=False)
+    return result.stdout + result.stderr
+
+
 def mypy_count() -> int:
     # cwd=app (not ROOT, target "app") deliberately: this repo's modules import each other
     # bare (`from ai_modelling.base import ...`, matching pytest.ini's pythonpath=app - see
@@ -74,11 +79,105 @@ def xenon_count(max_absolute: str = "B") -> int:
     )
 
 
+def loc_count(max_lines: int = 500) -> int:
+    total = 0
+    for path in (ROOT / TARGET).rglob("*.py"):
+        if "__pycache__" in path.parts:
+            continue
+        line_count = sum(1 for _ in path.open(encoding="utf-8", errors="ignore"))
+        total += max(0, line_count - max_lines)
+    return total
+
+
 VECTORS: dict[str, Callable[[], int]] = {
     "mypy": mypy_count,
     "ruff": ruff_count,
     "xenon": xenon_count,
+    "loc": loc_count,
 }
+
+
+def staged_app_python_files() -> list[Path]:
+    stdout = run("git", "diff", "--cached", "--name-only", "--diff-filter=ACMR")
+    paths: list[Path] = []
+    for line in stdout.splitlines():
+        path = Path(line)
+        if path.parts[:1] == (TARGET,) and path.suffix == ".py" and (ROOT / path).exists():
+            paths.append(path)
+    return sorted(set(paths))
+
+
+def print_mypy_details(paths: list[Path]) -> None:
+    app_paths = [path.relative_to(TARGET).as_posix() for path in paths]
+    if not app_paths:
+        print("    no staged app Python files to inspect")
+        return
+    output = run_output("mypy", "--config-file", str(ROOT / "pyproject.toml"), *app_paths, cwd=ROOT / TARGET)
+    print(output.rstrip() or "    mypy reported no errors on staged app Python files")
+
+
+def print_ruff_details(paths: list[Path]) -> None:
+    if not paths:
+        print("    no staged app Python files to inspect")
+        return
+    output = run_output("ruff", "check", *(path.as_posix() for path in paths))
+    print(output.rstrip() or "    ruff reported no errors on staged app Python files")
+
+
+def print_xenon_details(paths: list[Path], max_absolute: str = "B") -> None:
+    if not paths:
+        print("    no staged app Python files to inspect")
+        return
+    stdout = run("radon", "cc", "-j", *(path.as_posix() for path in paths))
+    try:
+        data = json.loads(stdout or "{}")
+    except json.JSONDecodeError:
+        print(stdout.rstrip() or "    radon output could not be parsed")
+        return
+    threshold = COMPLEXITY_RANKS.index(max_absolute)
+    printed = False
+    for file_path, blocks in sorted(data.items()):
+        for block in blocks:
+            rank = block.get("rank", "A")
+            if COMPLEXITY_RANKS.index(rank) <= threshold:
+                continue
+            print(f"    {file_path}:{block.get('lineno')} {block.get('type')} {block.get('name')} rank {rank}")
+            printed = True
+    if not printed:
+        print("    xenon/radon reported no rank > B blocks on staged app Python files")
+
+
+def print_loc_details(paths: list[Path], max_lines: int = 500) -> None:
+    printed = False
+    for path in paths:
+        line_count = sum(1 for _ in (ROOT / path).open(encoding="utf-8", errors="ignore"))
+        overage = line_count - max_lines
+        if overage <= 0:
+            continue
+        print(f"    {path.as_posix()}: {line_count} lines (+{overage} over {max_lines})")
+        printed = True
+    if not printed:
+        print("    no staged app Python files exceed the loc threshold")
+
+
+DETAIL_PRINTERS: dict[str, Callable[[list[Path]], None]] = {
+    "mypy": print_mypy_details,
+    "ruff": print_ruff_details,
+    "xenon": print_xenon_details,
+    "loc": print_loc_details,
+}
+
+
+def print_regression_details(regressed: list[tuple[str, int, int]]) -> None:
+    paths = staged_app_python_files()
+    print("\nDetails from staged app Python files:")
+    for name, _, _ in regressed:
+        print(f"\n  {name}:")
+        detail_printer = DETAIL_PRINTERS.get(name)
+        if detail_printer is None:
+            print("    no detail printer configured")
+            continue
+        detail_printer(paths)
 
 
 def characterization_test_touched() -> bool:
@@ -115,11 +214,11 @@ def main() -> int:
         print("Incremental pre-commit ratchet: BLOCKED - new problems introduced\n")
         for name, base, current in regressed:
             print(f"  {name}: baseline {base} -> now {current} (+{current - base} new)")
+        print_regression_details(regressed)
         print(
             "\nThis only blocks NEW violations you introduced - it never requires fixing "
-            "pre-existing debt in files you happen to touch. Run the tool directly on your "
-            "changed files to see what's new (e.g. `ruff check <file>`, "
-            "`mypy --config-file pyproject.toml <file>`)."
+            "pre-existing debt in files you happen to touch. The details above are scoped "
+            "to staged app Python files; the blocking comparison is still the project-wide total."
         )
         return 1
 

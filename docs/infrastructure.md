@@ -155,6 +155,8 @@ the `test-strategy` skill's characterization-test discipline.
 xenon's own thresholds (used by the `xenon` vector's count): `--max-absolute B --max-modules A
 --max-average A` (blocks ranked worse than `B`).
 
+`loc` vector: sum of `max(0, line_count - 500)` over every `app/**/*.py` file - a file-length countermeasure `xenon` doesn't cover (cyclomatic complexity per function, not raw file size). Size policy: `<300` lines is normal, and new/generated files should stay below this size; when modifying a file, prefer moving the touched method/function to its proper location if that naturally reduces the file. `300-500` lines is a potential low-priority split todo. `>500` lines is a warning and high-priority split todo. The ratchet's 500-line threshold is stricter than SonarQube's `S104`/pylint's `C0302` default of 1000, deliberately, so it starts counting excess on files already in the 500-1000 range instead of only reacting once they cross 1000.
+
 ### tests
 
 See the `test-strategy` skill for the test-type taxonomy and the `pytest` skill for `app/tests/` layout

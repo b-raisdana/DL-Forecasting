@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pre-Commit Check"
+  short_description: "Run the repo pre-commit gate after code edits."
+  default_prompt: "After modifying code, run the repository pre-commit checks and resolve failures caused by the change before final handoff."

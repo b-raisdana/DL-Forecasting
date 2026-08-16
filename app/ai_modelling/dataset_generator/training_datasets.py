@@ -1,4 +1,3 @@
-import textwrap
 from datetime import datetime, timedelta
 from typing import NamedTuple
 
@@ -14,14 +13,11 @@ from ai_modelling.dataset_generator.profit_loss.profit_loss_adder import add_lon
 from ai_modelling.dataset_generator.relative_candle import add_relative_candle_columns, relative_candle_columns
 from ai_modelling.dataset_generator.volume_feature import add_volume_feature_columns, volume_feature_columns
 from Config import app_config
-from FigurePlotter.plotter import show_and_save_plot
 from helper.br_py.br_py.do_log import log_d
 from helper.data_preparation import pattern_timeframe, single_timeframe, trigger_timeframe
 from helper.functions import date_range
 from helper.importer import pt
 from PanderaDFM import MultiTimeframe
-from plotly import graph_objects as go
-from plotly.subplots import make_subplots
 
 Shape = tuple[int, ...] | list[object] | dict[str, object] | None
 
@@ -67,6 +63,41 @@ def _build_frames_by_level(
     ]:
         dfs[df_name] = single_timeframe_n_indicators(mt_ohlcv, timeframe)
     return dfs
+
+
+# Producer loops (npz_batch.py/ram_batch.py/stream_loader.py) load mt_ohlcv once per quarter, then call
+# train_data_of_mt_n_profit() up to ~100x against that same object with the same (structure_tf, label_tf,
+# forecast_trigger_bars) — indicators and the rolling-window label computation in profit_loss_adder.py
+# were being recomputed from scratch on every one of those calls. pd.DataFrame is unhashable
+# (NDFrame.__hash__ = None), so the memo lives on the object itself via .attrs rather than as a dict key
+# — self-bounded to mt_ohlcv's own lifetime. See the cache-or-generate skill.
+_TRAINING_FRAME_CACHE_ATTR = "_dlf_training_frame_cache"
+
+
+def _cached_training_frames(
+    mt_ohlcv: pt.DataFrame[MultiTimeframe],  # type: ignore[valid-type]
+    structure_tf: str,
+    pattern_tf: str,
+    trigger_tf: str,
+    double_tf: str,
+    label_tf: str,
+    label_frame: str,
+    forecast_trigger_bars: int,
+) -> tuple[datetime, datetime, int, dict[str, pd.DataFrame]]:
+    cache: dict[tuple[str, str, int], tuple[datetime, datetime, int, dict[str, pd.DataFrame]]] = (
+        mt_ohlcv.attrs.setdefault(_TRAINING_FRAME_CACHE_ATTR, {})
+    )
+    cache_key = (structure_tf, label_tf, forecast_trigger_bars)
+    if cache_key not in cache:
+        dfs = _build_frames_by_level(mt_ohlcv, structure_tf, pattern_tf, trigger_tf, double_tf)
+        dfs["future"] = add_long_n_short_profit(
+            ohlc=dfs[label_frame],  # type: ignore[no-untyped-call]
+            position_max_bars=forecast_trigger_bars,
+            trigger_tf=label_tf,
+        )
+        cache[cache_key] = _compute_safe_training_range(dfs, structure_tf, label_tf, forecast_trigger_bars)
+    train_safe_start, train_safe_end, duration_seconds, cached_dfs = cache[cache_key]
+    return train_safe_start, train_safe_end, duration_seconds, {name: df.copy() for name, df in cached_dfs.items()}
 
 
 def _compute_safe_training_range(
@@ -263,15 +294,8 @@ def train_data_of_mt_n_profit(
     trigger_tf = trigger_timeframe(structure_tf)  # type: ignore[no-untyped-call]
     double_tf = pattern_timeframe(trigger_timeframe(structure_tf))  # type: ignore[no-untyped-call]
     label_tf, label_frame = _resolve_label_frame(structure_tf, pattern_tf, trigger_tf, double_tf, label_tf)
-    dfs = _build_frames_by_level(mt_ohlcv, structure_tf, pattern_tf, trigger_tf, double_tf)
-    dfs["future"] = add_long_n_short_profit(
-        ohlc=dfs[label_frame],
-        position_max_bars=forecast_trigger_bars,  # type: ignore[no-untyped-call]
-        trigger_tf=label_tf,
-    )
-
-    train_safe_start, train_safe_end, duration_seconds, dfs = _compute_safe_training_range(
-        dfs, structure_tf, label_tf, forecast_trigger_bars
+    train_safe_start, train_safe_end, duration_seconds, dfs = _cached_training_frames(
+        mt_ohlcv, structure_tf, pattern_tf, trigger_tf, double_tf, label_tf, label_frame, forecast_trigger_bars
     )
 
     x_dfs_by_level: dict[str, list[pd.DataFrame]] = {"double": [], "trigger": [], "pattern": [], "structure": []}
@@ -580,101 +604,6 @@ def slicing(
         raise AssertionError("structure_slice.isna().any().any()")
 
     return double_slice, pattern_slice, structure_slice, trigger_slice
-
-
-def plot_classic_indicators(fig: go.Figure, x_dfs: dict[str, list[pd.DataFrame]], n: int) -> go.Figure:
-    scalable_indicators = list(set(classic_indicator_columns()) - set(scaleless_indicators()))  # type: ignore[no-untyped-call]
-    for level in ["structure", "pattern", "double", "trigger"]:
-        for indicator_column in scaleless_indicators():  # type: ignore[no-untyped-call]
-            if indicator_column != "sc_obv":
-                t = x_dfs[f"{level}-indicators"][n][indicator_column]
-                fig.add_scatter(
-                    x=t.index, y=t, row=2, col=1, line={"color": "blue"}, name=f"{indicator_column}-{level}"
-                )
-        for indicator_column in scalable_indicators:
-            if indicator_column != "sc_obv":
-                t = x_dfs[f"{level}-indicators"][n][indicator_column]
-                fig.add_scatter(
-                    x=t.index, y=t, row=1, col=1, line={"color": "blue"}, name=f"{indicator_column}-{level}-"
-                )
-    return fig
-
-
-def plot_train_data_of_mt_n_profit(
-    x_dfs: dict[str, list[pd.DataFrame]], y_dfs: list[pd.DataFrame], y_tester_dfs: list[pd.DataFrame], n: int
-) -> None:
-    fig = make_subplots(
-        rows=2,
-        cols=1,
-        shared_xaxes=True,  # vertical_spacing=0.02,
-        row_heights=[0.65, 0.25],
-    )
-    plot_mt_charts(fig, n, x_dfs)
-    fig = plot_classic_indicators(fig, x_dfs, n)
-    plot_prediction_verifier(fig, n, y_tester_dfs)
-    plot_prediction(fig, n, y_dfs)
-    fig.update_layout(xaxis=dict(rangeslider=dict(visible=False)))
-    show_and_save_plot(fig.update_yaxes(fixedrange=False))
-
-
-def plot_mt_charts(fig: go.Figure, n: int, x_dfs: dict[str, list[pd.DataFrame]]) -> None:
-    ohlcv_slices = [("structure", "Structure"), ("pattern", "Pattern"), ("trigger", "Trigger"), ("double", "Double")]
-    for key, name in ohlcv_slices:
-        ohlcv = x_dfs[key][n]
-        fig.add_trace(
-            go.Candlestick(
-                x=ohlcv.index.get_level_values("date"),
-                open=ohlcv["low"],
-                high=ohlcv["high"],
-                low=ohlcv["low"],
-                close=ohlcv["high"],
-                name=name,
-            )
-        )
-
-
-def plot_prediction_verifier(fig: go.Figure, n: int, y_tester_dfs: list[pd.DataFrame]) -> None:
-    ohlcv = y_tester_dfs[n]
-    fig.add_trace(
-        go.Candlestick(
-            x=ohlcv.index.get_level_values("date"),
-            close=ohlcv["low"],
-            high=ohlcv["high"],
-            low=ohlcv["low"],
-            open=ohlcv["high"],
-            name="Y",
-        )
-    )
-
-
-def plot_prediction(fig: go.Figure, n: int, y_dfs: list[pd.DataFrame]) -> None:
-    predictions = y_dfs[n].to_dict()
-    formatted_predictions = textwrap.fill(
-        ", ".join(
-            [
-                f"{col}: {val:.2f}"
-                if isinstance(val, (int, float)) and not (val != val)
-                else f"{col}: NaN"
-                if val != val
-                else f"{col}: {val}"
-                for col, val in predictions.items()
-            ]
-        ),
-        width=80,
-    ).replace("\n", "<br>")
-    fig.add_annotation(
-        x=0,
-        y=1,
-        text=formatted_predictions,
-        showarrow=False,
-        font=dict(size=12, color="black"),
-        align="left",
-        bgcolor="white",
-        opacity=0.7,
-        xref="paper",  # Use the "paper" reference to place it relative to the figure
-        yref="paper",  # Use the "paper" reference to place it relative to the figure
-        borderpad=10,  # Add some padding for the border
-    )
 
 
 def scaler_trainer(
