@@ -1,6 +1,6 @@
 import pandas as pd
 from config import app_config
-from domain.market_structure.PeakValley import major_timeframe
+from domain.price_action.PeakValley import major_timeframe
 from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
 from domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
 from domain.schemas.market_structure.BullBearSide import MultiTimeframeBullBearSide

@@ -1,6 +1,6 @@
 import pandas as pd
 from config import TopTYPE, app_config
-from domain.market_structure.PeakValley import insert_crossing2, major_timeframe, peaks_only, valleys_only
+from domain.price_action.PeakValley import insert_crossing2, major_timeframe, peaks_only, valleys_only
 from domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
 from domain.schemas.market_structure.BullBearSide import BullBearSide
 from domain.schemas.market_structure.PeakValley import MultiTimeframePeakValley, PeakValley

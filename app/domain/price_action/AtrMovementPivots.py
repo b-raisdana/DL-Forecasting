@@ -3,7 +3,7 @@ from typing import Annotated
 import pandas as pd
 from ClassicPivot import insert_pivot_info, insert_pivot_type_n_level, update_pivot_deactivation
 from config import TopTYPE, app_config
-from domain.market_structure.ftc import insert_multi_timeframe_pivots_real_start
+from domain.price_action.ftc import insert_multi_timeframe_pivots_real_start
 from domain.schemas.common.OHLCV import OHLCV
 from domain.schemas.common.OHLCVA import OHLCVA
 from domain.schemas.market_structure.AtrTopPivot import (

@@ -5,8 +5,8 @@
     "version": "1.0.0",
     "description": "A hybrid temporal model that processes six different timeframes in parallel, extracts local and sequential features using ModernTCN and LSTM, fuses the information using a Perceiver architecture, models dependencies with Grouped Query Attention (GQA), and produces predictions through task-specific heads. Backbone width hyperparameters (ModernTCN_channels, LSTM_hidden_units, Perceiver_latent_tokens, Perceiver_latent_dim) are scaled ×1.5 from their original values (128/256/64/512) to better use the 8GB VRAM budget — see memory_budget below, computed per PROMPT.md § Memory sizing convention; every ratio between them is preserved exactly, depth/layer counts and kernel sizes are untouched, and MLP_width/MLP_depth stay at 512/4 since the prediction head's shape is held constant across candidates."
   },
-  "preprocessed_input": "input-data-feature/Tier-1_000.hand-made.input.jsonc",
-  "outcome_heads": "outcome-label-target-head/Tier-1_000.hand-made.outcome.jsonc",
+  "preprocessed_input": "input-data-feature/Tier-1_000.atr_rel_ohlc_log_sma_v_extm_rel_6tf (handmade).input.jsonc",
+  "outcome_heads": "outcome-label-target-head/Tier-1_000.action_mfe_rer (handmade).outcome.jsonc",
   "auxiliary_features": {
     "source": "preprocessed_input.candle_dataset, LAST candle only per timeframe branch (not the full window), flattened across all 6 branches",
     "role": "shared tabular snapshot feeding prediction_head.MLP's optional_auxiliary_features input and the LightGBM specialist — GBM operates on flattened features, distinct from the sequence-respecting LSTM/ModernTCN branches"
@@ -165,7 +165,7 @@
           "MLP_width": "searchable"
         },
         "output_heads": {
-          "defined_in": "Tier-1_000.hand-made.outcome.jsonc"
+          "defined_in": "outcome-label-target-head/Tier-1_000.action_mfe_rer (handmade).outcome.jsonc"
         }
       },
       "auxiliary_model": {

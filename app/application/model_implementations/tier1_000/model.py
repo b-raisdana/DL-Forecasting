@@ -1,7 +1,7 @@
 """DS-01 "Six-Timeframe Hybrid Temporal Model" per
-docs/ML_Forecasting_System_Design/designsets/Tier-1_000.hand-made.jsonc, resolved to its
-"1-base" hyperparameters (the `//` bound comments in that file are Optuna search bounds, not
-alternative values for a single run — see PROMPT.md's embedded-search-space convention).
+docs/ML_Forecasting_System_Design/designsets/Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm (handmade).base.jsonc,
+resolved to its "1-base" hyperparameters (the `//` bound comments in that file are Optuna search bounds,
+not alternative values for a single run — see PROMPT.md's embedded-search-space convention).
 
 Known, documented deviations from the spec (see docs/todos/01-input-data-channels.md and
 docs/todos/02-training-data-labels.md for the upstream gaps driving these):
@@ -312,7 +312,8 @@ def _pool(x: tf.Tensor, method: str) -> tf.Tensor:
 class PredictionHead(layers.Layer):
     """MLP trunk (fusion_concatenation of the pooled deep representation + auxiliary_features) ->
     action_head (3-class softmax) + mean_std_pairs for [mfe, rer] (heteroscedastic, Gaussian NLL —
-    outcome_set=1 in Tier-1_000.hand-made.outcome.jsonc, not the skew/kurtosis outcome_set=2)."""
+    outcome_set=1 in Tier-1_000.action_mfe_rer (handmade).outcome.jsonc, not the skew/kurtosis
+    outcome_set=2)."""
 
     def __init__(self, config: dict[str, object], **kwargs: object) -> None:
         super().__init__(**kwargs)
@@ -376,8 +377,9 @@ class Tier1000Model(tf_keras.Model):
 
 def gaussian_nll_loss(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
     """Gaussian NLL for a jointly-trained (mean, std) pair — mfe_params/rer_params' own loss, per
-    Tier-1_000.hand-made.outcome.jsonc outcome_set=1 ("mean+std trained jointly per pair, not two
-    independent MSE heads"). y_pred: (batch, 2) = [mean, std]; y_true: (batch, 1) realized value.
+    Tier-1_000.action_mfe_rer (handmade).outcome.jsonc outcome_set=1 ("mean+std trained jointly per
+    pair, not two independent MSE heads"). y_pred: (batch, 2) = [mean, std]; y_true: (batch, 1)
+    realized value.
     """
     mean = y_pred[..., 0]
     std = tf.maximum(y_pred[..., 1], 1e-3)  # numerical floor against log(0)/div-by-0

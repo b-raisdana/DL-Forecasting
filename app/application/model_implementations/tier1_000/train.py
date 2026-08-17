@@ -14,7 +14,11 @@ import numpy as np
 import psutil
 import tensorflow as tf
 from application.model_implementations.shared.base import setup_gpu
-from application.model_implementations.tier1_000.datafeeder import build_dataset, make_tf_dataset, split_bundle
+from application.model_implementations.tier1_000.datafeeder_input3_outcome1 import (
+    build_dataset,
+    make_tf_dataset,
+    split_bundle,
+)
 from application.model_implementations.tier1_000.model import TIER1_000_CONFIG, build_tier1000_model
 from GPUtil import getGPUs
 from infrastructure.model_artifacts import ModelArtifactRepository

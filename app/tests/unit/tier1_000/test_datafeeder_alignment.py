@@ -1,12 +1,13 @@
-"""Unit tests for datafeeder.py's cross-timeframe causal alignment (_last_closed_position) — the
-piece responsible for never letting a still-forming higher-timeframe candle's eventual final OHLC
-leak into an anchor's features. See that function's docstring for the shifted-merge_asof derivation.
+"""Unit tests for datafeeder_input3_outcome1.py's cross-timeframe causal alignment
+(_last_closed_position) — the piece responsible for never letting a still-forming higher-timeframe
+candle's eventual final OHLC leak into an anchor's features. See that function's docstring for the
+shifted-merge_asof derivation.
 """
 
 import numpy as np
 import pandas as pd
 import pytest
-from application.model_implementations.tier1_000.datafeeder import _last_closed_position
+from application.model_implementations.tier1_000.datafeeder_input3_outcome1 import _last_closed_position
 
 pytestmark = pytest.mark.unit
 

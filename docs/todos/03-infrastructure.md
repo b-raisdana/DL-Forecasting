@@ -102,7 +102,8 @@ are cross-cutting enablers other topics depend on rather than a pipeline stage o
 
       ```text
       app/
-        domain/market_structure/    # Model/TechnicalAnalysis/* + Model/Order.py
+        domain/price_action/         # Model/TechnicalAnalysis/* (price-action algorithms) + Model/Order.py
+        domain/technical_analysis/    # indicator calc split out of infra (e.g. ATR/RMA)
         domain/schemas/              # PanderaDFM/*
         application/dataset_generation/  # ai_modelling/dataset_generator/*
         application/training/             # ai_modelling/training/*
@@ -124,6 +125,7 @@ are cross-cutting enablers other topics depend on rather than a pipeline stage o
 
       `helper/functions.py`, `helper/data_preparation.py`, `helper/importer.py` are cross-cutting
       utilities used by every layer — leave under `helper/`, don't force them into one layer.
+    - **2026-08-17 follow-up split:** `domain/market_structure/` renamed to `domain/price_action/` (same content — name now matches what it holds). `infrastructure/ohlcv/atr.py` mixed a pure indicator calc (`RMA`, `insert_atr`, `insert_volume_rma`, `insert_mt_volume_rma` — DataFrame→DataFrame, no I/O) with its disk-cached repository generator (`get_multi_timeframe_ohlcva`, `@cache_on_disk`-decorated, does I/O); the calc moved to new `domain/technical_analysis/atr.py` per the `code-layers` skill's domain rule, the generator stayed in `infrastructure/ohlcv/atr.py` importing `insert_atr` from domain. `infrastructure/ohlcv/` holds I/O/cache adapters only — no TA math — going forward.
     - **Formalize repositories/DI** last — same scope as todo steps 7-8 above (`OhlcvRepository`; stop
       mutating `app_config.GLOBAL_CACHE` as a module-level singleton). `ModelArtifactRepository` itself is
       no longer a placeholder — implemented 2026-08-16 as `tf.train.Checkpoint`/`CheckpointManager`-based
@@ -148,7 +150,7 @@ are cross-cutting enablers other topics depend on rather than a pipeline stage o
     - misc symbol/index helpers (`map_symbol`, `FileInfoSet`/`extract_file_info`, `nearest_match`,
       `concat`).
 
-    Other files already over the `loc` vector's 500-line threshold, same one-cluster-per-commit approach (paths below reflect the todo step 12 directory-layer migration): `domain/market_structure/PeakValley.py` (776 lines), `application/dataset_generation/profit_loss/profit_loss_adder.py` (765), `domain/market_structure/BullBearSide.py` (712), `application/dataset_generation/training_datasets.py` (633), `domain/market_structure/ftc.py` (620), `helper/data_preparation.py` (613, up from its prior count above).
+    Other files already over the `loc` vector's 500-line threshold, same one-cluster-per-commit approach (paths below reflect the todo step 12 directory-layer migration, `market_structure/` renamed to `price_action/` in a later pass): `domain/price_action/PeakValley.py` (776 lines), `application/dataset_generation/profit_loss/profit_loss_adder.py` (765), `domain/price_action/BullBearSide.py` (712), `application/dataset_generation/training_datasets.py` (633), `domain/price_action/ftc.py` (620), `helper/data_preparation.py` (613, up from its prior count above).
 
     **2026-08-16 `loc` baseline bump, with an explicit payoff plan.** The todo step 12 directory-layer migration grew the four files above while moving/reformatting them (`profit_loss_adder.py` 657->765, `PeakValley.py` 694->776, `BullBearSide.py` 636->712, `ftc.py` 579->620) and pushed two more over the 500-line threshold for the first time (`training_datasets.py` at 633, `data_preparation.py` at 613) - a genuine +116 project-wide regression on the `loc` vector (1003->1119), not a rename artifact. Blocking the migration commit on an unrelated split effort wasn't worth it, so `scripts/git-hooks/incremental-precommit/baseline.json` was re-baselined to 1119 instead. Endpoint: this todo step's split plan (`data_preparation.py`'s clusters above, plus the same one-cluster-per-commit treatment for the other five files) is what pays this back down - the six files listed above are the full scope of what this bump covers, not a general license to keep growing them.
 

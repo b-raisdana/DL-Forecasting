@@ -1,6 +1,6 @@
 import pandas as pd
 from config import app_config
-from domain.market_structure.PeakValley import major_timeframe, peaks_only, valleys_only
+from domain.price_action.PeakValley import major_timeframe, peaks_only, valleys_only
 from domain.schemas.market_structure.PeakValley import MultiTimeframePeakValley
 from helper.data_preparation import df_timedelta_to_str, single_timeframe
 from helper.logging import profile_it

@@ -1,7 +1,8 @@
 import os
+import re
 from collections import OrderedDict
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from typing import get_args, get_type_hints
 from zipfile import BadZipFile
@@ -9,10 +10,10 @@ from zipfile import BadZipFile
 import pandas as pd
 import pytz
 from config import app_config
-from helper.data_preparation import after_under_process_date
-from helper.functions import Pandera_DFM_Type, date_range, morning
+from helper.data_preparation import after_under_process_date, trim_to_date_range
+from helper.functions import Pandera_DFM_Type, date_range, date_range_to_string, morning
 from helper.logging.do_log import log_w
-from helper.schema_casting import cast_and_validate
+from helper.schema_casting import cast_and_validate, empty_df
 from infrastructure.ohlcv.fragmented_data import symbol_data_path
 
 """
@@ -21,6 +22,11 @@ feather/ZSTD (or legacy CSV-zip) file and never recompute or re-fetch it twice w
 scope — the disk-level half of the cache-or-generate skill. `cache_on_disk` is the primitive new
 artifact types should use; `read_file`/`write_data_file` are its building blocks for callers (like
 domain.schemas.common.ExtendedDf.read_file) that need a class-bound variant instead of a decorator.
+
+Calendar-windowed caching (`cache_on_disk(..., windowed=True)` / `read_file_windowed()`), the legacy-
+file reuse it does on a miss, and the disk-generation-rate monitor are documented in detail in
+README.md next to this file — read that first if you're touching any of the `_window_*`/
+`*_cache_generation*`/`cleanup_redundant_cache_files` functions below.
 """
 
 
@@ -57,6 +63,33 @@ def _read_file_cache_put(cache_key: _ReadFileCacheKey, df: pd.DataFrame) -> None
         _read_file_cache.popitem(last=False)
 
 
+# Per-data_frame_type disk-generation-rate monitor (see README.md § monitoring). In-process only —
+# resets on restart, same tradeoff as _read_file_cache above. Evaluated lazily on write, at most once
+# per app_config.cache_generation_monitor_interval_minutes per prefix, so it never re-evaluates sooner
+# than that regardless of how many files a given prefix writes in between.
+_cache_generation_state: dict[str, dict[str, object]] = {}
+
+
+def _record_cache_generation(file_name_prefix: str, written_bytes: int) -> None:
+    now = datetime.now(pytz.UTC)
+    state = _cache_generation_state.setdefault(file_name_prefix, {"window_start": now, "bytes": 0})
+    state["bytes"] = state["bytes"] + written_bytes
+    interval = timedelta(minutes=app_config.cache_generation_monitor_interval_minutes)
+    elapsed = now - state["window_start"]
+    if elapsed < interval:
+        return
+    daily_rate_bytes = state["bytes"] / (elapsed.total_seconds() / 86400)
+    threshold = app_config.cache_generation_warn_bytes_per_day
+    if daily_rate_bytes > threshold:
+        log_w(
+            f"disk_cache: '{file_name_prefix}' cache files generated at ~{daily_rate_bytes / 1e9:.2f} "
+            f"GB/24h (measured over the last {elapsed}), above the {threshold / 1e9:.2f} GB/24h threshold. "
+            f"Possible cache-window misconfiguration or redundant regeneration — see README.md § monitoring."
+        )
+    state["window_start"] = now
+    state["bytes"] = 0
+
+
 def _feather_file_path(data_frame_type: str, date_range_str: str, file_path: str) -> str:
     return os.path.join(file_path, f"{data_frame_type}.{date_range_str}.feather")
 
@@ -74,6 +107,7 @@ def write_data_file(df: pd.DataFrame, data_frame_type: str, date_range_str: str,
     """
     feather_file_path = _feather_file_path(data_frame_type, date_range_str, file_path)
     df.reset_index().to_feather(feather_file_path, compression="zstd")
+    _record_cache_generation(data_frame_type, os.path.getsize(feather_file_path))
 
 
 def remove_data_file(data_frame_type: str, date_range_str: str, file_path: str) -> None:
@@ -284,6 +318,202 @@ def read_file(
     return df
 
 
+_DATE_RANGE_STR_RE = r"\d{2}-\d{2}-\d{2}\.\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{2}-\d{2}"
+
+
+def _legacy_file_pattern(data_frame_type: str) -> "re.Pattern":
+    return re.compile(rf"^{re.escape(data_frame_type)}\.(?P<range>{_DATE_RANGE_STR_RE})\.(?P<ext>feather|zip)$")
+
+
+def _window_freq(data_frame_type: str) -> str:
+    return app_config.cache_window_freq_overrides.get(data_frame_type, app_config.default_cache_window_freq)
+
+
+def _window_date_range_strs(date_range_str: str, window_freq: str) -> list[str]:
+    """
+    Decompose date_range_str into the full-span, calendar-aligned window_freq periods it overlaps
+    (e.g. every whole calendar day/month it touches) — always whole windows, never clipped to
+    date_range_str's own start/end, so the same window file is reused verbatim across differently
+    bounded requests instead of writing a fragment. read_file_windowed() trims the merged result back
+    down to date_range_str afterwards. See README.md § windowing.
+    """
+    start, end = date_range(date_range_str)
+    periods = pd.period_range(start=start, end=end, freq=window_freq)
+    return [
+        date_range_to_string(
+            start=period.start_time.tz_localize(pytz.UTC),
+            end=period.end_time.floor("min").tz_localize(pytz.UTC),
+        )
+        for period in periods
+    ]
+
+
+def _find_covering_file(
+    data_frame_type: str, window_start: datetime, window_end: datetime, file_path: str
+) -> tuple[str, str] | None:
+    """
+    Smallest on-disk (range, ext) for data_frame_type whose own date range fully contains
+    [window_start, window_end], if any. "Smallest" minimizes the read cost of the reuse in
+    _seed_window_from_legacy_file() — a window is usually covered by many nested legacy ranges.
+    """
+    pattern = _legacy_file_pattern(data_frame_type)
+    try:
+        entries = os.listdir(file_path)
+    except FileNotFoundError:
+        return None
+    best: tuple[str, str, datetime, datetime] | None = None
+    for entry in entries:
+        match = pattern.match(entry)
+        if not match:
+            continue
+        candidate_range = match.group("range")
+        candidate_start, candidate_end = date_range(candidate_range)
+        if candidate_start <= window_start and candidate_end >= window_end:
+            if best is None or (candidate_end - candidate_start) < (best[3] - best[2]):
+                best = (candidate_range, match.group("ext"), candidate_start, candidate_end)
+    if best is None:
+        return None
+    return best[0], best[1]
+
+
+def _seed_window_from_legacy_file(data_frame_type: str, window_date_range_str: str, file_path: str) -> None:
+    """
+    Backward-compatibility path for the windowing migration (README.md § backward compatibility): if
+    window_date_range_str's own canonical file is missing but an existing (typically pre-windowing,
+    arbitrary-range) file for data_frame_type fully covers it, slice that file down to the window and
+    write it out as the window's canonical file — so the caller's read_file() call right after this
+    finds it and never calls generator(). Does not touch the legacy file itself; a separate,
+    explicit cleanup_redundant_cache_files() pass removes files that become fully redundant.
+    """
+    if os.path.exists(_feather_file_path(data_frame_type, window_date_range_str, file_path)) or os.path.exists(
+        _csv_zip_file_path(data_frame_type, window_date_range_str, file_path)
+    ):
+        return
+    window_start, window_end = date_range(window_date_range_str)
+    covering = _find_covering_file(data_frame_type, window_start, window_end, file_path)
+    if covering is None:
+        return
+    covering_range_str, _ext = covering
+    try:
+        covering_df = read_with_timeframe(data_frame_type, covering_range_str, file_path, n_rows=None, skip_rows=None)
+    except Exception as e:
+        log_w(
+            f"disk_cache: failed reading legacy cache file {data_frame_type}.{covering_range_str} to "
+            f"seed window {window_date_range_str}: {e}"
+        )
+        return
+    window_df = trim_to_date_range(window_date_range_str, covering_df)
+    write_data_file(window_df, data_frame_type, window_date_range_str, file_path)
+
+
+def read_file_windowed(
+    date_range_str: str,
+    data_frame_type: str,
+    generator: Callable,
+    caster_model: type[Pandera_DFM_Type],
+    file_path: str = None,
+    zero_size_allowed: None | bool = None,
+    generator_params: dict = {},
+) -> pd.DataFrame:
+    """
+    Windowed counterpart to read_file() — see README.md § windowing for the full design. Decomposes
+    date_range_str into whole calendar windows (_window_date_range_strs(), sized per
+    app_config.cache_window_freq_overrides/default_cache_window_freq), fetches/generates each window
+    through the ordinary read_file() single-file path (so memoization, legacy CSV-zip migration, and
+    validation are all unchanged and shared with non-windowed callers), stitches the windows back
+    together, and trims to exactly date_range_str.
+
+    A window whose entire span is still in the future is never fetched (generator() would just
+    fail/return nothing useful for it) — it contributes an empty frame instead. A window missing its
+    own canonical file but fully covered by an existing legacy file is seeded from that file first;
+    see _seed_window_from_legacy_file().
+    """
+    if file_path is None:
+        file_path = symbol_data_path()
+    if date_range_str is None:
+        date_range_str = app_config.processing_date_range
+    window_freq = _window_freq(data_frame_type)
+    window_ranges = _window_date_range_strs(date_range_str, window_freq)
+    now = datetime.now(pytz.UTC)
+
+    window_dfs = []
+    for window_range in window_ranges:
+        window_start, _window_end = date_range(window_range)
+        if window_start > now:
+            window_dfs.append(empty_df(caster_model))
+            continue
+        if not datarange_is_not_cachable(window_range):
+            _seed_window_from_legacy_file(data_frame_type, window_range, file_path)
+        window_dfs.append(
+            read_file(
+                window_range,
+                data_frame_type,
+                generator,
+                caster_model,
+                file_path=file_path,
+                zero_size_allowed=zero_size_allowed,
+                generator_params=generator_params,
+            )
+        )
+    df = pd.concat(window_dfs)
+    df = df.sort_index(level="date")
+    return trim_to_date_range(date_range_str, df)
+
+
+def cleanup_redundant_cache_files(
+    data_frame_type: str, file_path: str = None, window_freq: str | None = None, dry_run: bool = False
+) -> list[tuple[str, int]]:
+    """
+    Delete every on-disk cache file for data_frame_type whose whole date-range span is already fully,
+    exactly reconstructable from OTHER cache files for the same data_frame_type at window_freq
+    granularity (defaults to this prefix's configured window). See README.md § cleanup. Typical
+    target: a pre-windowing file that duplicates the canonical window tiles now sitting underneath it
+    (e.g. a multi-year "full range" file where every day in it also has its own daily tile). A file is
+    never deleted on the strength of its own span alone — every constituent window period must be
+    backed by a DIFFERENT file, so a genuine window tile is never mistaken for redundant.
+
+    Returns the (path, size_in_bytes) pairs deleted (or, if dry_run, that would be deleted).
+    """
+    if file_path is None:
+        file_path = symbol_data_path()
+    if window_freq is None:
+        window_freq = _window_freq(data_frame_type)
+    pattern = _legacy_file_pattern(data_frame_type)
+    try:
+        entries = os.listdir(file_path)
+    except FileNotFoundError:
+        return []
+
+    files: list[tuple[str, datetime, datetime]] = []
+    exact_index: dict[tuple[datetime, datetime], list[str]] = {}
+    for entry in entries:
+        match = pattern.match(entry)
+        if not match:
+            continue
+        start, end = date_range(match.group("range"))
+        files.append((entry, start, end))
+        exact_index.setdefault((start, end), []).append(entry)
+
+    removed: list[tuple[str, int]] = []
+    for entry, start, end in files:
+        periods = pd.period_range(start=start, end=end, freq=window_freq)
+        fully_covered_by_others = True
+        for period in periods:
+            key = (period.start_time.tz_localize(pytz.UTC), period.end_time.floor("min").tz_localize(pytz.UTC))
+            other_files = [f for f in exact_index.get(key, []) if f != entry]
+            if not other_files:
+                fully_covered_by_others = False
+                break
+        if not fully_covered_by_others:
+            continue
+        full_path = os.path.join(file_path, entry)
+        size = os.path.getsize(full_path)
+        if not dry_run:
+            os.remove(full_path)
+        removed.append((full_path, size))
+    return removed
+
+
 def _resolve_caster_model(generator: Callable) -> type[Pandera_DFM_Type]:
     """Pull the pandera model read_file() should validate/write against straight from generator's own
     return-type annotation, so cache_on_disk() callers don't repeat it. Accepts either a bare model class
@@ -305,6 +535,7 @@ def cache_on_disk(
     skip_rows=None,
     n_rows=None,
     zero_size_allowed: None | bool = None,
+    windowed: bool = False,
 ):
     """
     Decorate a `generator(date_range_str, file_path=None, **kwargs) -> DataFrame` function so calling it
@@ -316,6 +547,12 @@ def cache_on_disk(
     `after_read`, if given, runs on the result of every call — a disk/memo hit as well as a fresh
     generation — for side effects that must reflect what was actually read, not just fresh generation
     (e.g. `cache_times()` populating `app_config.GLOBAL_CACHE` for `to_timeframe()` validation).
+
+    `windowed=True` makes `generator` a per-window generator (see README.md § windowing): the decorated
+    function accepts an arbitrary `date_range_str`, decomposes it into whole calendar windows sized per
+    `app_config.cache_window_freq_overrides[file_name_prefix]` (default `app_config.default_cache_window_freq`),
+    and calls `generator` once per window via `read_file_windowed()` instead of once for the whole range.
+    Not compatible with `skip_rows`/`n_rows` (same restriction `read_file()` already has on a cache miss).
     """
 
     def decorator(generator: Callable) -> Callable:
@@ -323,17 +560,30 @@ def cache_on_disk(
 
         @wraps(generator)
         def wrapper(date_range_str: str = None, file_path: str = None, **generator_params):
-            result = read_file(
-                date_range_str,
-                file_name_prefix,
-                generator,
-                caster_model,
-                skip_rows=skip_rows,
-                n_rows=n_rows,
-                file_path=file_path,
-                zero_size_allowed=zero_size_allowed,
-                generator_params=generator_params,
-            )
+            if windowed:
+                if skip_rows or n_rows is not None:
+                    raise Exception("cache_on_disk(windowed=True) does not support skip_rows/n_rows.")
+                result = read_file_windowed(
+                    date_range_str,
+                    file_name_prefix,
+                    generator,
+                    caster_model,
+                    file_path=file_path,
+                    zero_size_allowed=zero_size_allowed,
+                    generator_params=generator_params,
+                )
+            else:
+                result = read_file(
+                    date_range_str,
+                    file_name_prefix,
+                    generator,
+                    caster_model,
+                    skip_rows=skip_rows,
+                    n_rows=n_rows,
+                    file_path=file_path,
+                    zero_size_allowed=zero_size_allowed,
+                    generator_params=generator_params,
+                )
             if after_read is not None:
                 after_read(result)
             return result

@@ -30,24 +30,27 @@ Rules:
 
 ## Code layers
 
-Trigger: adding a module/file under `app/`, or reviewing a layer boundary. DDD-flavored, not MVC — offline pipeline, no request/response cycle. Dependency arrows point inward.
+Trigger: adding a module/file under `app/`, or reviewing a layer boundary. DDD-flavored, not MVC — offline pipeline, no request/response cycle. Dependency arrows point inward: Presentation → Application → Infrastructure/Domain, and Infrastructure → Domain schemas only. Domain depends on nothing in-house.
 
-1. **Presentation** — plotting, entrypoints, notebooks → depends on Application.
-2. **Application** — dataset gen, training, prediction, optimization, backtesting → Domain + Infrastructure.
-3. **Infrastructure** — I/O/framework adapters (fetch, persistence, config, logging, TF defs) → Domain schemas only.
-4. **Domain** — pure TA algorithms (DataFrame→DataFrame, no I/O) + PanderaDFM schemas → nothing in-house.
+1. **Presentation** (`presentation/*`) — plotting, entrypoints, notebooks.
+2. **Application** (`application/dataset_generation`, `application/preprocessing`, `application/model_implementations`, `application/optimization`, `application/backtesting`, `application/live_trading`) — orchestrates Domain + Infrastructure for one job (dataset gen, training, prediction, optimization, backtesting).
+3. **Infrastructure** (`infrastructure/ohlcv`, `infrastructure/market_data_fetch`, `infrastructure/model_artifacts`, `infrastructure/order_execution`, `config/Config.py`) — I/O/framework adapters only: exchange fetch, disk cache/persistence, GPU/TF setup, config, logging. **No calculation logic** — `infrastructure/ohlcv/atr.py` is the pattern to copy: the disk-cached repository generator (`get_multi_timeframe_ohlcva`, `@cache_on_disk`-decorated) lives here because it does I/O; the indicator math it calls (`insert_atr`) lives in `domain/technical_analysis/`, imported in.
+4. **Domain** (`domain/technical_analysis`, `domain/price_action`, `domain/order`, `domain/schemas`) — pure algorithms (DataFrame→DataFrame, no I/O) + PanderaDFM schemas.
+   - `domain/technical_analysis/` — generic indicator math (ATR, RMA, …).
+   - `domain/price_action/` — price-action/market-structure pattern detection (peak/valley, bull/bear/side, base-pattern, pivots).
+   - `domain/schemas/` — PanderaDFM value-object schemas.
 
 Placing new code:
-- Pure transform, no I/O → Domain (`Model/TechnicalAnalysis/*`) or a new PanderaDFM schema.
-- Orchestrates multiple domain steps + I/O for one job → Application (`ai_modelling/*`, `Strategy/*`).
-- Direct disk/exchange/GPU/config/logging → Infrastructure (`data_processing/*`, `Config.py`); new persisted-artifact types go through a repository (`get`/`save`), not inline I/O.
-- Plot/print/CLI → Presentation (`FigurePlotter/*`, `main.py`-style).
+- Pure transform, no I/O → Domain (`domain/technical_analysis/*` for indicator math, `domain/price_action/*` for pattern detection) or a new PanderaDFM schema under `domain/schemas/`.
+- Orchestrates multiple domain steps + I/O for one job → Application (e.g. `application/backtesting/BasePatternStrategy.py`, `application/dataset_generation/*`).
+- Direct disk/exchange/GPU/config/logging → Infrastructure (`infrastructure/market_data_fetch/*`, `infrastructure/ohlcv/*`, `config/Config.py`); new persisted-artifact types go through a repository (`get`/`save`), not inline I/O.
+- Plot/print/CLI → Presentation (`presentation/*`).
 
-DDD map: value objects = PanderaDFM schemas (no persistent identity); domain services = the TA transform chain (PeakValley → BullBearSide → BasePattern → ATR/pivots → ftc); application services = orchestrators; bounded contexts = *market structure* (`Model`, `Strategy`) and *forecasting* (`ai_modelling/*`), sharing the OHLCV/PanderaDFM kernel.
+DDD map: value objects = PanderaDFM schemas (no persistent identity); domain services = the TA transform chain (PeakValley → BullBearSide → BasePattern → ATR/pivots → ftc); application services = orchestrators; bounded contexts = *price action* (`domain/price_action`, `application/backtesting`) and *forecasting* (`application/dataset_generation`, `application/model_implementations`), sharing the OHLCV/PanderaDFM kernel.
 
 Rules:
-- Never import Presentation/Application from Domain (known violation: `Model/TechnicalAnalysis/PeakValley.py` importing a constant from `FigurePlotter/plotter.py` — don't copy it; fix is moving the constant to `Config.py`).
-- Don't fork a second copy of a module for a new pipeline (3 existing dupes: `PreProcessing`/`predicting`/`training` under both `app/` and `app/ai_modelling/`) — extend/move the existing one.
+- Never import Presentation/Application from Domain. Current known violation: several `domain/price_action/*` modules (`BasePattern.py`, `BullBearSide.py`, `BullBearSidePivot.py`, `PeakValleyPivots.py`, `AtrMovementPivots.py`) import `get_multi_timeframe_ohlcva`/`read_multi_timeframe_ohlcva` straight from `infrastructure/ohlcv/atr.py` (a Domain→Infrastructure dependency, not just schemas) — don't copy this pattern into new code; a proper fix passes the OHLCVA frame in rather than having Domain pull it.
+- Don't fork a second copy of a module for a new pipeline — extend/move the existing one instead of duplicating.
 - Pass config/state explicitly into constructors/functions, never pulled from `app_config` mid-function.
 
 Splitting an oversized file (~500+ lines, by responsibility not raw count): extract one cohesive cluster per commit (few/no external callers first — check via grep), re-export moved names (`from new_module import name as name`) so callers keep working unchanged in that commit, log remaining clusters as follow-up instead of a full-file rewrite in one pass.

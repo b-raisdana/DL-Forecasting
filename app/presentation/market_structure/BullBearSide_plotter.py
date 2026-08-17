@@ -1,8 +1,8 @@
 import pandas as pd
 from config import TREND, TopTYPE, app_config
-from domain.market_structure import PeakValley
-from domain.market_structure.BullBearSide import most_two_significant_tops
-from domain.market_structure.PeakValley import major_timeframe, peaks_only, valleys_only
+from domain.price_action import PeakValley
+from domain.price_action.BullBearSide import most_two_significant_tops
+from domain.price_action.PeakValley import major_timeframe, peaks_only, valleys_only
 from domain.schemas.common.OHLCV import OHLCV
 from domain.schemas.market_structure.BullBearSide import BullBearSide, bull_bear_side_repr
 from helper.data_preparation import single_timeframe

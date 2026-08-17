@@ -86,7 +86,7 @@ Locking order and the "materially worse than Validation B" rule (investigate, do
 
 ## 6. ML-Ops
 
-[06](06-ML-Ops.md) covers training-run resource monitoring — GPU compute/VRAM, RAM, CPU, disk I/O KPIs and thresholds for this project's single-GPU local hardware, plus the diagnostic decision tree for isolating which resource is actually the bottleneck. Concrete implementation: `ResourceSampler` in `app/ai_modelling/tier1_000/train.py`. Scoped to this project's own local hardware, not production/serving MLOps — see [99-Exclusion.md § MLOps / Infrastructure](99-Exclusion.md#mlops--infrastructure).
+[06](06-ML-Ops.md) covers training-run resource monitoring — GPU compute/VRAM, RAM, CPU, disk I/O KPIs and thresholds for this project's single-GPU local hardware, plus the diagnostic decision tree for isolating which resource is actually the bottleneck. Concrete implementation: `ResourceSampler` in `app/application/model_implementations/tier1_000/train.py`. Scoped to this project's own local hardware, not production/serving MLOps — see [99-Exclusion.md § MLOps / Infrastructure](99-Exclusion.md#mlops--infrastructure).
 
 ---
 

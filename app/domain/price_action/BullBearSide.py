@@ -5,7 +5,7 @@ from typing import Literal
 import pandas as pd
 import pandera.typing as pt
 from config import TREND, TopTYPE, app_config
-from domain.market_structure.PeakValley import (
+from domain.price_action.PeakValley import (
     get_multi_timeframe_peaks_n_valleys,
     insert_previous_n_next_top,
     major_timeframe,

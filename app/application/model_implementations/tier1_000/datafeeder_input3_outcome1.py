@@ -1,8 +1,23 @@
-"""Datafeeder for the Tier-1_000 model: builds the 6 fixed-timeframe branch windows +
-auxiliary_features + mfe/rer/action labels once per training run, RAM-resident, then serves them
-through a tf.data pipeline — the "preload once, in-memory feature cache, .prefetch(AUTOTUNE)"
-convention from 03-Model & Architecture Engineering.md § vram/ram budget split's pre-loading/prefetch
-pipeline. See the cache-or-generate skill for the general pattern this follows.
+"""Datafeeder for the Tier-1_000 architecture (see docs/ML_Forecasting_System_Design/designsets/
+Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm (handmade).base.jsonc), built specifically against
+**input variation 3** of the input-data-feature category's handmade reference,
+`Tier-1_000.atr_rel_ohlc_log_sma_v_extm_rel_6tf (handmade).input.jsonc` (256 candles on 5min/15min, 128 on
+1h/4h, 64 on 1D/1W — see model.py's module docstring for why variation 3 and not the "1-base" row's
+variation 1), and **outcome set 1** of the outcome-label-target-head category's handmade reference,
+`Tier-1_000.action_mfe_rer (handmade).outcome.jsonc` (action_head + mean_std_pairs for
+[mfe, rer], not the mean_std_skew_kurtosis_pairs of outcome set 2).
+
+This is one input/outcome combination among several the Tier-1_000 architecture can be trained
+against — a future `datafeeder_input<N>_outcome<M>.py` sibling module covers any other combination
+tested later; this module's name pins down exactly which one `build_dataset()` here implements, so
+callers never have to guess from a bare "datafeeder" which variation/outcome-set pairing they're
+getting.
+
+Builds the 6 fixed-timeframe branch windows + auxiliary_features + mfe/rer/action labels once per
+training run, RAM-resident, then serves them through a tf.data pipeline — the "preload once,
+in-memory feature cache, .prefetch(AUTOTUNE)" convention from 03-Model & Architecture Engineering.md
+§ vram/ram budget split's pre-loading/prefetch pipeline. See the cache-or-generate skill for the
+general pattern this follows.
 
 Causality: a higher-timeframe candle is only usable for an anchor once it has actually closed by the
 anchor's own close — not merely "started before" the anchor (a naive backward-nearest match on raw
@@ -43,6 +58,10 @@ _ATR_LENGTH_OVERRIDE: dict[str, int] = {"1W": 20}
 
 @dataclass
 class DatasetBundle:
+    """branch_windows/auxiliary_features shape per this module's input variation 3 (BRANCH_WINDOW_LENGTHS);
+    mfe/rer/action shape per this module's outcome set 1 (a mean_std_pairs [mfe, rer] regression target
+    per sample, not the mean_std_skew_kurtosis_pairs a future outcome-set-2 builder would carry)."""
+
     branch_windows: dict[str, npt.NDArray[np.float32]]  # tf -> (n_samples, window_len, feature_dim)
     auxiliary_features: npt.NDArray[np.float32]  # (n_samples, AUX_FEATURE_DIM)
     mfe: npt.NDArray[np.float32]  # (n_samples, 1)

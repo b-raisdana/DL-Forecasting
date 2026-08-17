@@ -5,9 +5,9 @@ import backtrader as bt
 import pandas as pd
 from application.backtesting.ExtendedStrategy import ExtendedStrategy
 from config import app_config
-from domain.market_structure.BasePattern import get_multi_timeframe_base_patterns
 from domain.order.Order import BracketOrderType, OrderSide
 from domain.order.SignalDf import SignalDf, SignalDFM
+from domain.price_action.BasePattern import get_multi_timeframe_base_patterns
 from domain.schemas.market_structure.BasePattern import BasePattern, MultiTimeframeBasePattern
 from helper.logging import log_d, profile_it
 from infrastructure.ohlcv.atr import get_multi_timeframe_ohlcva

@@ -5,31 +5,20 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from application.dataset_generation.classic_indicators import classic_indicator_columns
-from application.dataset_generation.relative_candle import relative_candle_columns
-from application.dataset_generation.training_datasets import (
-    _cached_training_frames,
-    _check_gap,
-    _resolve_label_frame,
-    normalize,
-    slicing,
+from application.model_implementations.tier1_000.datafeeder_input3_outcome1 import DatasetBundle, build_dataset
+from application.model_implementations.tier1_000.model import (
+    BRANCH_TIMEFRAMES,
+    BRANCH_WINDOW_LENGTHS,
+    CANDLE_FEATURE_COLUMNS,
 )
-from application.dataset_generation.volume_feature import volume_feature_columns
 from config import app_config
-from helper.data_preparation import pattern_timeframe, trigger_timeframe
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
 SYMBOLS = ["BTCUSDT", "ETHUSDT", "AIOUSDT", "TRXUSDT", "BNBUSDT"]
-DEFAULT_STRUCTURE_TF = "4h"
-DEFAULT_X_SHAPE = {
-    "double": (255, 5),
-    "trigger": (254, 5),
-    "pattern": (253, 5),
-    "structure": (127, 5),
-}
-DEFAULT_FORECAST_BARS = 192
 RANGE_DAYS = 14
+_ACTION_LABELS = ["long", "short", "none"]
+_AUX_FEATURE_NAMES = [f"{tf_name}_{column}" for tf_name in BRANCH_TIMEFRAMES for column in CANDLE_FEATURE_COLUMNS]
 _CACHE_RE = re.compile(r"^(?P<kind>multi_timeframe_ohlcva?|ohlcva?)\.(?P<range>.+)\.(?:zip|feather)$")
 
 
@@ -111,47 +100,83 @@ def random_cached_period(symbol: str, days: int = RANGE_DAYS, seed: int = 7) -> 
     return start, start + pd.Timedelta(days=days)
 
 
-def build_review_samples(
-    symbol: str,
-    sample_count: int = 5,
-    structure_tf: str = DEFAULT_STRUCTURE_TF,
-    forecast_bars: int = DEFAULT_FORECAST_BARS,
-    label_tf: str | None = "5min",
-    x_shape: dict[str, tuple[int, int]] = DEFAULT_X_SHAPE,
-) -> list[dict[str, object]]:
-    mt_ohlcv = load_cached_multi_timeframe_ohlcv(symbol)
-    pattern_tf = pattern_timeframe(structure_tf)
-    trigger_tf = trigger_timeframe(structure_tf)
-    double_tf = pattern_timeframe(trigger_tf)
-    resolved_label_tf, label_frame = _resolve_label_frame(structure_tf, pattern_tf, trigger_tf, double_tf, label_tf)
-    train_safe_start, train_safe_end, _, dfs = _cached_training_frames(
-        mt_ohlcv, structure_tf, pattern_tf, trigger_tf, double_tf, resolved_label_tf, label_frame, forecast_bars
-    )
-    candidates = dfs["double"].loc[pd.IndexSlice[train_safe_start:train_safe_end], :].index
-    if len(candidates) < sample_count:
-        raise RuntimeError(f"Only {len(candidates)} safe NOW candidates found for {symbol}")
-    selected = candidates[np.linspace(0, len(candidates) - 1, sample_count + 2, dtype=int)[1:-1]]
-    return [
-        _build_sample_at_now(symbol, dfs, now, structure_tf, pattern_tf, trigger_tf, double_tf, x_shape, forecast_bars)
-        for now in selected
-    ]
+def build_review_samples(symbol: str, sample_count: int = 5) -> list[dict[str, object]]:
+    """Builds `sample_count` NOW samples straight from
+    `datafeeder_input3_outcome1.build_dataset()`'s `DatasetBundle` — the literal per-branch feature
+    windows + mfe/rer/action labels the Tier1_000 model trains on, not a separate ad hoc
+    reconstruction of them. Uses the largest single locally cached multi-timeframe file for `symbol`
+    as `build_dataset()`'s `date_range_str`, so this stays an offline review of already-fetched data
+    (no broker/exchange call — `build_dataset` only fetches on a cache miss, and this range is by
+    construction already on disk).
+    """
+    date_range_str = _select_cache_file(symbol, None, None).date_range
+    bundle = build_dataset(symbol, date_range_str)
+    if bundle.n_samples < sample_count:
+        raise RuntimeError(f"Only {bundle.n_samples} samples built for {symbol} — need {sample_count}")
+    selected = np.linspace(0, bundle.n_samples - 1, sample_count + 2, dtype=int)[1:-1]
+    return [_extract_sample(symbol, bundle, int(idx)) for idx in selected]
+
+
+def _extract_sample(symbol: str, bundle: DatasetBundle, idx: int) -> dict[str, object]:
+    return {
+        "symbol": symbol,
+        "now": bundle.anchor_index[idx],
+        "branch_windows": {
+            tf_name: pd.DataFrame(
+                bundle.branch_windows[tf_name][idx],
+                columns=CANDLE_FEATURE_COLUMNS,
+                index=np.arange(-(BRANCH_WINDOW_LENGTHS[tf_name] - 1), 1),
+            )
+            for tf_name in BRANCH_TIMEFRAMES
+        },
+        "auxiliary_features": pd.Series(bundle.auxiliary_features[idx], index=_AUX_FEATURE_NAMES),
+        "mfe": float(bundle.mfe[idx, 0]),
+        "rer": float(bundle.rer[idx, 0]),
+        "action": dict(zip(_ACTION_LABELS, bundle.action[idx].tolist(), strict=True)),
+    }
 
 
 def plot_now_sample(sample: dict[str, object], title: str | None = None) -> go.Figure:
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.5, 0.5], vertical_spacing=0.05)
-    _add_sample_traces(fig, sample, row=1, normalized=True)
-    _add_sample_traces(fig, sample, row=2, normalized=False)
-    _add_label_lines(fig, sample, row=1)
-    _add_label_lines(fig, sample, row=2)
+    """One row per branch timeframe, each plotting that branch's own CANDLE_FEATURE_COLUMNS
+    (ATR-relative OHLC + volume, the columns model.py's branches actually consume) across the window,
+    x=0 marking NOW. Labels (mfe/rer/action) — outcome_set=1's regression + classification targets —
+    are summarized in the title rather than as price ladders, since mfe/rer are ATR-relative
+    distances/ratios, not price levels this bundle carries.
+    """
+    branch_windows = sample["branch_windows"]
+    assert isinstance(branch_windows, dict)
+    fig = make_subplots(
+        rows=len(BRANCH_TIMEFRAMES),
+        cols=1,
+        shared_xaxes=False,
+        subplot_titles=[f"{tf_name} branch" for tf_name in BRANCH_TIMEFRAMES],
+        vertical_spacing=0.04,
+    )
+    for row, tf_name in enumerate(BRANCH_TIMEFRAMES, start=1):
+        frame = branch_windows[tf_name]
+        for column in CANDLE_FEATURE_COLUMNS:
+            fig.add_trace(
+                go.Scatter(
+                    x=frame.index, y=frame[column], mode="lines", name=column, legendgroup=column, showlegend=(row == 1)
+                ),
+                row=row,
+                col=1,
+            )
+        fig.add_vline(x=0, line_dash="dash", line_color="black", row=row, col=1)
+
+    action = sample["action"]
+    assert isinstance(action, dict)
+    action_str = ", ".join(f"{name}={value:.0f}" for name, value in action.items())
     fig.update_layout(
-        title=title or f"{sample['symbol']} NOW {sample['now']}",
-        height=850,
-        xaxis_rangeslider_visible=False,
-        xaxis2_rangeslider_visible=False,
+        title=title
+        or (
+            f"{sample['symbol']} NOW {sample['now']} — mfe={sample['mfe']:.4f} rer={sample['rer']:.4f} "
+            f"action=[{action_str}]"
+        ),
+        height=220 * len(BRANCH_TIMEFRAMES),
         legend={"orientation": "h"},
     )
-    fig.update_yaxes(title_text="normalized", row=1, col=1)
-    fig.update_yaxes(title_text="original", row=2, col=1)
+    fig.update_xaxes(title_text="candles before NOW", row=len(BRANCH_TIMEFRAMES), col=1)
     return fig
 
 
@@ -164,76 +189,6 @@ def plot_random_period(symbol: str, start: pd.Timestamp, end: pd.Timestamp, char
         title=f"{symbol} cached period {chart_no}: {start} to {end}", height=520, xaxis_rangeslider_visible=False
     )
     return fig
-
-
-def _build_sample_at_now(
-    symbol: str,
-    dfs: dict[str, pd.DataFrame],
-    now: pd.Timestamp,
-    structure_tf: str,
-    pattern_tf: str,
-    trigger_tf: str,
-    double_tf: str,
-    x_shape: dict[str, tuple[int, int]],
-    forecast_bars: int,
-) -> dict[str, object]:
-    training_x_columns = (
-        ["open", "high", "low", "close", "volume"]
-        + classic_indicator_columns()
-        + relative_candle_columns()
-        + volume_feature_columns()
-    )
-    double_end = pd.Timestamp(now)
-    trigger_end = double_end - x_shape["double"][0] * pd.to_timedelta(double_tf)
-    pattern_end = trigger_end - x_shape["trigger"][0] * pd.to_timedelta(trigger_tf)
-    structure_end = pattern_end - x_shape["pattern"][0] * pd.to_timedelta(pattern_tf)
-    future = dfs["future"].loc[pd.IndexSlice[double_end:], :].iloc[:forecast_bars]
-    double_slice, pattern_slice, structure_slice, trigger_slice = slicing(
-        dfs, structure_end, pattern_end, trigger_end, double_end, training_x_columns, x_shape
-    )
-    gap_error = _check_gap(
-        [
-            (structure_tf, structure_slice, "structure"),
-            (pattern_tf, pattern_slice, "pattern"),
-            (trigger_tf, trigger_slice, "trigger"),
-            (double_tf, double_slice, "double"),
-        ],
-        x_shape,
-    )
-    if gap_error is not None:
-        raise RuntimeError(gap_error)
-    sc_double, sc_pattern, sc_trigger, sc_structure, sc_future = normalize(
-        structure_slice, pattern_slice, trigger_slice, double_slice, future
-    )
-    return {
-        "symbol": symbol,
-        "now": double_end,
-        "original": {
-            "structure": structure_slice,
-            "pattern": pattern_slice,
-            "trigger": trigger_slice,
-            "double": double_slice,
-            "future": future,
-        },
-        "normalized": {
-            "structure": sc_structure,
-            "pattern": sc_pattern,
-            "trigger": sc_trigger,
-            "double": sc_double,
-            "future": sc_future,
-        },
-        "label": future.iloc[0],
-    }
-
-
-def _add_sample_traces(fig: go.Figure, sample: dict[str, object], row: int, normalized: bool) -> None:
-    key = "normalized" if normalized else "original"
-    frames = sample[key]
-    assert isinstance(frames, dict)
-    for level in ["structure", "pattern", "trigger", "double"]:
-        _add_candles(fig, frames[level], f"{key} {level}", row=row, opacity=1.0)
-    _add_candles(fig, frames["future"], f"{key} future labels", row=row, opacity=0.5)
-    fig.add_vline(x=sample["now"], line_dash="dash", line_color="black", row=row, col=1)
 
 
 def _add_candles(fig: go.Figure, df: pd.DataFrame, name: str, row: int | None = None, opacity: float = 1.0) -> None:
@@ -250,33 +205,6 @@ def _add_candles(fig: go.Figure, df: pd.DataFrame, name: str, row: int | None = 
         fig.add_trace(trace)
     else:
         fig.add_trace(trace, row=row, col=1)
-
-
-def _add_label_lines(fig: go.Figure, sample: dict[str, object], row: int) -> None:
-    label = sample["label"]
-    now = sample["now"]
-    assert isinstance(label, pd.Series)
-    assert isinstance(now, pd.Timestamp)
-    if float(label.get("long_signal", 0)) > 0:
-        _add_ladder(fig, now, label["worst_long_open"], label["max_high"], label["long_sl_distance"], "long", row)
-    if float(label.get("short_signal", 0)) > 0:
-        _add_ladder(fig, now, label["worst_short_open"], label["min_low"], label["short_sl_distance"], "short", row)
-
-
-def _add_ladder(
-    fig: go.Figure, now: pd.Timestamp, entry: float, tp4: float, sl_distance: float, side: str, row: int
-) -> None:
-    color = "#1f9d55" if side == "long" else "#d64545"
-    sl = entry - sl_distance if side == "long" else entry + sl_distance
-    levels = {
-        "SL": sl,
-        "TP1": entry + (tp4 - entry) * 0.25,
-        "TP2": entry + (tp4 - entry) * 0.5,
-        "TP3": entry + (tp4 - entry) * 0.75,
-        "TP4": tp4,
-    }
-    for name, y in levels.items():
-        fig.add_hline(y=y, line_dash="dot", line_color=color, annotation_text=f"{side} {name}", row=row, col=1)
 
 
 def _read_cached_frame(cache_file: CacheFile) -> pd.DataFrame:

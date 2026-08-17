@@ -101,6 +101,20 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
     path_of_logs: str = os.path.join(_ROOT_PATH, "logs")
     path_of_test_plots: str = "test_plots"
 
+    # infrastructure.ohlcv.disk_cache windowing (see app/infrastructure/ohlcv/README.md): default
+    # calendar-window size for any data_frame_type without an entry in cache_window_freq_overrides,
+    # as a pandas period freq alias ("M" calendar month, "D" calendar day, ...).
+    default_cache_window_freq: str = "M"
+    cache_window_freq_overrides: dict[str, str] = {
+        "ohlcv": "D",
+        "multi_timeframe_ohlcv": "D",
+        "multi_timeframe_ohlcva": "D",
+    }
+    # Warn if a data_frame_type's cache-file generation rate, extrapolated to 24h, exceeds this many
+    # bytes; re-evaluated at most once per cache_generation_monitor_interval_minutes per prefix.
+    cache_generation_warn_bytes_per_day: int = Field(default=1_000_000_000, gt=0)
+    cache_generation_monitor_interval_minutes: int = Field(default=30, gt=0)
+
     momentum_trand_strength_factor: float = Field(default=0.70, gt=0)  # CandleSize.Standard.value[0]
 
     load_data_to_meta_trader: bool = False
