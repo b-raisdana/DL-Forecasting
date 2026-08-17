@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import multiprocessing as mp
 import os
@@ -11,9 +12,9 @@ import tensorflow as tf
 from application.dataset_generation.training_datasets import train_data_of_mt_n_profit
 from application.model_implementations.shared.base import master_x_shape, overlapped_quarters
 from config import app_config
+from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from helper.functions import date_range_to_string
 from helper.logging.do_log import log_d, log_i, log_w
-from infrastructure.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 
 
 def npz_file_dataset(cache_folder, poll_interval_sec=1.0):
@@ -106,7 +107,8 @@ def npz_cache_generator(
                             ]
                             while len(cache_files) >= CACHE_THRESHOLD:
                                 print(
-                                    f"Cache is full (>= threshold{CACHE_THRESHOLD}), no new file needed right now. Sleep briefly."
+                                    f"Cache is full (>= threshold{CACHE_THRESHOLD}), no new file needed right now. "
+                                    "Sleep briefly."
                                 )
                                 time.sleep(0.5)  # small delay to avoid busy-wait
                                 cache_files = [
@@ -142,11 +144,9 @@ def npz_cache_generator(
                             except Exception as e:
                                 logging.error(f"Failed to write cache file {final_path}: {e}")
                                 # Clean up temp file if exists
-                                try:
+                                with contextlib.suppress(OSError):
                                     os.remove(tmp_path)
-                                except OSError:
-                                    pass
-                            # loop continues to potentially generate more if still below threshold...
+                                    # loop continues to potentially generate more if still below threshold...
                         except Exception as e:
                             logging.error(f"Unexpected error in generator loop: {e}", exc_info=True)
                             time.sleep(5)
@@ -158,7 +158,7 @@ def build_npz_dataset(cache_folder, batch_size=80):
     def unpack_and_reconstruct(*xs_and_ys):
         xs_list = xs_and_ys[:-1]
         ys = xs_and_ys[-1]
-        xs_dict = dict(zip(master_x_shape.keys(), xs_list))
+        xs_dict = dict(zip(master_x_shape.keys(), xs_list, strict=False))
         return xs_dict, ys
 
     unpacked_ds = file_ds.map(load_and_delete_npz, num_parallel_calls=tf.data.AUTOTUNE)
@@ -198,30 +198,23 @@ def npz_dataset_generator(batch_size: int):
             except Exception as e:
                 logging.error(f"Error loading file {oldest_file}: {e}")
                 # If file was removed or corrupted, skip it
-                try:
+                with contextlib.suppress(OSError):
                     os.remove(file_path)
-                except OSError:
-                    pass
                 continue
             # Extract Xs and ys from the loaded data
             try:
-                for key in master_x_shape.keys():
+                for key in master_x_shape:
                     if key in cached_xs:
                         cached_xs[key] = np.concatenate([cached_xs[key], data[key]], axis=0)
                     else:
                         cached_xs[key] = data[key]
-                if cached_ys is None:
-                    cached_ys = data["ys"]
-                else:
-                    cached_ys = np.concatenate([cached_ys, data["ys"]], axis=0)
+                cached_ys = data["ys"] if cached_ys is None else np.concatenate([cached_ys, data["ys"]], axis=0)
             except Exception as e:
                 logging.error(f"Data format error in {oldest_file}: {e}")
                 # Remove problematic file and skip
                 data.close()
-                try:
+                with contextlib.suppress(OSError):
                     os.remove(file_path)
-                except OSError:
-                    pass
                 continue
             # Now that data is in memory, delete the file to free space
             try:
@@ -257,7 +250,7 @@ if __name__ == "__main__":
     num_workers = 10
     processes = []
 
-    for i in range(num_workers):
+    for _ in range(num_workers):
         p = mp.Process(target=worker)
         p.start()
         processes.append(p)

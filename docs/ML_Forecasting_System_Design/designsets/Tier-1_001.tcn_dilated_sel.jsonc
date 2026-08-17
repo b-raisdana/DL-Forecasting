@@ -5,8 +5,8 @@
     "version": "1.0.0",
     "description": "Whole-architecture Stage-1 candidate: plain dilated-causal-conv TCN, no LSTM, no cross-tf attention, no Perceiver latent-bottleneck fusion — per 03-Model & Architecture Engineering.md#architecture-candidates 'TCN' entry, stage_config {embedding:\"linear\", local_extraction:\"tcn_dilated\", sequential:0, attention:0, fusion:\"concat_mlp\", global_repr:\"pool\"}. Tier 1, adjusted score 11 (05-Prioritization Framework.md#current-stage-1-candidate-set) — the doc's single highest Tier-1 score. kernel_size=3 and num_dilated_levels=10 are 03's own published S1 (depth-heavy) profile for this candidate, copied verbatim — chosen over S2/S3 because, with sequential/attention zeroed, TCN's dilated-conv stack is the sole source of long-range context, and S1's own numbers compute to the largest receptive field of the three (receptive_field ≈ 1 + (kernel_size-1) × (2^num_dilated_levels-1) ≈ 2047 for S1, vs ≈15 for S2, ≈505 for S3), despite S1 carrying the 'depth-heavy' rather than 'context-heavy' label — that reasoning is untouched here since it depends only on kernel_size/num_dilated_levels. TCN_hidden_channels is widened ×16 from S1's literal 40 to 640 to make fuller use of the 8GB VRAM budget (this candidate was the most under-using of it, at ≈27%) — see memory_budget below, computed per PROMPT.md § Memory sizing convention; MLP_width/MLP_depth stay at 512/4 since the prediction head's shape is held constant across candidates."
   },
-  "preprocessed_input": "input-data-feature/Tier-1_000.atr_rel_ohlc_log_sma_v_extm_rel_6tf (handmade).input.jsonc",
-  "outcome_heads": "outcome-label-target-head/Tier-1_000.action_mfe_rer (handmade).outcome.jsonc",
+  "preprocessed_input": "input-data-feature/Tier-1_000.atr_rel_ohlc_log_sma_v_extm_rel_6tf(handmade).input.jsonc",
+  "outcome_heads": "outcome-label-target-head/Tier-1_000.action_mfe_rer(handmade).outcome.jsonc",
   "auxiliary_features": {
     "source": "preprocessed_input.candle_dataset, LAST candle only per timeframe branch (not the full window), flattened across all 6 branches",
     "role": "shared tabular snapshot feeding prediction_head.MLP's optional_auxiliary_features input and the LightGBM specialist — GBM operates on flattened features, distinct from the sequence-respecting TCN branches"
@@ -134,7 +134,7 @@
           "MLP_width": "searchable"
         },
         "output_heads": {
-          "defined_in": "outcome-label-target-head/Tier-1_000.action_mfe_rer (handmade).outcome.jsonc"
+          "defined_in": "outcome-label-target-head/Tier-1_000.action_mfe_rer(handmade).outcome.jsonc"
         }
       },
       "auxiliary_model": {
@@ -235,7 +235,7 @@
     },
     "preloaded_input_label_cache": {
       "ram_gb": "capacity-bound: ~485K samples against the RAM budget's 65% cache slice (41.6GB of 64GB)",
-      "basis": "same preprocessed_input (input_set=1) and outcome_heads (outcome_set=1) as Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm (handmade).base.jsonc, so the same per-sample size applies: 1536 total candles (256/tf × 6tf) × 15 candle_dataset fields × 4 bytes (float32) ≈92,160 bytes + outcome_set=1 label bytes ≈20 bytes ≈92,180 bytes (~90KB)/sample. Total training sample count isn't doc-resolved (open-ended symbol universe, per 02-Data, Label & Feature Engineering.md § training symbol universe) — sized as capacity against the budget slice instead of a fabricated total, per Memory sizing convention"
+      "basis": "same preprocessed_input (input_set=1) and outcome_heads (outcome_set=1) as Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm(handmade).base.jsonc, so the same per-sample size applies: 1536 total candles (256/tf × 6tf) × 15 candle_dataset fields × 4 bytes (float32) ≈92,160 bytes + outcome_set=1 label bytes ≈20 bytes ≈92,180 bytes (~90KB)/sample. Total training sample count isn't doc-resolved (open-ended symbol universe, per 02-Data, Label & Feature Engineering.md § training symbol universe) — sized as capacity against the budget slice instead of a fabricated total, per Memory sizing convention"
     },
     "other_memory_consumers": {
       "vram_mb": 2048,

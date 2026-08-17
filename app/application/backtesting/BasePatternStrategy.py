@@ -10,8 +10,8 @@ from domain.order.SignalDf import SignalDf, SignalDFM
 from domain.price_action.BasePattern import get_multi_timeframe_base_patterns
 from domain.schemas.market_structure.BasePattern import BasePattern, MultiTimeframeBasePattern
 from helper.logging import log_d, profile_it
-from infrastructure.ohlcv.atr import get_multi_timeframe_ohlcva
 from infrastructure.ohlcv.ohlcv import get_base_timeframe_ohlcv
+from infrastructure.ohlcv.ohlcva import get_multi_timeframe_ohlcva
 from pandera import typing as pt
 from presentation.market_structure.BasePattern_plotter import plot_multi_timeframe_base_pattern
 

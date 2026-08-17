@@ -1,17 +1,17 @@
 import backtrader as bt
 from config import app_config
+from domain.ohlcv.ohlcv import read_base_timeframe_ohlcv
 from helper.functions import date_range_to_string
-from infrastructure.ohlcv.ohlcv import read_base_timeframe_ohlcv
 
 # Create a subclass of SignaStrategy to define the indicators and signals
 
 
 class SmaCross(bt.SignalStrategy):
     # list of parameters which are configurable for the strategy
-    params = dict(
-        pfast=10,  # period for the fast moving average
-        pslow=30,  # period for the slow moving average
-    )
+    params = {
+        "pfast": 10,  # period for the fast moving average
+        "pslow": 30,  # period for the slow moving average
+    }
 
     def __init__(self):
         sma1 = bt.ind.SMA(period=self.p.pfast)  # fast moving average

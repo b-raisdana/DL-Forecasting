@@ -6,9 +6,9 @@ import pandas as pd
 from application.dataset_generation.training_datasets import train_data_of_mt_n_profit
 from application.model_implementations.shared.base import master_x_shape, overlapped_quarters
 from config import app_config
+from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from helper.functions import date_range_to_string
 from helper.logging.do_log import log_d, log_i
-from infrastructure.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from scipy.spatial.distance import cosine, jensenshannon
 from scipy.stats import ks_2samp, wasserstein_distance
 
@@ -116,8 +116,6 @@ def summarize_feature_similarity(comparison: pd.DataFrame):
 
 
 def summarize_symbol_similarity(df_results: pd.DataFrame, top_n=5):
-    sim_summary = []
-
     grouped = (
         df_results.groupby(["symbol_1", "symbol_2"])[
             ["js_divergence", "cosine_similarity", "wasserstein_distance", "ks_statistic"]
@@ -179,7 +177,7 @@ def pairs_stat_compare(
                     forecast_trigger_bars=forecast_trigger_bars,
                     verbose=False,
                 )
-                for k in x_dfs.keys():
+                for k in x_dfs:
                     x_dfs[k]["timeframe"] = k
                 x_dfs = pd.concat(x_dfs)
                 x_dfs["symbol"] = symbol
@@ -215,7 +213,7 @@ def pairs_stat_compare(
 
 
 if __name__ == "__main__":
-    for i in range(5):
+    for _i in range(5):
         pairs_stat_compare(
             start=pd.to_datetime("2024-03-01"),
             end=pd.to_datetime("2024-09-01"),

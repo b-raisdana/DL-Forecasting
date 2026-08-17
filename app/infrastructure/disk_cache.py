@@ -1,3 +1,4 @@
+import contextlib
 import os
 import re
 from collections import OrderedDict
@@ -14,7 +15,6 @@ from helper.data_preparation import after_under_process_date, trim_to_date_range
 from helper.functions import Pandera_DFM_Type, date_range, date_range_to_string, morning
 from helper.logging.do_log import log_w
 from helper.schema_casting import cast_and_validate, empty_df
-from infrastructure.ohlcv.fragmented_data import symbol_data_path
 
 """
 Everything this repo needs to persist/read a (data_frame_type, date_range_str) artifact as a
@@ -25,17 +25,33 @@ domain.schemas.common.ExtendedDf.read_file) that need a class-bound variant inst
 
 Calendar-windowed caching (`cache_on_disk(..., windowed=True)` / `read_file_windowed()`), the legacy-
 file reuse it does on a miss, and the disk-generation-rate monitor are documented in detail in
-README.md next to this file — read that first if you're touching any of the `_window_*`/
-`*_cache_generation*`/`cleanup_redundant_cache_files` functions below.
+infrastructure/ohlcv/README.md (its examples are OHLCV/OHLCVA-specific; this module itself is
+generic) — read that first if you're touching any of the `_window_*`/`*_cache_generation*`/
+`cleanup_redundant_cache_files` functions below.
 """
+
+
+def symbol_data_path(
+    path_of_data: str = None,
+    exchange: str = None,
+    market: str = None,
+    trading_pair: str = None,
+) -> str:
+    if path_of_data is None:
+        path_of_data = app_config.path_of_data
+    if exchange is None:
+        exchange = app_config.under_process_exchange
+    if market is None:
+        market = app_config.under_process_market
+    if trading_pair is None:
+        trading_pair = app_config.under_process_symbol
+    return os.path.join(path_of_data, exchange, market, trading_pair)
 
 
 # @cache
 def datarange_is_not_cachable(date_range_str):
     _, end = date_range(date_range_str)
-    if end > morning(datetime.utcnow().replace(tzinfo=pytz.UTC)):
-        return True
-    return False
+    return end > morning(datetime.utcnow().replace(tzinfo=pytz.UTC))
 
 
 # In-process memo in front of read_file()'s disk read, keyed on the exact args that determine the file's
@@ -158,9 +174,9 @@ def _read_raw_data_file(
     csv_zip_file_path = _csv_zip_file_path(data_frame_type, date_range_str, file_path)
     try:
         df = pd.read_csv(csv_zip_file_path, sep=",", header=0, skiprows=skip_rows, nrows=n_rows)
-    except BadZipFile:
+    except BadZipFile as err:
         os.remove(csv_zip_file_path)
-        raise Exception(f"{csv_zip_file_path} is not a zip file!")
+        raise Exception(f"{csv_zip_file_path} is not a zip file!") from err
 
     if skip_rows is None and n_rows is None:
         _migrate_csv_zip_to_feather(df, feather_file_path, csv_zip_file_path)
@@ -176,9 +192,8 @@ def read_by_date(data_frame_type, date_range_str, file_path, n_rows, skip_rows):
     df["date"] = pd.to_datetime(df["date"])
     df.set_index("date", inplace=True)
     # Convert the 'date' index to UTC if it's timezone-unaware
-    if len(df) > 0:
-        if df.index.tz is None:
-            df.index = df.index.tz_localize("UTC")
+    if len(df) > 0 and df.index.tz is None:
+        df.index = df.index.tz_localize("UTC")
 
     return df
 
@@ -195,7 +210,7 @@ def read_with_timeframe(
     The 'date' index is assumed to be UTC.
 
     Parameters:
-        data_frame_type (str): The type of data frame being read, such as 'ohlcv', 'ohlcva', or 'multi_timeframe_ohlcva'.
+        data_frame_type: Data-frame type, e.g. `ohlcv`, `ohlcva`, or `multi_timeframe_ohlcva`.
         date_range_str (str): The date range string used to generate the file name.
         file_path (str): The path to the directory containing the data file.
         n_rows (int): The maximum number of rows to read from the CSV file.
@@ -228,7 +243,7 @@ def read_file(
     n_rows=None,
     file_path: str = None,
     zero_size_allowed: None | bool = None,
-    generator_params: dict = {},
+    generator_params: dict = None,
 ):
     """
     Read data from a file and return a DataFrame. If the file does not exist or the DataFrame does not
@@ -278,6 +293,8 @@ def read_file(
         :param generator:
         :param caster_model:
     """
+    if generator_params is None:
+        generator_params = {}
     if file_path is None:
         file_path = symbol_data_path()
     if date_range_str is None:
@@ -290,10 +307,8 @@ def read_file(
             return cached_df
 
     df = None
-    try:
+    with contextlib.suppress(FileNotFoundError):
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
-    except FileNotFoundError:
-        pass
     if zero_size_allowed is None:
         zero_size_allowed = after_under_process_date(date_range_str)
     if df is None or not cast_and_validate(df, caster_model, return_bool=True, zero_size_allowed=zero_size_allowed):
@@ -368,9 +383,12 @@ def _find_covering_file(
             continue
         candidate_range = match.group("range")
         candidate_start, candidate_end = date_range(candidate_range)
-        if candidate_start <= window_start and candidate_end >= window_end:
-            if best is None or (candidate_end - candidate_start) < (best[3] - best[2]):
-                best = (candidate_range, match.group("ext"), candidate_start, candidate_end)
+        if (
+            candidate_start <= window_start
+            and candidate_end >= window_end
+            and (best is None or (candidate_end - candidate_start) < (best[3] - best[2]))
+        ):
+            best = (candidate_range, match.group("ext"), candidate_start, candidate_end)
     if best is None:
         return None
     return best[0], best[1]
@@ -413,7 +431,7 @@ def read_file_windowed(
     caster_model: type[Pandera_DFM_Type],
     file_path: str = None,
     zero_size_allowed: None | bool = None,
-    generator_params: dict = {},
+    generator_params: dict = None,
 ) -> pd.DataFrame:
     """
     Windowed counterpart to read_file() — see README.md § windowing for the full design. Decomposes
@@ -428,6 +446,8 @@ def read_file_windowed(
     own canonical file but fully covered by an existing legacy file is seeded from that file first;
     see _seed_window_from_legacy_file().
     """
+    if generator_params is None:
+        generator_params = {}
     if file_path is None:
         file_path = symbol_data_path()
     if date_range_str is None:

@@ -6,7 +6,7 @@ from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
 from domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
 from domain.schemas.market_structure.Pivot2 import MultiTimeframePivot2DFM, Pivot2DFM
 from helper.data_preparation import single_timeframe
-from infrastructure.ohlcv.atr import read_multi_timeframe_ohlcva
+from infrastructure.ohlcv.ohlcva import read_multi_timeframe_ohlcva
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 from presentation.market_structure.BasePattern_plotter import draw_base
@@ -70,7 +70,7 @@ def plot_multi_timeframe_pivots(
                 x=[base_ohlcv.index[0]],
                 y=[base_ohlcv["open"]],
                 name=legend_group,
-                line=dict(color="red", width=0),
+                line={"color": "red", "width": 0},
                 mode="lines",
                 legendgroup=legend_group,
                 showlegend=True,
@@ -82,7 +82,7 @@ def plot_multi_timeframe_pivots(
                 x=[base_ohlcv.index[0]],
                 y=[base_ohlcv["open"]],
                 name=legend_group,
-                line=dict(color="red", width=0),
+                line={"color": "red", "width": 0},
                 mode="lines",
                 legendgroup=legend_group,
                 showlegend=True,
@@ -115,7 +115,7 @@ def plot_multi_timeframe_pivots(
                 x=[pivot_start, pivot_original_start],
                 y=[pivot_info["level"], pivot_info["level"]],
                 name=pivot_name,
-                line=dict(color="blue", dash="dot", width=0.5),
+                line={"color": "blue", "dash": "dot", "width": 0.5},
                 mode="lines",  # +text',
                 legendgroup=legend_group,
                 showlegend=False,
@@ -135,7 +135,7 @@ def plot_multi_timeframe_pivots(
                 y=[pivot_info["level"], pivot_info["level"]],
                 text=[pivot_description] * 2,
                 name=pivot_name,
-                line=dict(color=level_color, width=0.5),
+                line={"color": level_color, "width": 0.5},
                 mode="lines",  # +text',
                 # legendgroup=legend_group, showlegend=show_legend, hoverinfo='text',
                 legendgroup=legend_group,
@@ -157,7 +157,7 @@ def plot_multi_timeframe_pivots(
                     opacity=0.2,
                     text=[pivot_description, None, None, pivot_description],
                     name=pivot_name,
-                    line=dict(color=boundary_color, width=0),
+                    line={"color": boundary_color, "width": 0},
                     mode="lines",  # +text',
                     legendgroup=legend_group,
                     showlegend=False,
@@ -181,7 +181,7 @@ def plot_multi_timeframe_pivots(
                             pivot_info["level"],
                         ],
                         name=pivot_name,
-                        line=dict(color="green", width=0.5),
+                        line={"color": "green", "width": 0.5},
                         mode="lines",  # +text',
                         legendgroup=legend_group,
                         showlegend=False,
@@ -191,7 +191,7 @@ def plot_multi_timeframe_pivots(
                         x=[pivot_start, pivot_info["return_end_time"]],
                         y=[pivot_info["level"], pivot_info["return_end_value"]],
                         name=pivot_name,
-                        line=dict(color="red", width=0.5),
+                        line={"color": "red", "width": 0.5},
                         mode="lines",  # +text',
                         legendgroup=legend_group,
                         showlegend=False,
@@ -209,31 +209,29 @@ def plot_multi_timeframe_pivots(
                             pivot_info["level"],
                         ],
                         name=pivot_name,
-                        line=dict(color="gray", width=0.5),
+                        line={"color": "gray", "width": 0.5},
                         mode="lines",  # +text',
                         legendgroup=legend_group,
                         showlegend=False,
                         hoverinfo="none",
                     )
-                    if show_ftc:
-                        # draw pivot FTC base patterns
-                        if pivots_have_ftc:
-                            if isinstance(pivot_info["ftc_list"], list):
-                                for ftc in pivot_info["ftc_list"]:
-                                    ftc_name = MultiTimeframeBasePattern.str(ftc["date"], ftc["timeframe"], ftc)
-                                    if ftc_name not in plotted_ftc:
-                                        real_start = (
-                                            ftc["date"]
-                                            + pd.to_timedelta(ftc["timeframe"])
-                                            * app_config.base_pattern_index_shift_after_last_candle_in_the_sequence
-                                        )
-                                        ftc["effective_end"] = min(
-                                            ftc["end"] if pd.notna(ftc["end"]) else ftc["ttl"],
-                                            ftc["ttl"] if pd.notna(ftc["ttl"]) else ftc["end"],
-                                            end_time,
-                                        )
-                                        draw_base(ftc, fig, ftc["date"], real_start, ftc["timeframe"], legend_group)
-                                        plotted_ftc.append(ftc_name)
+                    # draw pivot FTC base patterns
+                    if show_ftc and pivots_have_ftc and isinstance(pivot_info["ftc_list"], list):
+                        for ftc in pivot_info["ftc_list"]:
+                            ftc_name = MultiTimeframeBasePattern.str(ftc["date"], ftc["timeframe"], ftc)
+                            if ftc_name not in plotted_ftc:
+                                real_start = (
+                                    ftc["date"]
+                                    + pd.to_timedelta(ftc["timeframe"])
+                                    * app_config.base_pattern_index_shift_after_last_candle_in_the_sequence
+                                )
+                                ftc["effective_end"] = min(
+                                    ftc["end"] if pd.notna(ftc["end"]) else ftc["ttl"],
+                                    ftc["ttl"] if pd.notna(ftc["ttl"]) else ftc["end"],
+                                    end_time,
+                                )
+                                draw_base(ftc, fig, ftc["date"], real_start, ftc["timeframe"], legend_group)
+                                plotted_ftc.append(ftc_name)
     update_figure_layout(fig)
     show_and_save_plot(fig, save, show, name_without_prefix=f"multi_timeframe_classic_pivots.{date_range_str}")
     return fig

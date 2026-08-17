@@ -3,6 +3,7 @@ from typing import Literal
 
 import pandas as pd
 from config import CandleSize, app_config
+from domain.ohlcv.ohlcva import get_multi_timeframe_ohlcva
 from domain.schemas.common.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
 from domain.schemas.market_structure.BasePattern import BasePattern, MultiTimeframeBasePattern
 from helper.data_preparation import (
@@ -16,8 +17,7 @@ from helper.data_preparation import (
 from helper.functions import date_range, date_range_to_string
 from helper.logging import profile_it
 from helper.schema_casting import cast_and_validate, empty_df
-from infrastructure.ohlcv.atr import get_multi_timeframe_ohlcva
-from infrastructure.ohlcv.disk_cache import cache_on_disk
+from infrastructure.disk_cache import cache_on_disk
 from pandera import Timestamp
 from pandera import typing as pt
 
@@ -145,10 +145,7 @@ def add_previous_candle_overlap(_sequence_of_spinning, ohlcva, number_of_base_sp
     ohlcva["previous_high"] = ohlcva["high"].shift(1)
     loop_range_shift = 0  # config.base_pattern_index_shift_after_last_candle_in_the_sequence todo: optimize
     for i in range(loop_range_shift, number_of_base_spinning_candles + loop_range_shift):
-        if i != 0:
-            shifted_index = _sequence_of_spinning.index.shift(-i, freq=timeframe)
-        else:
-            shifted_index = _sequence_of_spinning.index
+        shifted_index = _sequence_of_spinning.index.shift(-i, freq=timeframe) if i != 0 else _sequence_of_spinning.index
         _sequence_of_spinning[f"previous_candle_intersect_low_{i}"] = (
             ohlcva.loc[shifted_index, ["low", "previous_low"]].max(axis="columns").tolist()
         )
@@ -252,9 +249,7 @@ def timeframe_base_pattern(
 def set_zero_trigger_candle_internal_high_and_lows(
     timeframe_base_patterns: pt.DataFrame[BasePattern], number_of_base_spinning_candles: int
 ) -> pt.DataFrame[BasePattern]:
-    zero_trigger_candle_patterns = timeframe_base_patterns[
-        timeframe_base_patterns["zero_trigger_candle"] == True
-    ].copy()
+    zero_trigger_candle_patterns = timeframe_base_patterns[timeframe_base_patterns["zero_trigger_candle"]].copy()
     intersect_length_columns = zero_trigger_candle_patterns.filter(
         like="previous_candle_intersect_length_", axis="columns"
     )
@@ -321,7 +316,7 @@ def multi_timeframe_base_patterns(
         # the last 3 timeframes will not have an anti_trigger_timeframe!
         timeframe_shortlist = app_config.timeframes[:-2]
     else:
-        if any([t in timeframe_shortlist for t in app_config.timeframes[-2:]]):
+        if any(t in timeframe_shortlist for t in app_config.timeframes[-2:]):
             raise Exception(f"timeframes {timeframe_shortlist} should have Anti-Trigger time!")
     _multi_timeframe_base_patterns = empty_df(MultiTimeframeBasePattern)
     base_timeframe_ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, app_config.timeframes[0])
@@ -358,7 +353,7 @@ def get_multi_timeframe_base_patterns(
         # the last 3 timeframes will not have an anti_trigger_timeframe!
         timeframe_shortlist = app_config.timeframes[:-2]
     else:
-        if any([t in timeframe_shortlist for t in app_config.timeframes[-2:]]):
+        if any(t in timeframe_shortlist for t in app_config.timeframes[-2:]):
             raise Exception(f"timeframes {timeframe_shortlist} should have Anti-Trigger time!")
     start, end = date_range(date_range_str)
     expanded_start = to_timeframe(
@@ -445,8 +440,8 @@ def update_band_status(
 def timeframe_effective_bases(_multi_timeframe_base_pattern, timeframe):
     try:
         index = app_config.timeframes.index(timeframe)
-    except ValueError:
-        raise Exception(f"timeframe:{timeframe} should be in [{app_config.timeframes}]!")
+    except ValueError as err:
+        raise Exception(f"timeframe:{timeframe} should be in [{app_config.timeframes}]!") from err
     if index < (len(app_config.timeframes) - 1):
         result = _multi_timeframe_base_pattern.loc[
             _multi_timeframe_base_pattern.index.get_level_values("timeframe").isin(app_config.timeframes[: index + 1])

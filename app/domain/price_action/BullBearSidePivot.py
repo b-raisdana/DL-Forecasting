@@ -1,6 +1,7 @@
 import pandas as pd
 from BullBearSide import get_multi_timeframe_bull_bear_side_trends, previous_trend
 from config import app_config
+from domain.ohlcv.ohlcva import get_multi_timeframe_ohlcva
 from domain.schemas.market_structure.BullBearSide import BullBearSide
 from domain.schemas.market_structure.BullBearSidePivot import BullBearSidePivot
 from domain.schemas.market_structure.Pivot import MultiTimeframePivotDFM
@@ -13,8 +14,7 @@ from helper.data_preparation import (
 )
 from helper.logging import profile_it
 from helper.schema_casting import cast_and_validate, empty_df
-from infrastructure.ohlcv.atr import get_multi_timeframe_ohlcva
-from infrastructure.ohlcv.disk_cache import cache_on_disk
+from infrastructure.disk_cache import cache_on_disk
 from pandera import typing as pt
 from PeakValley import get_multi_timeframe_peaks_n_valleys, major_timeframe
 from PivotsHelper import level_ttl, pivots_level_n_margins
@@ -22,10 +22,10 @@ from PivotsHelper import level_ttl, pivots_level_n_margins
 
 def remove_overlapping_trends(timeframe_trends: pt.DataFrame[BullBearSide]) -> pt.DataFrame[BullBearSide]:
     """
-    Remove overlapping trends from a DataFrame by selecting the trend with the maximum 'movement' within each date group.
+    Select the trend with maximum `movement` from each overlapping date group.
 
     Args:
-        timeframe_trends (pd.DataFrame[application.backtesting.BullBearSide.BullBearSide]): A DataFrame containing trend data.
+        timeframe_trends: DataFrame containing trend data.
 
     Returns:
         pd.DataFrame[application.backtesting.BullBearSide.BullBearSide]: A DataFrame with overlapping trends removed.
@@ -156,8 +156,6 @@ def get_multi_timeframe_bull_bear_side_pivots(
                 time and high of highest high in Bullish and time and low of lowest low in Bearish,
     :return:
     """
-    if file_path is None:
-        file_path = symbol_data_path()
     if date_range_str is None:
         date_range_str = app_config.processing_date_range
     multi_timeframe_pivots = multi_timeframe_bull_bear_side_pivots(date_range_str, timeframe_shortlist)

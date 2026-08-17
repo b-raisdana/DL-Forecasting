@@ -101,7 +101,7 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
     path_of_logs: str = os.path.join(_ROOT_PATH, "logs")
     path_of_test_plots: str = "test_plots"
 
-    # infrastructure.ohlcv.disk_cache windowing (see app/infrastructure/ohlcv/README.md): default
+    # infrastructure.disk_cache windowing (see app/infrastructure/ohlcv/README.md): default
     # calendar-window size for any data_frame_type without an entry in cache_window_freq_overrides,
     # as a pandas period freq alias ("M" calendar month, "D" calendar day, ...).
     default_cache_window_freq: str = "M"

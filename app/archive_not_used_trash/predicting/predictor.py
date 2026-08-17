@@ -4,10 +4,10 @@ import numpy as np
 import pandas as pd
 from application.model_implementations.cnn_lstm import cnn_lstd_model_x_lengths
 from config import app_config
+from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import single_timeframe
 from helper.functions import profile_it
 from helper.importer import go
-from infrastructure.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from PreProcessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
 from presentation.plotting.plotter import show_and_save_plot
 from tensorflow.keras.models import load_model
@@ -41,7 +41,7 @@ def prediction_reconstructor(row, prev_row):
     Reconstruct high and low values based on previous row's statistics and current row's predictions.
 
     Args:
-        row: The current row in the rolling window (contains current n_high, n_low, mean_high, mean_low, std_high, std_low).
+        row: Current rolling-window row with normalized highs/lows and summary statistics.
         prev_row: The previous row's statistics (mean_high, mean_low, std_high, std_low).
 
     Returns:

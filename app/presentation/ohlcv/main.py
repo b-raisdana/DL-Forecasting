@@ -1,6 +1,6 @@
 from config import app_config
+from domain.ohlcv.ohlcva import read_multi_timeframe_ohlcva
 from helper.functions import date_range_to_string
-from infrastructure.ohlcv.atr import read_multi_timeframe_ohlcva
 
 # from data_preparation import d_types
 

@@ -1,5 +1,5 @@
 """LightGBM tabular specialist + deep-model/GBM calibrated ensemble, per
-Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm (handmade).base.jsonc's dependency_modeling.auxiliary_model
+Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm(handmade).base.jsonc's dependency_modeling.auxiliary_model
 / ensemble.model_combination.
 
 Trained outside the TensorFlow graph ("integration.external_ensemble.inside_tensorflow_graph": false)

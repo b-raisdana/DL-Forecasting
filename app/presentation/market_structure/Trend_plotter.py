@@ -5,7 +5,7 @@ from config import TREND, app_config
 from domain.price_action.PeakValley import major_timeframe, peaks_only, valleys_only
 from helper.data_preparation import single_timeframe
 from helper.logging import profile_it
-from infrastructure.ohlcv.fragmented_data import symbol_data_path
+from infrastructure.disk_cache import symbol_data_path
 from presentation.market_structure.PeakValley_plotter import plot_peaks_n_valleys
 from presentation.shared.plotter import file_id, plot_multiple_figures, save_figure
 
@@ -22,9 +22,7 @@ def plot_single_timeframe_candle_trend(
     """
     Plot candlesticks with highlighted trends (Bullish, Bearish, Side).
 
-    The function uses the provided DataFrame containing candle trends and highlights the bars of candles based on
-    their trend. Bullish candles are displayed with 70% transparent green color, Bearish candles with 70% transparent red,
-    and Side candles with 70% transparent grey color.
+    It highlights bars by their candle trends: bullish green, bearish red, and side grey.
 
     Parameters:
         ohlcv (pd.DataFrame): DataFrame containing OHLC data.
@@ -56,7 +54,7 @@ def plot_single_timeframe_candle_trend(
     )
 
     # Update the bar trace with trend colors
-    fig.update_traces(marker=dict(color=trend_colors), selector=dict(type="bar"))
+    fig.update_traces(marker={"color": trend_colors}, selector={"type": "bar"})
 
     # Set the title of the figure
     fig.update_layout(title_text=name)

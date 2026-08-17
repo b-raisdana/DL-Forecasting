@@ -8,9 +8,9 @@ import numpy as np
 from application.dataset_generation.training_datasets import train_data_of_mt_n_profit
 from application.model_implementations.shared.base import overlapped_quarters
 from config import app_config
+from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from helper.functions import date_range_to_string
 from helper.logging.do_log import log_d
-from infrastructure.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 
 
 def dataset_streamer(

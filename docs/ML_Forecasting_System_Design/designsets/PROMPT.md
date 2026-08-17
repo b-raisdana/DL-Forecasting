@@ -24,7 +24,7 @@ A design-set file is a pure engineering spec — it does not wrap the content in
 - Filename pattern: `<name>` = `Tier-<n>_<idx>.<slug>`:
   - `<n>` = tier (`1`\|`2`\|`3`) from [05 § Decision Framework](../05-Prioritization Framework.md#decision-framework).
   - `<idx>` = 3-digit, zero-padded, **restarts at `000` per tier, scoped to the candidate's location** (root for `architecture-design`, its subfolder for the other two).
-  - `<slug>`: idx `000` is a fixed, ordered **layer sequence** — one maximally-abbreviated token per structural layer/field the file actually defines, snake_case-joined, then the literal `(handmade)` marker, then a category tag (`base` for `architecture-design`, `input` for `input-data-feature`, `outcome` for `outcome-label-target-head`), e.g. `par_branch_mtcn_lstm_perc_gqa_mlp_lgbm (handmade).base`, `atr_rel_ohlc_log_sma_v_extm_rel_6tf (handmade).input`, `action_mfe_rer (handmade).outcome`. This is the category's hand-authored reference (see [step 0](#selection-algorithm)), never produced by this prompt. Fixed position = fixed meaning: omit a layer's token entirely (don't leave a placeholder gap) when that layer is zeroed, not applicable, or left `"searchable"` for this file — same "not listed" convention `the_model` itself already uses. Per-category layer order:
+  - `<slug>`: idx `000` is a fixed, ordered **layer sequence** — one maximally-abbreviated token per structural layer/field the file actually defines, snake_case-joined, then the literal `(handmade)` marker, then a category tag (`base` for `architecture-design`, `input` for `input-data-feature`, `outcome` for `outcome-label-target-head`), e.g. `par_branch_mtcn_lstm_perc_gqa_mlp_lgbm(handmade).base`, `atr_rel_ohlc_log_sma_v_extm_rel_6tf(handmade).input`, `action_mfe_rer(handmade).outcome`. This is the category's hand-authored reference (see [step 0](#selection-algorithm)), never produced by this prompt. Fixed position = fixed meaning: omit a layer's token entirely (don't leave a placeholder gap) when that layer is zeroed, not applicable, or left `"searchable"` for this file — same "not listed" convention `the_model` itself already uses. Per-category layer order:
     - `architecture-design`: `<branch_topology>_<embedding>_<local_extraction>_<sequential>_<fusion>_<attention>_<global_repr>_<prediction_head>_<auxiliary_model>` — one token per `the_model` stage, in the same order as [03 § unified super-architecture skeleton](../03-Model & Architecture Engineering.md#unified-super-architecture-skeleton).
     - `input-data-feature`: `<relative_ohlc_scheme>_<volume_feature>_<extremum_feature>_<timeframe_count>` — one token per `base_definitions.candle_dataset` sub-block, in the order those sub-blocks appear in the file, then an `<n>tf` token for how many timeframe branches `variations` covers.
     - `outcome-label-target-head`: `<action_head>_<price_level_heads...>` — one token per head name in the file's `"1"` entry (today's resolved baseline set, per [Embedded search space](#embedded-search-space)); no category-restating suffix like `_heads` — the `outcome-label-target-head` folder + `.outcome` tag already say "heads".
@@ -35,29 +35,29 @@ A design-set file is a pure engineering spec — it does not wrap the content in
 
 Reuse these across every filename so slugs stay short and mutually consistent; extend the list (don't invent one-off abbreviations) when a new term needs one.
 
-| Full term | Abbrev. | Full term | Abbrev. | Full term | Abbrev. |
-| --- | --- | --- | --- | --- | --- |
-| and | `n` | selected | `sel` | parameters | `params` |
-| architecture | `arch` | sizing | `sz` | hyperparameters | `hparams` |
-| normalization | `norm` | hybrid | `hyb` | training | `train` |
-| window | `win` | length | `len` | feature | `feat` |
-| label | `lbl` | threshold | `thr` | combination | `comb` |
-| embedding | `embed` | extraction | `extr` | sequential | `seq` |
-| attention | `attn` | representation | `repr` | fusion | `fus` |
-| dilated | `dil` | convolution | `conv` | baseline | `base` |
-| extremum | `extm` | relative | `rel` | volume | `vol` |
-| independent | `indep` | parallel | `par` | timeframe | `tf` |
-| ModernTCN | `mtcn` | Perceiver | `perc` | LightGBM | `lgbm` |
+| Full term     | Abbrev. | Full term      | Abbrev. | Full term       | Abbrev.   |
+| ------------- | ------- | -------------- | ------- | --------------- | --------- |
+| and           | `n`     | selected       | `sel`   | parameters      | `params`  |
+| architecture  | `arch`  | sizing         | `sz`    | hyperparameters | `hparams` |
+| normalization | `norm`  | hybrid         | `hyb`   | training        | `train`   |
+| window        | `win`   | length         | `len`   | feature         | `feat`    |
+| label         | `lbl`   | threshold      | `thr`   | combination     | `comb`    |
+| embedding     | `embed` | extraction     | `extr`  | sequential      | `seq`     |
+| attention     | `attn`  | representation | `repr`  | fusion          | `fus`     |
+| dilated       | `dil`   | convolution    | `conv`  | baseline        | `base`    |
+| extremum      | `extm`  | relative       | `rel`   | volume          | `vol`     |
+| independent   | `indep` | parallel       | `par`   | timeframe       | `tf`      |
+| ModernTCN     | `mtcn`  | Perceiver      | `perc`  | LightGBM        | `lgbm`    |
 
 ## Category assignment
 
 Every design set belongs to exactly one category, chosen by what it varies:
 
-| Category | Covers | Location | Source tables/sections in [05](../05-Prioritization Framework.md) |
-| --- | --- | --- | --- |
-| `architecture-design` | Model backbone/topology and how it's trained/sized — **the core design**: every satellite-category choice ultimately plugs into one of these as the reference backbone | `designsets/` root | [§ tiered candidates by layer](../05-Prioritization Framework.md#tiered-candidates-by-layer): input/feature embedding, local feature extraction, sequential encoding, attention/dependency, global representation, current Stage-1 candidate set, activation mechanisms, combination strategy, fusion mechanism, multi-timeframe fusion, GBM-family. Plus its embedded search space (see [Embedded search space](#embedded-search-space)): learning rate, dropout, weight decay, optimizer, batch size, epoch/early-stopping budget — **not** model/backbone sizing, see [Embedded search space](#embedded-search-space) |
-| `input-data-feature` | What goes into the model | `designsets/input-data-feature/` | [§ normalization strategy](../05-Prioritization Framework.md#normalization-strategy). Plus its embedded search space: per-tf window/sequence-length scheme, feature parameters |
-| `outcome-label-target-head` | What the model is trained to predict and how heads are weighted/scored | `designsets/outcome-label-target-head/` | No scored candidate table exists yet in 05 (the [per-head statistical metrics](../04-Experimentation, Evaluation & Optimization.md#per-head-statistical-metrics-dev-diagnostics) table in 04 lists alternatives but isn't tiered — score it with the [Decision Framework](../05-Prioritization Framework.md#decision-framework) formula before queuing a row here). Plus its embedded search space: label parameters, threshold parameters (e.g. `OM` threshold), loss-function parameters, per-head loss-weight vector |
+| Category                    | Covers                                                                                                                                                                 | Location                                | Source tables/sections in [05](../05-Prioritization Framework.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `architecture-design`       | Model backbone/topology and how it's trained/sized — **the core design**: every satellite-category choice ultimately plugs into one of these as the reference backbone | `designsets/` root                      | [§ tiered candidates by layer](../05-Prioritization Framework.md#tiered-candidates-by-layer): input/feature embedding, local feature extraction, sequential encoding, attention/dependency, global representation, current Stage-1 candidate set, activation mechanisms, combination strategy, fusion mechanism, multi-timeframe fusion, GBM-family. Plus its embedded search space (see [Embedded search space](#embedded-search-space)): learning rate, dropout, weight decay, optimizer, batch size, epoch/early-stopping budget — **not** model/backbone sizing, see [Embedded search space](#embedded-search-space) |
+| `input-data-feature`        | What goes into the model                                                                                                                                               | `designsets/input-data-feature/`        | [§ normalization strategy](../05-Prioritization Framework.md#normalization-strategy). Plus its embedded search space: per-tf window/sequence-length scheme, feature parameters                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `outcome-label-target-head` | What the model is trained to predict and how heads are weighted/scored                                                                                                 | `designsets/outcome-label-target-head/` | No scored candidate table exists yet in 05 (the [per-head statistical metrics](../04-Experimentation, Evaluation & Optimization.md#per-head-statistical-metrics-dev-diagnostics) table in 04 lists alternatives but isn't tiered — score it with the [Decision Framework](../05-Prioritization Framework.md#decision-framework) formula before queuing a row here). Plus its embedded search space: label parameters, threshold parameters (e.g. `OM` threshold), loss-function parameters, per-head loss-weight vector                                                                                                  |
 
 If a future candidate table doesn't fit a row above, classify it by the same rule (backbone/topology → `architecture-design`, model input → `input-data-feature`, model output/label/head → `outcome-label-target-head`) and add it to this table.
 
@@ -65,14 +65,14 @@ Every architecture-design file names the exact `input-data-feature`/`outcome-lab
 
 ## Selection algorithm
 
-0. **Category-reference prerequisite**: each category's idx-`000` file (`designsets/Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm (handmade).base.jsonc`, `designsets/input-data-feature/Tier-1_000.atr_rel_ohlc_log_sma_v_extm_rel_6tf (handmade).input.jsonc`, `designsets/outcome-label-target-head/Tier-1_000.action_mfe_rer (handmade).outcome.jsonc`) is that category's reference — today's resolved default for every axis in the category, plus the category's own embedded search space (see [Embedded search space](#embedded-search-space)). It's authored directly, not produced by walking steps 1–3 below: assembling a coherent, buildable whole-architecture design (or a satellite file's full variation set) out of per-axis winners is a holistic judgment call, not a mechanical queue pop. **If a category's reference file doesn't exist yet, stop and say so** rather than attempting to generate one via the steps below. All 3 reference files already exist, so this step is satisfied — proceed straight to step 1, and only revisit step 0 if a reference file is ever superseded by a new one (never by editing the old one in place, see [Rules](#rules)).
+0. **Category-reference prerequisite**: each category's idx-`000` file (`designsets/Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm(handmade).base.jsonc`, `designsets/input-data-feature/Tier-1_000.atr_rel_ohlc_log_sma_v_extm_rel_6tf(handmade).input.jsonc`, `designsets/outcome-label-target-head/Tier-1_000.action_mfe_rer(handmade).outcome.jsonc`) is that category's reference — today's resolved default for every axis in the category, plus the category's own embedded search space (see [Embedded search space](#embedded-search-space)). It's authored directly, not produced by walking steps 1–3 below: assembling a coherent, buildable whole-architecture design (or a satellite file's full variation set) out of per-axis winners is a holistic judgment call, not a mechanical queue pop. **If a category's reference file doesn't exist yet, stop and say so** rather than attempting to generate one via the steps below. All 3 reference files already exist, so this step is satisfied — proceed straight to step 1, and only revisit step 0 if a reference file is ever superseded by a new one (never by editing the old one in place, see [Rules](#rules)).
 1. **Build the queue** from every tiered table in [05 § tiered candidates by layer](../05-Prioritization Framework.md#tiered-candidates-by-layer), taken in the doc's own layer order: normalization → embedding → local extraction → sequential encoding → attention → global representation → **current Stage-1 candidate set** (whole-architecture) → activation → combination strategy → fusion mechanism → multi-timeframe fusion → GBM-family. Each table row = one queue entry (`layer`, `candidate`, `tier`, `adjusted` score, `gated?`).
 2. **Sort**: tier ascending (1→3) → `adjusted` score descending → layer order as listed above (tiebreak only, for equal scores) → row order within the table (tiebreak). Score genuinely drives order this way — sorting by layer order before score would drain a whole layer's Tier-1 rows before ever reaching a higher-scoring row in a later layer, e.g. queuing embedding's Tier-1 rows (adjusted 10, 9) to completion before local extraction's TCN/ModernTCN row (adjusted 11, the doc's single highest Tier-1 score).
 3. **Resume**: for each queue entry in sorted order, its target location is fixed by [Category assignment](#category-assignment) (today: every layer above except normalization → `designsets/` root; normalization → `designsets/input-data-feature/`).
    - **Skip a queue entry whose candidate is already the exact value the category reference (idx `000`) embeds for that axis** — no controlled variation would result from generating it (e.g. the local-feature-extraction table's `TCN / ModernTCN` row is already the reference's own `local_extraction` choice; the GBM-family table's `LightGBM` row is already the reference's own `auxiliary_model` choice; the sequential-encoding table's `LSTM` row and the attention table's `GQA/MQA` row are likewise already embedded). Skipped entries don't consume an idx slot — keep walking the sorted queue.
    - Otherwise: list existing `Tier-*` files at that location, parse `<n>`/`<idx>`, find the lowest tier with an unfilled `idx` gap (or the next `idx` after the last one present, at that location), and generate that queue entry. Never renumber or overwrite an existing file, and never touch an idx-`000` `(handmade)` reference file — it's authored by hand, per step 0.
 4. When a design set's `metadata.description` cites a score/tier from [05](../05-Prioritization Framework.md), copy it verbatim — don't re-derive or re-round it.
-5. **Presentation notebook** (`architecture-design` rows only, and only when the row's `searchable_architecture_parameter_sets."<n>-base".input_set`/`outcome_set` pairing has no datafeeder yet): build a `datafeeder_input<N>_outcome<M>.py` module next to that architecture's other implementation code (e.g. `app/application/model_implementations/tier1_000/`) exposing a `build_dataset()` that builds real samples for exactly that `input_set`/`outcome_set` combination — name and docstring stating which `input-data-feature`/`outcome-label-target-head` file+variation/entry it implements, per [`datafeeder_input3_outcome1.py`](<../../../app/application/model_implementations/tier1_000/datafeeder_input3_outcome1.py>)'s own docstring. Feed it into a presentation notebook, named after the content-descriptor slugs of the exact `input-data-feature`/`outcome-label-target-head` files under test (e.g. `NOW atr_rel_ohlc_log_sma_v_extm_rel_6tf x action_mfe_rer Visual Review.ipynb` for input3/outcome1) — one such notebook per tested combination, not one shared file — that visually reviews a handful of NOW samples: one figure per sample, one row per branch timeframe, that branch's own `candle_dataset` fields as line traces, x=0 at NOW, the sample's realized outcome-head values (action/mfe/rer, or whichever fields the row's `outcome_set` carries) summarized in the figure title. Reuse the existing plotting/sampling helper module (`app/presentation/dataset_generation/now_review_notebook.py`) across every such notebook — only the thin notebook itself and its `build_dataset()` import are per-combination.
+5. **Presentation notebook** (`architecture-design` rows only, and only when the row's `searchable_architecture_parameter_sets."<n>-base".input_set`/`outcome_set` pairing has no datafeeder yet): build a `datafeeder_input<N>_outcome<M>.py` module next to that architecture's other implementation code (e.g. `app/application/model_implementations/tier1_000/`) exposing a `build_dataset()` that builds real samples for exactly that `input_set`/`outcome_set` combination — name and docstring stating which `input-data-feature`/`outcome-label-target-head` file+variation/entry it implements, per [`datafeeder_input3_outcome1.py`](../../../app/application/model_implementations/tier1_000/datafeeder_input3_outcome1.py)'s own docstring. Feed it into a presentation notebook, named after the content-descriptor slugs of the exact `input-data-feature`/`outcome-label-target-head` files under test (e.g. `NOW atr_rel_ohlc_log_sma_v_extm_rel_6tf x action_mfe_rer Visual Review.ipynb` for input3/outcome1) — one such notebook per tested combination, not one shared file — that visually reviews a handful of NOW samples: one figure per sample, one row per branch timeframe, that branch's own `candle_dataset` fields as line traces, x=0 at NOW, the sample's realized outcome-head values (action/mfe/rer, or whichever fields the row's `outcome_set` carries) summarized in the figure title. Reuse the existing plotting/sampling helper module (`app/presentation/dataset_generation/now_review_notebook.py`) across every such notebook — only the thin notebook itself and its `build_dataset()` import are per-combination.
 
 ## Building a full experiment from one queue row
 
@@ -90,13 +90,13 @@ This keeps the "one axis varied, rest held fixed" controlled-experiment discipli
 
 Each category's parameter/window/label search space lives inside its own category reference file (idx `000`) — there's no separate bundle file type:
 
-- `designsets/Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm (handmade).base.jsonc` embeds the architecture/training/hyperparameter search space in `searchable_architecture_parameter_sets` — one `"<n>-base"` block per named base config, each parameter's line commented with its search bounds (see [Precise sizing convention](#precise-sizing-convention)).
-- `designsets/input-data-feature/Tier-1_000.atr_rel_ohlc_log_sma_v_extm_rel_6tf (handmade).input.jsonc` embeds the window/feature-parameter search space as numbered `variations` (each a complete alternative scheme) under one shared `base_definitions` block.
-- `designsets/outcome-label-target-head/Tier-1_000.action_mfe_rer (handmade).outcome.jsonc` embeds the label/loss-parameter search space the same way: numbered top-level entries, each a complete alternative head config.
+- `designsets/Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm(handmade).base.jsonc` embeds the architecture/training/hyperparameter search space in `searchable_architecture_parameter_sets` — one `"<n>-base"` block per named base config, each parameter's line commented with its search bounds (see [Precise sizing convention](#precise-sizing-convention)).
+- `designsets/input-data-feature/Tier-1_000.atr_rel_ohlc_log_sma_v_extm_rel_6tf(handmade).input.jsonc` embeds the window/feature-parameter search space as numbered `variations` (each a complete alternative scheme) under one shared `base_definitions` block.
+- `designsets/outcome-label-target-head/Tier-1_000.action_mfe_rer(handmade).outcome.jsonc` embeds the label/loss-parameter search space the same way: numbered top-level entries, each a complete alternative head config.
 
 A future single-axis row (e.g. testing one specific window-length variation, or one specific normalization scheme) still owes a **complete, standalone value** for its own axis in its own file — it doesn't need to re-embed the whole search space again, only state which reference variation/entry it's testing against, per [Building a full experiment](#building-a-full-experiment-from-one-queue-row).
 
-Whether a reference file's variation `"1"` is today's already-resolved default or the first rung of a not-yet-adopted incremental ladder isn't a fixed rule — match whatever [02](../02-Data, Label & Feature Engineering.md)/[03](../03-Model & Architecture Engineering.md) actually establish for that axis. The input reference's `variations.1` is today's resolved default (256/tf uniform) because the architecture-design schema doesn't restate `window`/`normalization` inline anywhere else — the input file is the *only* place that value is documented, so it has to be one of the numbered entries, not just the untried alternatives. The outcome reference's two entries are instead both rungs of the not-yet-adopted probabilistic-head ladder (mean+std, then +skew+kurtosis, per [02 § model output targets](../02-Data, Label & Feature Engineering.md#model-output-targets)) — the point-estimate baseline needs no search-space entry at all, since "not adopted" is itself the answer.
+Whether a reference file's variation `"1"` is today's already-resolved default or the first rung of a not-yet-adopted incremental ladder isn't a fixed rule — match whatever [02](../02-Data, Label & Feature Engineering.md)/[03](../03-Model & Architecture Engineering.md) actually establish for that axis. The input reference's `variations.1` is today's resolved default (256/tf uniform) because the architecture-design schema doesn't restate `window`/`normalization` inline anywhere else — the input file is the _only_ place that value is documented, so it has to be one of the numbered entries, not just the untried alternatives. The outcome reference's two entries are instead both rungs of the not-yet-adopted probabilistic-head ladder (mean+std, then +skew+kurtosis, per [02 § model output targets](../02-Data, Label & Feature Engineering.md#model-output-targets)) — the point-estimate baseline needs no search-space entry at all, since "not adopted" is itself the answer.
 
 An embedded search-space entry earns its place only by adding something no single design-set file already states inline — an untried alternative, or a shared methodology — never by restating an already-inlined value a second time. Concrete consequence: **model/backbone sizing stays out of any shared/cross-candidate list** — sizing hyperparameter names and values are backbone-specific (ModernTCN's `ModernTCN_kernel_size`/`ModernTCN_depth`/`ModernTCN_channels` mean nothing to a Transformer's `d_model`/`num_heads`), so each candidate's own `searchable_architecture_parameter_sets` carries its own sizing entries and nothing shared duplicates them.
 
@@ -106,39 +106,39 @@ Three fixed schemas, one per category — every file in a category uses its sche
 
 ### architecture-design files
 
-| JSON key | Captures | Doc source |
-| --- | --- | --- |
-| `metadata.design_set` | Sequential ID, `DS-<nn>`. Only `architecture-design` files carry `metadata` at all — the two satellite schemas have no `metadata` object (see [input-data-feature files](#input-data-feature-files)/[outcome-label-target-head files](#outcome-label-target-head-files)), so the counter only ever counts `architecture-design` files. `DS-01` = `Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm (handmade).base.jsonc`; increment from the highest `DS-<nn>` already present among existing `architecture-design` files | — |
-| `metadata.name` / `version` / `description` | Short human title; semver-ish version (`1.0.0` for a first cut); prose naming every distinguishing technology/option choice vs. the category reference | — |
-| `preprocessed_input` | Path to the `input-data-feature` file this design assumes | [Category assignment](#category-assignment) |
-| `outcome_heads` | Path to the `outcome-label-target-head` file this design assumes | [Category assignment](#category-assignment) |
-| `auxiliary_features` | `source` / `role` of the flattened last-candle snapshot feeding the MLP head's optional input and the GBM specialist | [03 § auxiliary tabular models (GBM-family)](../03-Model & Architecture Engineering.md#auxiliary-tabular-models-gbm-family) |
-| `the_model.per_timeframe_processing` | One branch per input tf (5m/15m/1H/4H/1D/1W — see [02 § glossary](../02-Data, Label & Feature Engineering.md#glossary) tf-ordered-list), each an ordered `temporal_encoder` stage list matching this candidate's `stage_config` — a stage this candidate zeroes at the per-branch level (`embedding`, `sequential`, `local_extraction_post`) is simply not listed, per the handmade reference's own convention (it omits `embedding` entirely for its ModernTCN+LSTM branches, no placeholder entry); explain the zeroing in `metadata.description` if it's worth calling out, not with an inline placeholder value | [03 § unified super-architecture skeleton](../03-Model & Architecture Engineering.md#unified-super-architecture-skeleton) |
-| `the_model.fusion` | Multi-timeframe fusion block and its own sub-config | [03 § multi-timeframe fusion](../03-Model & Architecture Engineering.md#multi-timeframe-fusion) |
-| `the_model.dependency_modeling.attention` | Post-fusion attention block — omit the key entirely if this candidate zeroes the attention stage (same "not listed" convention as `per_timeframe_processing` above; a `//` comment near the omission is fine, a placeholder JSON value like `"n/a"` is not — the handmade reference never uses one) | [03 § attention / dependency](../03-Model & Architecture Engineering.md#attention--dependency) |
-| `the_model.dependency_modeling.regularization_and_stabilization` | Normalization placement, residual connections, dropout — state exactly what the candidate's own pseudocode in [03 § architecture candidates](../03-Model & Architecture Engineering.md#architecture-candidates) shows; omit `normalization` entirely (don't invent a placeholder) if the source pseudocode has no explicit normalization layer | [03 § design layers to pass](../03-Model & Architecture Engineering.md#design-layers-to-pass) step 4 |
-| `the_model.dependency_modeling.global_representation` | Pooling stage | [03 § global representation](../03-Model & Architecture Engineering.md#global-representation) |
-| `the_model.dependency_modeling.prediction_head` | Shared MLP head shape (held constant across candidates) + pointer to the outcome file's head definitions | [02 § model output targets](../02-Data, Label & Feature Engineering.md#model-output-targets) |
-| `the_model.dependency_modeling.auxiliary_model` | GBM specialist config (held constant unless GBM-family is the axis under test) | [03 § auxiliary tabular models (GBM-family)](../03-Model & Architecture Engineering.md#auxiliary-tabular-models-gbm-family) |
-| `the_model.ensemble` | Deep-model + GBM combination (held constant unless this row tests it) | [03 § combination strategy](../03-Model & Architecture Engineering.md#combination-strategy) |
-| `the_model.training.optimization` | Optimizer/scheduler/AMP/grad-clip shape (held constant — values come from `searchable_architecture_parameter_sets`) | [04 § Training Engineering](../04-Experimentation, Evaluation & Optimization.md#training-engineering) |
-| `experiment_controller.hyperparameter_optimization` | Optuna pruning config (held constant) | [04 § optimization strategy](../04-Experimentation, Evaluation & Optimization.md#optimization-strategy) |
-| `searchable_architecture_parameter_sets` | `"<n>-base"` block(s): every architecture-specific + shared hyperparameter, base value + `//` search-bound comment, per [Precise sizing convention](#precise-sizing-convention) | [03 § architecture candidates](../03-Model & Architecture Engineering.md#architecture-candidates) |
-| `memory_budget` | VRAM/RAM estimate for this candidate's `1-base` config, against the hardware budget: static `model_parameters` (weights + gradients + AdamW optimizer state — param-count-scaled, independent of batch size), per-step `transient_activation_memory` (forward/backward activations — batch×seq×d_model-scaled), `preloaded_input_label_cache` (RAM-resident windowed dataset, sized from this row's `input_set`/`outcome_set` selection), `other_memory_consumers` (CUDA/driver context, staging buffers, fragmentation/OS headroom, GBM specialist) | [03 § hardware constraints](../03-Model & Architecture Engineering.md#hardware-constraints) / [§ vram/ram budget split](../03-Model & Architecture Engineering.md#vramram-budget-split); computed per [Memory sizing convention](#memory-sizing-convention) |
-| `complete_flow` | Ordered pipeline-stage name list, matching this candidate's actual non-zeroed stages | — |
-| `visualized` | ASCII pipeline diagram, matching `complete_flow` | — |
+| JSON key                                                         | Captures                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Doc source                                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `metadata.design_set`                                            | Sequential ID, `DS-<nn>`. Only `architecture-design` files carry `metadata` at all — the two satellite schemas have no `metadata` object (see [input-data-feature files](#input-data-feature-files)/[outcome-label-target-head files](#outcome-label-target-head-files)), so the counter only ever counts `architecture-design` files. `DS-01` = `Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm(handmade).base.jsonc`; increment from the highest `DS-<nn>` already present among existing `architecture-design` files                                                                                          | —                                                                                                                                                                                                                                                           |
+| `metadata.name` / `version` / `description`                      | Short human title; semver-ish version (`1.0.0` for a first cut); prose naming every distinguishing technology/option choice vs. the category reference                                                                                                                                                                                                                                                                                                                                                                                                                                                              | —                                                                                                                                                                                                                                                           |
+| `preprocessed_input`                                             | Path to the `input-data-feature` file this design assumes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | [Category assignment](#category-assignment)                                                                                                                                                                                                                 |
+| `outcome_heads`                                                  | Path to the `outcome-label-target-head` file this design assumes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | [Category assignment](#category-assignment)                                                                                                                                                                                                                 |
+| `auxiliary_features`                                             | `source` / `role` of the flattened last-candle snapshot feeding the MLP head's optional input and the GBM specialist                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | [03 § auxiliary tabular models (GBM-family)](../03-Model & Architecture Engineering.md#auxiliary-tabular-models-gbm-family)                                                                                                                                 |
+| `the_model.per_timeframe_processing`                             | One branch per input tf (5m/15m/1H/4H/1D/1W — see [02 § glossary](../02-Data, Label & Feature Engineering.md#glossary) tf-ordered-list), each an ordered `temporal_encoder` stage list matching this candidate's `stage_config` — a stage this candidate zeroes at the per-branch level (`embedding`, `sequential`, `local_extraction_post`) is simply not listed, per the handmade reference's own convention (it omits `embedding` entirely for its ModernTCN+LSTM branches, no placeholder entry); explain the zeroing in `metadata.description` if it's worth calling out, not with an inline placeholder value | [03 § unified super-architecture skeleton](../03-Model & Architecture Engineering.md#unified-super-architecture-skeleton)                                                                                                                                   |
+| `the_model.fusion`                                               | Multi-timeframe fusion block and its own sub-config                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | [03 § multi-timeframe fusion](../03-Model & Architecture Engineering.md#multi-timeframe-fusion)                                                                                                                                                             |
+| `the_model.dependency_modeling.attention`                        | Post-fusion attention block — omit the key entirely if this candidate zeroes the attention stage (same "not listed" convention as `per_timeframe_processing` above; a `//` comment near the omission is fine, a placeholder JSON value like `"n/a"` is not — the handmade reference never uses one)                                                                                                                                                                                                                                                                                                                 | [03 § attention / dependency](../03-Model & Architecture Engineering.md#attention--dependency)                                                                                                                                                              |
+| `the_model.dependency_modeling.regularization_and_stabilization` | Normalization placement, residual connections, dropout — state exactly what the candidate's own pseudocode in [03 § architecture candidates](../03-Model & Architecture Engineering.md#architecture-candidates) shows; omit `normalization` entirely (don't invent a placeholder) if the source pseudocode has no explicit normalization layer                                                                                                                                                                                                                                                                      | [03 § design layers to pass](../03-Model & Architecture Engineering.md#design-layers-to-pass) step 4                                                                                                                                                        |
+| `the_model.dependency_modeling.global_representation`            | Pooling stage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | [03 § global representation](../03-Model & Architecture Engineering.md#global-representation)                                                                                                                                                               |
+| `the_model.dependency_modeling.prediction_head`                  | Shared MLP head shape (held constant across candidates) + pointer to the outcome file's head definitions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | [02 § model output targets](../02-Data, Label & Feature Engineering.md#model-output-targets)                                                                                                                                                                |
+| `the_model.dependency_modeling.auxiliary_model`                  | GBM specialist config (held constant unless GBM-family is the axis under test)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | [03 § auxiliary tabular models (GBM-family)](../03-Model & Architecture Engineering.md#auxiliary-tabular-models-gbm-family)                                                                                                                                 |
+| `the_model.ensemble`                                             | Deep-model + GBM combination (held constant unless this row tests it)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | [03 § combination strategy](../03-Model & Architecture Engineering.md#combination-strategy)                                                                                                                                                                 |
+| `the_model.training.optimization`                                | Optimizer/scheduler/AMP/grad-clip shape (held constant — values come from `searchable_architecture_parameter_sets`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | [04 § Training Engineering](../04-Experimentation, Evaluation & Optimization.md#training-engineering)                                                                                                                                                       |
+| `experiment_controller.hyperparameter_optimization`              | Optuna pruning config (held constant)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | [04 § optimization strategy](../04-Experimentation, Evaluation & Optimization.md#optimization-strategy)                                                                                                                                                     |
+| `searchable_architecture_parameter_sets`                         | `"<n>-base"` block(s): every architecture-specific + shared hyperparameter, base value + `//` search-bound comment, per [Precise sizing convention](#precise-sizing-convention)                                                                                                                                                                                                                                                                                                                                                                                                                                     | [03 § architecture candidates](../03-Model & Architecture Engineering.md#architecture-candidates)                                                                                                                                                           |
+| `memory_budget`                                                  | VRAM/RAM estimate for this candidate's `1-base` config, against the hardware budget: static `model_parameters` (weights + gradients + AdamW optimizer state — param-count-scaled, independent of batch size), per-step `transient_activation_memory` (forward/backward activations — batch×seq×d_model-scaled), `preloaded_input_label_cache` (RAM-resident windowed dataset, sized from this row's `input_set`/`outcome_set` selection), `other_memory_consumers` (CUDA/driver context, staging buffers, fragmentation/OS headroom, GBM specialist)                                                                | [03 § hardware constraints](../03-Model & Architecture Engineering.md#hardware-constraints) / [§ vram/ram budget split](../03-Model & Architecture Engineering.md#vramram-budget-split); computed per [Memory sizing convention](#memory-sizing-convention) |
+| `complete_flow`                                                  | Ordered pipeline-stage name list, matching this candidate's actual non-zeroed stages                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | —                                                                                                                                                                                                                                                           |
+| `visualized`                                                     | ASCII pipeline diagram, matching `complete_flow`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | —                                                                                                                                                                                                                                                           |
 
 ### input-data-feature files
 
-| JSON key | Captures | Doc source |
-| --- | --- | --- |
-| `base_definitions` | Shared terms/derivations this file's `variations` build on (extremum/nearest/`plus2TF`/`plus3TF`/ATR/`candle_dataset` field formulas) — copy verbatim from [02 § candle feature schema](../02-Data, Label & Feature Engineering.md#candle-feature-schema)/[§ glossary](../02-Data, Label & Feature Engineering.md#glossary) unless the axis under test changes a formula itself | [02 § candle feature schema](../02-Data, Label & Feature Engineering.md#candle-feature-schema) |
-| `variations` | Numbered (`"1"`, `"2"`, ...) complete alternatives for the **one** axis this file covers (window-length scheme, or normalization scheme, or feature-set variant — a new axis gets a new file, not a new key alongside existing variations) — include today's resolved default as one entry if this file is the only place that default is documented (see [Embedded search space](#embedded-search-space)) | [03 § multi-timeframe fusion](../03-Model & Architecture Engineering.md#multi-timeframe-fusion) → "per-tf window length" / [02 § normalization strategy](../02-Data, Label & Feature Engineering.md#normalization-strategy) |
+| JSON key           | Captures                                                                                                                                                                                                                                                                                                                                                                                                   | Doc source                                                                                                                                                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `base_definitions` | Shared terms/derivations this file's `variations` build on (extremum/nearest/`plus2TF`/`plus3TF`/ATR/`candle_dataset` field formulas) — copy verbatim from [02 § candle feature schema](../02-Data, Label & Feature Engineering.md#candle-feature-schema)/[§ glossary](../02-Data, Label & Feature Engineering.md#glossary) unless the axis under test changes a formula itself                            | [02 § candle feature schema](../02-Data, Label & Feature Engineering.md#candle-feature-schema)                                                                                                                              |
+| `variations`       | Numbered (`"1"`, `"2"`, ...) complete alternatives for the **one** axis this file covers (window-length scheme, or normalization scheme, or feature-set variant — a new axis gets a new file, not a new key alongside existing variations) — include today's resolved default as one entry if this file is the only place that default is documented (see [Embedded search space](#embedded-search-space)) | [03 § multi-timeframe fusion](../03-Model & Architecture Engineering.md#multi-timeframe-fusion) → "per-tf window length" / [02 § normalization strategy](../02-Data, Label & Feature Engineering.md#normalization-strategy) |
 
 ### outcome-label-target-head files
 
-| JSON key | Captures | Doc source |
-| --- | --- | --- |
+| JSON key                             | Captures                                                                                                                                                                                                                                                                                                                | Doc source                                                                                   |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `"<n>"` (numbered top-level entries) | One complete alternative head config per entry — `action_head` (`classes`/`task`/`activation`/`loss`/`loss_weight`) plus the price-level head group (`mean_std_pairs` / `mean_std_skew_kurtosis_pairs` / a future point-estimate or quantile variant), each with `heads[]`, `task`, `activation`, `loss`, `loss_weight` | [02 § model output targets](../02-Data, Label & Feature Engineering.md#model-output-targets) |
 
 ## Skeletons
@@ -151,48 +151,106 @@ Three fixed schemas, one per category — every file in a category uses its sche
     "design_set": "DS-<nn>",
     "name": "<short human title>",
     "version": "1.0.0",
-    "description": "<what this candidate is and why, vs. the Tier-1_000 reference — name the swapped stage/axis and the source-doc candidate/score if citing one>"
+    "description": "<what this candidate is and why, vs. the Tier-1_000 reference — name the swapped stage/axis and the source-doc candidate/score if citing one>",
   },
-  "preprocessed_input": "input-data-feature/Tier-1_000.atr_rel_ohlc_log_sma_v_extm_rel_6tf (handmade).input.jsonc",
-  "outcome_heads": "outcome-label-target-head/Tier-1_000.action_mfe_rer (handmade).outcome.jsonc",
+  "preprocessed_input": "input-data-feature/Tier-1_000.atr_rel_ohlc_log_sma_v_extm_rel_6tf(handmade).input.jsonc",
+  "outcome_heads": "outcome-label-target-head/Tier-1_000.action_mfe_rer(handmade).outcome.jsonc",
   "auxiliary_features": {
     "source": "preprocessed_input.candle_dataset, LAST candle only per timeframe branch (not the full window), flattened across all 6 branches",
-    "role": "shared tabular snapshot feeding prediction_head.MLP's optional_auxiliary_features input and the LightGBM specialist"
+    "role": "shared tabular snapshot feeding prediction_head.MLP's optional_auxiliary_features input and the LightGBM specialist",
   },
   "the_model": {
     "per_timeframe_processing": {
       "architecture": "independent_parallel_branches",
       "branches": {
-        "5m_encoded_sequence": { "temporal_encoder": [ { "<stage_name>": "<block>" } ] },
-        "15m_encoded_sequence": { "temporal_encoder": [ "...same shape as 5m..." ] },
-        "1H_encoded_sequence": { "temporal_encoder": [ "..." ] },
-        "4H_encoded_sequence": { "temporal_encoder": [ "..." ] },
-        "1D_encoded_sequence": { "temporal_encoder": [ "..." ] },
-        "1W_encoded_sequence": { "temporal_encoder": [ "..." ] }
-      }
+        "5m_encoded_sequence": {
+          "temporal_encoder": [{ "<stage_name>": "<block>" }],
+        },
+        "15m_encoded_sequence": {
+          "temporal_encoder": ["...same shape as 5m..."],
+        },
+        "1H_encoded_sequence": { "temporal_encoder": ["..."] },
+        "4H_encoded_sequence": { "temporal_encoder": ["..."] },
+        "1D_encoded_sequence": { "temporal_encoder": ["..."] },
+        "1W_encoded_sequence": { "temporal_encoder": ["..."] },
+      },
     },
     "fusion": { "multitimeframe_fusion": { "<block>": { "...": "..." } } },
     "dependency_modeling": {
       // omit "attention" entirely here if stage_config.attention = 0 for this candidate — no placeholder key/value
       "attention": { "<block>": { "...": "..." } },
       // omit "normalization" entirely if the candidate's own pseudocode has no explicit normalization layer
-      "regularization_and_stabilization": { "training_stability": { "normalization": {}, "residual_connections": {}, "dropout": {} } },
+      "regularization_and_stabilization": {
+        "training_stability": {
+          "normalization": {},
+          "residual_connections": {},
+          "dropout": {},
+        },
+      },
       "global_representation": { "pooling": "<value, or \"searchable\">" },
       "prediction_head": {
         "MLP": {
-          "fusion_concatenation": { "inputs": ["deep_temporal_representation", "optional_auxiliary_features"] },
-          "each_layer": [ { "Dense": "searchable", "activation": "searchable" }, { "Dropout": "searchable" } ],
+          "fusion_concatenation": {
+            "inputs": [
+              "deep_temporal_representation",
+              "optional_auxiliary_features",
+            ],
+          },
+          "each_layer": [
+            { "Dense": "searchable", "activation": "searchable" },
+            { "Dropout": "searchable" },
+          ],
           "MLP_depth": "searchable",
-          "MLP_width": "searchable"
+          "MLP_width": "searchable",
         },
-        "output_heads": { "defined_in": "outcome-label-target-head/Tier-1_000.action_mfe_rer (handmade).outcome.jsonc" }
+        "output_heads": {
+          "defined_in": "outcome-label-target-head/Tier-1_000.action_mfe_rer(handmade).outcome.jsonc",
+        },
       },
-      "auxiliary_model": { "tabular_model": { "GBM": { "LightGBM": { "inputs": "auxiliary_features", "quantile_regression_loss": "pinball", "outputs": ["q10", "q50", "q90"], "integration": { "external_ensemble": { "inside_tensorflow_graph": false } } } } } }
+      "auxiliary_model": {
+        "tabular_model": {
+          "GBM": {
+            "LightGBM": {
+              "inputs": "auxiliary_features",
+              "quantile_regression_loss": "pinball",
+              "outputs": ["q10", "q50", "q90"],
+              "integration": {
+                "external_ensemble": { "inside_tensorflow_graph": false },
+              },
+            },
+          },
+        },
+      },
     },
-    "ensemble": { "model_combination": { "deep_model_plus_GBM": { "components": ["Keras_temporal_model", "LightGBM_tabular_model"], "combination": { "calibrated_ensemble": { "weighting": "searchable" } } } } },
-    "training": { "optimization": { "optimizer": "searchable", "scheduler": { "learning_rate_schedule": "searchable" }, "mixed_precision": "enabled", "gradient_clipping": { "enabled": true, "norm": "searchable" } } }
+    "ensemble": {
+      "model_combination": {
+        "deep_model_plus_GBM": {
+          "components": ["Keras_temporal_model", "LightGBM_tabular_model"],
+          "combination": {
+            "calibrated_ensemble": { "weighting": "searchable" },
+          },
+        },
+      },
+    },
+    "training": {
+      "optimization": {
+        "optimizer": "searchable",
+        "scheduler": { "learning_rate_schedule": "searchable" },
+        "mixed_precision": "enabled",
+        "gradient_clipping": { "enabled": true, "norm": "searchable" },
+      },
+    },
   },
-  "experiment_controller": { "hyperparameter_optimization": { "Optuna": { "pruning": { "enabled": true, "role": "terminate_unpromising_trials_early" } } } },
+  "experiment_controller": {
+    "hyperparameter_optimization": {
+      "Optuna": {
+        "pruning": {
+          "enabled": true,
+          "role": "terminate_unpromising_trials_early",
+        },
+      },
+    },
+  },
   "searchable_architecture_parameter_sets": {
     // stepping convention (base * 4 / base / 4 per level, with documented exceptions): see PROMPT.md § Precise sizing convention
     "1-base": {
@@ -210,20 +268,41 @@ Three fixed schemas, one per category — every file in a category uses its sche
       "scheduler": "cosine", // step, exponential
       "gradient_clip_norm": 1.0, // 0.1, 5.0
       "outcome_set": 1, // 2 — selects a set from outcome_heads
-      "ensemble_weighting": "validation_optimized_scalar" // fixed_equal_weight, stacked_meta_learner
-    }
+      "ensemble_weighting": "validation_optimized_scalar", // fixed_equal_weight, stacked_meta_learner
+    },
   },
   "memory_budget": {
     // order-of-magnitude estimate for this file's "1-base" config, per Memory sizing convention — not profiler-measured, profile_trial_cost() is ground truth
     "hardware_reference": "RTX 4060 Laptop GPU, 8GB VRAM (8188 MiB), 64GB RAM — per 03-Model & Architecture Engineering.md#hardware-constraints",
-    "model_parameters": { "vram_mb": "<value>", "basis": "<per-stage param-count formula and rollup, see Memory sizing convention>" },
-    "transient_activation_memory": { "vram_mb": "<value>", "basis": "<batch_size × seq_len × d_model × depth × bytes, per stage>" },
-    "preloaded_input_label_cache": { "ram_gb": "<value or 'capacity-bound, see basis'>", "basis": "<bytes/sample from this row's input_set/outcome_set, sized against the RAM budget's cache slice>" },
-    "other_memory_consumers": { "vram_mb": "<value>", "ram_gb": "<value>", "basis": "<CUDA/staging/fragmentation/OS overhead + GBM specialist, per vram/ram budget split>" },
-    "estimated_total": { "vram_mb": "<value>", "vram_pct_of_8gb_card": "<value>", "flag": "<fits/negligible/needs profiling — name the dominant term>" }
+    "model_parameters": {
+      "vram_mb": "<value>",
+      "basis": "<per-stage param-count formula and rollup, see Memory sizing convention>",
+    },
+    "transient_activation_memory": {
+      "vram_mb": "<value>",
+      "basis": "<batch_size × seq_len × d_model × depth × bytes, per stage>",
+    },
+    "preloaded_input_label_cache": {
+      "ram_gb": "<value or 'capacity-bound, see basis'>",
+      "basis": "<bytes/sample from this row's input_set/outcome_set, sized against the RAM budget's cache slice>",
+    },
+    "other_memory_consumers": {
+      "vram_mb": "<value>",
+      "ram_gb": "<value>",
+      "basis": "<CUDA/staging/fragmentation/OS overhead + GBM specialist, per vram/ram budget split>",
+    },
+    "estimated_total": {
+      "vram_mb": "<value>",
+      "vram_pct_of_8gb_card": "<value>",
+      "flag": "<fits/negligible/needs profiling — name the dominant term>",
+    },
   },
-  "complete_flow": ["preprocessed_inputs", "...", "Optuna_hyperparameter_optimization"],
-  "visualized": ["INPUT", "..."]
+  "complete_flow": [
+    "preprocessed_inputs",
+    "...",
+    "Optuna_hyperparameter_optimization",
+  ],
+  "visualized": ["INPUT", "..."],
 }
 ```
 
@@ -232,12 +311,12 @@ Three fixed schemas, one per category — every file in a category uses its sche
 ```jsonc
 {
   "base_definitions": {
-    "<term>": "<definition, copied verbatim from 02 § candle feature schema / § glossary unless this axis changes it>"
+    "<term>": "<definition, copied verbatim from 02 § candle feature schema / § glossary unless this axis changes it>",
   },
   "variations": {
     "1": { "<tf_minutes>": "<value for this variation>" },
-    "2": { "<tf_minutes>": "<value for this variation>" }
-  }
+    "2": { "<tf_minutes>": "<value for this variation>" },
+  },
 }
 ```
 
@@ -246,9 +325,21 @@ Three fixed schemas, one per category — every file in a category uses its sche
 ```jsonc
 {
   "1": {
-    "action_head": { "classes": ["long", "short", "none"], "task": "multiclass_classification", "activation": "softmax", "loss": "categorical_crossentropy", "loss_weight": 1.0 },
-    "<price_level_head_group_name>": { "heads": ["mfe", "rer"], "task": "<...>", "activation": "<...>", "loss": "<...>", "loss_weight": 1.0 }
-  }
+    "action_head": {
+      "classes": ["long", "short", "none"],
+      "task": "multiclass_classification",
+      "activation": "softmax",
+      "loss": "categorical_crossentropy",
+      "loss_weight": 1.0,
+    },
+    "<price_level_head_group_name>": {
+      "heads": ["mfe", "rer"],
+      "task": "<...>",
+      "activation": "<...>",
+      "loss": "<...>",
+      "loss_weight": 1.0,
+    },
+  },
 }
 ```
 
@@ -256,7 +347,7 @@ Three fixed schemas, one per category — every file in a category uses its sche
 
 Referenced from [03 § architecture candidates](../03-Model & Architecture Engineering.md#architecture-candidates) (the plain-conv candidate's `conv_layers` list) — this section is that link's target, covering how `searchable_architecture_parameter_sets` states both a value and its search bounds.
 
-**Which S1/S2/S3 profile to base a candidate on, when nothing else in the row decides it:** the S1/S2/S3 labels (depth-heavy/width-heavy/context-heavy, per [03 § architecture candidates](../03-Model & Architecture Engineering.md#architecture-candidates)) name a *general per-architecture-family* emphasis, not a guaranteed ranking on every derived property for every architecture — verify against the candidate's own numbers rather than assuming the label. Worked example: TCN's receptive field ≈ `1 + (kernel_size − 1) × (2^num_dilated_levels − 1)`. Plugging in 03's own S1/S2/S3 numbers (`hidden_channels`/`kernel_size`/`num_dilated_levels` = 40/3/10, 96/3/3, 56/9/6) gives S1 ≈ 2047, S2 ≈ 15, S3 ≈ 505 — S1 dominates despite carrying the "depth-heavy" label rather than "context-heavy." For a candidate whose zeroed stages (e.g. no `sequential`/`attention`) leave `local_extraction` as the sole source of long-range context, that computed number — not the label — is what should drive the profile choice. State whichever reasoning applies in `metadata.description`.
+**Which S1/S2/S3 profile to base a candidate on, when nothing else in the row decides it:** the S1/S2/S3 labels (depth-heavy/width-heavy/context-heavy, per [03 § architecture candidates](../03-Model & Architecture Engineering.md#architecture-candidates)) name a _general per-architecture-family_ emphasis, not a guaranteed ranking on every derived property for every architecture — verify against the candidate's own numbers rather than assuming the label. Worked example: TCN's receptive field ≈ `1 + (kernel_size − 1) × (2^num_dilated_levels − 1)`. Plugging in 03's own S1/S2/S3 numbers (`hidden_channels`/`kernel_size`/`num_dilated_levels` = 40/3/10, 96/3/3, 56/9/6) gives S1 ≈ 2047, S2 ≈ 15, S3 ≈ 505 — S1 dominates despite carrying the "depth-heavy" label rather than "context-heavy." For a candidate whose zeroed stages (e.g. no `sequential`/`attention`) leave `local_extraction` as the sole source of long-range context, that computed number — not the label — is what should drive the profile choice. State whichever reasoning applies in `metadata.description`.
 
 **State an explicit list, never a formula.** A per-layer/per-block hyperparameter (conv channel counts, kernel sizes, a growth schedule) is written as one entry per layer, in order (e.g. `conv_layers = [(64,3), (128,5), (192,7), (256,9)]`), never compressed into a depth-count + growth-formula pair (`depth=4, growth=1.5x`) — a formula makes the reader compute actual values themselves, which breaks the "state the actual value inline" rule in [Building a full experiment](#building-a-full-experiment-from-one-queue-row).
 
@@ -284,15 +375,15 @@ Recompute against the actual base value each time — don't copy another candida
   - Perceiver cross-attention: same attention formula, `Q_proj` sized off `latent_dim`, `K_proj`/`V_proj` sized off the source sequence's own dim (per this file's own `pre_fusion` embedding note, not necessarily `latent_dim`) — plus the learnable latent-token bank (`latent_tokens × latent_dim`, usually negligible).
   - Roll up: `weight_bytes ≈ total_param_count × 16 bytes` (fp32 master weights + fp32 gradient + AdamW's 2 fp32 moment buffers — 4 param-sized copies, matching [03's worked example](../03-Model & Architecture Engineering.md#hardware-constraints) "~4× params, fp32" convention exactly, so the same shortcut is reusable here without re-deriving it).
 - **`transient_activation_memory` (VRAM, per-step).** Per 03's own framing ("activation memory (batch × seq × d_model)" — [§ capacity/sizing layer](../03-Model & Architecture Engineering.md#design-layers-to-pass), [§ hardware constraints worked example](../03-Model & Architecture Engineering.md#hardware-constraints)): for each stage, `batch_size × seq_len × d_model_at_that_stage × depth_at_that_stage × 2 bytes` (fp16/bf16 under AMP — `mixed_precision: enabled` is this file's own `the_model.training.optimization` setting, so activations are stored at 2 bytes, not 4). Sum across stages; note which stage's `seq_len` is the full concatenated multi-tf window (pre-fusion) vs. a compressed token count (e.g. a Perceiver latent bottleneck reduces the sequence a downstream attention stage sees from "all timeframes' raw window" to `Perceiver_latent_tokens`) — this is usually where the dominant term lives, per 03's finding that activation memory, not param count, is the binding VRAM constraint.
-- **`preloaded_input_label_cache` (RAM).** `bytes_per_sample = (Σ over this row's `input_set` variation's per-tf window lengths) × feature_count_per_candle × 4 bytes` (float32) `+ label_bytes_per_sample` (from this row's `outcome_set`: one-hot/scalar size per head, typically tens of bytes, negligible next to the input side). `feature_count_per_candle` = count the fields actually enumerated in `preprocessed_input`'s `base_definitions.candle_dataset` (commented-out fields like `tf_minutes`/`age_minutes`/`candle_offset` don't count). Total training-set sample count isn't a doc-resolved number (the training symbol universe is open-ended — every Binance USDT pair ever listed, per [02 § training symbol universe](../02-Data, Label & Feature Engineering.md#training-symbol-universe-survivorship)) — don't fabricate one; instead size `bytes_per_sample` against [03's RAM budget split](../03-Model & Architecture Engineering.md#vramram-budget-split) `~65%` in-memory-cache slice (`0.65 × 64GB`) and state the resulting sample-count *capacity*, flagged as capacity-bound rather than total-bound.
+- **`preloaded_input_label_cache` (RAM).** `bytes_per_sample = (Σ over this row's `input_set` variation's per-tf window lengths) × feature_count_per_candle × 4 bytes` (float32) `+ label_bytes_per_sample` (from this row's `outcome_set`: one-hot/scalar size per head, typically tens of bytes, negligible next to the input side). `feature_count_per_candle` = count the fields actually enumerated in `preprocessed_input`'s `base_definitions.candle_dataset` (commented-out fields like `tf_minutes`/`age_minutes`/`candle_offset` don't count). Total training-set sample count isn't a doc-resolved number (the training symbol universe is open-ended — every Binance USDT pair ever listed, per [02 § training symbol universe](../02-Data, Label & Feature Engineering.md#training-symbol-universe-survivorship)) — don't fabricate one; instead size `bytes_per_sample` against [03's RAM budget split](../03-Model & Architecture Engineering.md#vramram-budget-split) `~65%` in-memory-cache slice (`0.65 × 64GB`) and state the resulting sample-count _capacity_, flagged as capacity-bound rather than total-bound.
 - **`other_memory_consumers` (VRAM + RAM).** Pipeline-level overhead that's roughly fixed regardless of which candidate this is — reuse [03's vram/ram budget split](../03-Model & Architecture Engineering.md#vramram-budget-split) percentages verbatim rather than re-deriving per file: VRAM side = CUDA/driver context (`~5%`) + pinned CPU→GPU transfer buffer (`~10%`) + fragmentation headroom (`~10%`) of the 8GB card; RAM side = OS/Python/dataloader-worker overhead (`~10%`) + pinned staging buffers (`~15%`) + headroom (`~10%`) of 64GB. Also note the LightGBM specialist's own training-time memory here (histogram bins etc.) if `auxiliary_model` is present — order tens of MB at this feature scale, negligible next to the cache slice, so it doesn't need its own bucket.
 - **`estimated_total` / flag.** Sum the VRAM buckets, state `%` of the 8GB card, and name whichever single term dominates (per-candidate, this varies — a narrow-channel TCN baseline is typically overhead-dominated; a wide hybrid with full cross-attention is typically activation-dominated). This is the file's own instantiated number — it supersedes 03's generic rough-prior percentages for this specific candidate, but both remain subordinate to an actual `profile_trial_cost()` run.
 
-**Fitting the budget, not just measuring it.** A freshly copied S1/S2/S3 profile (per [Building a full experiment](#building-a-full-experiment-from-one-queue-row)) is a *shape*, not a config already sized for this hardware — compute `memory_budget` once from the profile's literal numbers, check `estimated_total.vram_pct_of_8gb_card` against the target band below, and resize before finalizing the file if it's well outside that band, not after.
+**Fitting the budget, not just measuring it.** A freshly copied S1/S2/S3 profile (per [Building a full experiment](#building-a-full-experiment-from-one-queue-row)) is a _shape_, not a config already sized for this hardware — compute `memory_budget` once from the profile's literal numbers, check `estimated_total.vram_pct_of_8gb_card` against the target band below, and resize before finalizing the file if it's well outside that band, not after.
 
 - **Target band: ~80–85% of the 8GB card's total estimate.** Below it, the row leaves the hardware this repo is scoped to ([03 § hardware constraints](../03-Model & Architecture Engineering.md#hardware-constraints)) unused; above it, there's not enough headroom left to cover this being an unverified order-of-magnitude number rather than a `profile_trial_cost()` measurement. Every row should land in the same band regardless of how cheap its own `stage_config` naturally makes it — a candidate with fewer active stages (no attention, no sequential) needs a proportionally larger scale-up on the stages it does have — so every candidate makes comparable use of the same fixed hardware when it's its turn to train, not so a structurally cheaper architecture family is permanently left under-using the card. `other_memory_consumers` stays the fixed ~2048MB slice from [§ vram/ram budget split](../03-Model & Architecture Engineering.md#vramram-budget-split) throughout the resize — it's `model_parameters` + `transient_activation_memory` that has to grow or shrink to hit the band.
-- **What to scale: width only.** Identify the row's own width hyperparameters — channel counts, hidden units, `d_model`-equivalents, latent dims/tokens — and scale *all of them* by one common factor `k`, so every ratio between them is preserved exactly. Never scale one in isolation, and never touch: depth/layer counts or kernel sizes (already their own small-bounded-integer convention above, and often load-bearing for a receptive-field/profile-choice rationale already cited in `metadata.description` — leave that reasoning intact and say so explicitly if it depends only on the untouched parameters); `batch_size` (stays Optuna-searched per [04 § hyperparam search-space bounds](../04-Experimentation, Evaluation & Optimization.md#hyperparam-search-space-bounds), not maximized to fit a budget); or `MLP_width`/`MLP_depth` (the prediction head's shape is held constant across candidates, per [Required topics](#required-topics)'s `prediction_head` row — its input dimension still grows naturally when a scaled-up backbone feeds it a wider `deep_temporal_representation`, only the head's own Dense width/depth stay put).
-- **Solve `k` empirically, round to clean numbers, recompute for real.** Order-of-magnitude work, same epistemic status as the rest of this section — a couple of trial values of `k` run back through the formulas above is enough, no closed-form solve needed. Round each scaled value to a number that still satisfies the row's own cross-parameter constraints (e.g. `Perceiver_latent_dim % GQA_heads == 0`), then recompute `memory_budget` from the *rounded* values, not the theoretical `k`-scaled ones — the two differ slightly, and the file's stated numbers must match what's actually in `searchable_architecture_parameter_sets`.
+- **What to scale: width only.** Identify the row's own width hyperparameters — channel counts, hidden units, `d_model`-equivalents, latent dims/tokens — and scale _all of them_ by one common factor `k`, so every ratio between them is preserved exactly. Never scale one in isolation, and never touch: depth/layer counts or kernel sizes (already their own small-bounded-integer convention above, and often load-bearing for a receptive-field/profile-choice rationale already cited in `metadata.description` — leave that reasoning intact and say so explicitly if it depends only on the untouched parameters); `batch_size` (stays Optuna-searched per [04 § hyperparam search-space bounds](../04-Experimentation, Evaluation & Optimization.md#hyperparam-search-space-bounds), not maximized to fit a budget); or `MLP_width`/`MLP_depth` (the prediction head's shape is held constant across candidates, per [Required topics](#required-topics)'s `prediction_head` row — its input dimension still grows naturally when a scaled-up backbone feeds it a wider `deep_temporal_representation`, only the head's own Dense width/depth stay put).
+- **Solve `k` empirically, round to clean numbers, recompute for real.** Order-of-magnitude work, same epistemic status as the rest of this section — a couple of trial values of `k` run back through the formulas above is enough, no closed-form solve needed. Round each scaled value to a number that still satisfies the row's own cross-parameter constraints (e.g. `Perceiver_latent_dim % GQA_heads == 0`), then recompute `memory_budget` from the _rounded_ values, not the theoretical `k`-scaled ones — the two differ slightly, and the file's stated numbers must match what's actually in `searchable_architecture_parameter_sets`.
 - **Document the scale.** State the factor and which hyperparameters it touched in `metadata.description` (e.g. "widths scaled ×1.5 from the original 128/256/64/512 to reach the target VRAM band"), and recompute every `//` search-bound comment on a scaled parameter from its new base value per [Precise sizing convention](#precise-sizing-convention) — don't leave a bound comment computed off the old, pre-scaling base.
 
 ## Rules

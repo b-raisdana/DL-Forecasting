@@ -3,6 +3,7 @@ from typing import Annotated
 import pandas as pd
 from ClassicPivot import insert_pivot_info, insert_pivot_type_n_level, update_pivot_deactivation
 from config import TopTYPE, app_config
+from domain.ohlcv.ohlcva import read_multi_timeframe_ohlcva
 from domain.price_action.ftc import insert_multi_timeframe_pivots_real_start
 from domain.schemas.common.OHLCV import OHLCV
 from domain.schemas.common.OHLCVA import OHLCVA
@@ -15,8 +16,7 @@ from domain.schemas.market_structure.PeakValley import MultiTimeframePeakValley,
 from helper.data_preparation import pattern_timeframe, single_timeframe, to_timeframe, trigger_timeframe
 from helper.functions import date_range, date_range_to_string
 from helper.logging import profile_it
-from infrastructure.ohlcv.atr import read_multi_timeframe_ohlcva
-from infrastructure.ohlcv.fragmented_data import symbol_data_path
+from infrastructure.disk_cache import symbol_data_path
 from pandera import typing as pt
 from PeakValley import insert_crossing2, major_timeframe, peaks_only, read_multi_timeframe_peaks_n_valleys, valleys_only
 
@@ -64,21 +64,12 @@ def find_multi_timeframe_atr_movement_pivots(
                 timeframe_pivots.set_index("timeframe", inplace=True, append=True)
                 timeframe_pivots = timeframe_pivots.swaplevel()
                 pivots = MultiTimeframeAtrMovementPivotDf.concat(pivots, timeframe_pivots)
-                if app_config.check_assertions and not (
-                    (
-                        len(
-                            mt_tops.drop(
-                                index=mt_tops[
-                                    mt_tops.index.get_level_values("date").isin(
-                                        timeframe_pivots.index.get_level_values("date")
-                                    )
-                                ].index
-                            )
-                        )
-                        + len(timeframe_pivots)
-                    )
-                    == len(mt_tops)
-                ):
+                remaining_tops = mt_tops.drop(
+                    index=mt_tops[
+                        mt_tops.index.get_level_values("date").isin(timeframe_pivots.index.get_level_values("date"))
+                    ].index
+                )
+                if app_config.check_assertions and len(remaining_tops) + len(timeframe_pivots) != len(mt_tops):
                     AssertionError("not ((len(mt_tops.drop(...")
                 if not same_time_multiple_timeframes:
                     mt_tops.drop(
@@ -101,7 +92,7 @@ def generate_multi_timeframe_atr_movement_pivots(
         timeframe_shortlist = app_config.structure_timeframes
     else:
         # if any([t in timeframe_shortlist for t in config.timeframes[-2:]]):
-        if any([t not in app_config.structure_timeframes for t in timeframe_shortlist]):
+        if any(t not in app_config.structure_timeframes for t in timeframe_shortlist):
             raise Exception(
                 f"timeframes {timeframe_shortlist} should be in structure_timeframes:{app_config.structure_timeframes}!"
             )
@@ -176,7 +167,7 @@ def atr_movement_pivots(
             timeframe_pivots = insert_pivot_info(timeframe_pivots, ohlcva, timeframe, pattern_ohlcva, trigger_ohlcva)
             timeframe_pivots = update_pivot_deactivation(timeframe_pivots, timeframe, ohlcva)
             timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
-            # pivots_to_change_timeframe = timeframe_pivots[timeframe_pivots['timeframe_invalid'].astype(bool)].copy() # todo: test
+            # pivots_to_change_timeframe = timeframe_pivots[timeframe_pivots["timeframe_invalid"].astype(bool)].copy()
             # pivots_to_change_timeframe['timeframe'] = timeframe
             # pivots_to_change_timeframe = \
             #     pivots_to_change_timeframe.reset_index().set_index(['timeframe', 'date', 'original_start'])
@@ -276,7 +267,7 @@ def insert_pivot_movement_times(
     :param top_type:
     :return:
     - right_crossing_time and left_crossing_time: Time index where the crossing occurs in the specified direction.
-    - right_crossing_value and left_crossing_value: Value of the OHLCV data at the crossing point in the specified direction.
+    - right_crossing_value and left_crossing_value: OHLCV values at the crossing points.
     """
 
     if top_type == TopTYPE.PEAK:
@@ -375,10 +366,7 @@ def insert_more_significant_top(
     target_tops: pt.DataFrame[MultiTimeframePeakValley],
     top_type: TopTYPE,
 ) -> pt.DataFrame[MultiTimeframePeakValley]:
-    if top_type == TopTYPE.PEAK:
-        high_low = "high"
-    else:  # top_type == TopTYPE.VALLEY
-        high_low = "low"
+    high_low = "high" if top_type == TopTYPE.PEAK else "low"
 
     no_timeframe_tops = target_tops.reset_index(level="timeframe")
     for direction in ["left", "right"]:

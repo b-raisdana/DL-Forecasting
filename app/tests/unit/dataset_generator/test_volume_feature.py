@@ -9,7 +9,9 @@ import numpy as np
 import pandas as pd
 import pytest
 from application.dataset_generation.volume_feature import (
+    add_log_sma_volume_feature_column,
     add_volume_feature_columns,
+    log_sma_volume_feature_columns,
     volume_feature_columns,
 )
 
@@ -50,3 +52,38 @@ def test_volume_atr_zero_volume_run_is_nan_not_inf() -> None:
     result = add_volume_feature_columns(ohlcv)
     assert result["volume_atr"].isna().all()
     assert not np.isinf(result["volume_atr"].fillna(0)).any()
+
+
+# --- add_log_sma_volume_feature_column (additive sibling, gap 2) ---------------------------------
+
+
+def test_log_sma_volume_feature_columns_lists_the_one_derived_field() -> None:
+    assert log_sma_volume_feature_columns() == ["log_volume_sma_ratio"]
+
+
+def test_log_volume_sma_ratio_matches_hand_derived_formula() -> None:
+    ohlcv = pd.DataFrame({"volume": [10.0, 20.0, 30.0, 40.0]})
+    result = add_log_sma_volume_feature_column(ohlcv, length=2)
+    eps = np.finfo(np.float64).eps
+    sma = pd.Series([10.0, 20.0, 30.0, 40.0]).rolling(2).mean()
+    expected = np.log((ohlcv["volume"] + eps) / (sma + eps))
+    np.testing.assert_allclose(
+        result["log_volume_sma_ratio"].to_numpy(), expected.to_numpy(), rtol=1e-9, equal_nan=True
+    )
+
+
+def test_log_volume_sma_ratio_is_zero_when_volume_equals_its_own_sma() -> None:
+    ohlcv = pd.DataFrame({"volume": [5.0, 5.0, 5.0, 5.0]})
+    result = add_log_sma_volume_feature_column(ohlcv, length=2)
+    np.testing.assert_allclose(result["log_volume_sma_ratio"].iloc[1:].to_numpy(), 0.0, atol=1e-12)
+
+
+def test_length_exceeding_available_history_would_otherwise_crash_not_nan() -> None:
+    """pandas_ta.sma returns None outright (not a NaN Series) when length > len(series) -- a real
+    concern for the 1W branch, which has fewer than 256 cached candles (see
+    datafeeder_input3_outcome1.py's _ATR_LENGTH_OVERRIDE, reused for this same reason). Documenting
+    the failure mode here rather than papering over it inside this function, since the actual fix
+    (a shorter override length) is the caller's responsibility, matching the existing ATR precedent."""
+    ohlcv = pd.DataFrame({"volume": [10.0, 20.0, 30.0]})
+    with pytest.raises(TypeError):
+        add_log_sma_volume_feature_column(ohlcv, length=256)

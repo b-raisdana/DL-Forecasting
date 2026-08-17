@@ -1,10 +1,11 @@
-import logging
 from datetime import timedelta
 from typing import Literal
 
 import pandas as pd
 import pandera.typing as pt
 from config import TREND, TopTYPE, app_config
+from domain.ohlcv.ohlcv import get_multi_timeframe_ohlcv
+from domain.ohlcv.ohlcva import get_multi_timeframe_ohlcva
 from domain.price_action.PeakValley import (
     get_multi_timeframe_peaks_n_valleys,
     insert_previous_n_next_top,
@@ -23,11 +24,9 @@ from helper.data_preparation import (
     single_timeframe,
     to_timeframe,
 )
-from helper.logging import profile_it
+from helper.logging import log_d, log_e, log_w, profile_it
 from helper.schema_casting import cast_and_validate, empty_df
-from infrastructure.ohlcv.atr import get_multi_timeframe_ohlcva
-from infrastructure.ohlcv.disk_cache import cache_on_disk
-from infrastructure.ohlcv.ohlcv import get_multi_timeframe_ohlcv
+from infrastructure.disk_cache import cache_on_disk
 
 
 def insert_previous_n_next_tops(
@@ -55,11 +54,9 @@ def single_timeframe_candles_trend(
     ].index
 
     if len(candles_with_known_trend) == 0:
-        log(
+        log_w(
             f"Not found any candle with possibly known trend "
             f"in ({ohlcv.index[0]}:{ohlcv.index[-1]}#{len(ohlcv)}={ohlcv.head(5)})!",
-            severity=logging.WARNING,
-            stack_trace=False,
         )
         candle_trend["bull_bear_side"] = TREND.SIDE.value
         if candle_trend["is_final"].isna().any():
@@ -226,12 +223,10 @@ def expand_trend_by_near_tops(
             .compare(previous_round_movement_start_time.sort_index())
         )
         number_of_changed_starts = len(changed_starts)
-        log(
+        log_d(
             f"Changed start={number_of_changed_starts} ends={number_of_changed_ends}"
             f"possibly movable starts={len(possible_start_expandable_indexes)} "
             f"ends= {len(possible_end_expandable_indexes)} ",
-            severity=logging.DEBUG,
-            stack_trace=False,
         )
         previous_round_movement_end_time = timeframe_bull_or_bear["movement_end_time"].copy()
         previous_round_movement_start_time = timeframe_bull_or_bear["movement_start_time"].copy()
@@ -432,11 +427,9 @@ def multi_timeframe_bull_bear_side_trends(
     for timeframe in timeframe_shortlist:
         timeframe_candle_trend = single_timeframe(multi_timeframe_candle_trend, timeframe)
         if len(timeframe_candle_trend) < 3:
-            log(
+            log_w(
                 f"multi_timeframe_candle_trend has less than 3 rows ({len(timeframe_candle_trend)}) for "
                 f"{timeframe}/{date_range_of_data(multi_timeframe_ohlcva)}",
-                stack_trace=False,
-                severity=logging.WARNING,
             )
             continue
         timeframe_peaks_n_valleys = major_timeframe(multi_timeframe_peaks_n_valleys, timeframe).reset_index(
@@ -497,7 +490,7 @@ def add_trend_extremum(
 
 
 def most_two_significant_tops(start, end, single_timeframe_peaks_n_valleys, tops_type: TopTYPE) -> pd.DataFrame:
-    log("test most_two_significant_valleys", severity=LogSeverity.ERROR)
+    log_e("test most_two_significant_valleys")
     filtered_valleys = single_timeframe_peaks_n_valleys.loc[
         (single_timeframe_peaks_n_valleys.index >= start)
         & (single_timeframe_peaks_n_valleys.index <= end)
@@ -538,7 +531,7 @@ def ignore_weak_trend(boundaries: pt.DataFrame[BullBearSide]) -> pt.DataFrame[Bu
     Remove weak trends from the DataFrame.
 
     Parameters:
-        boundaries (pt.DataFrame[application.backtesting.BullBearSide.BullBearSide]): A DataFrame containing trend boundary data.
+        boundaries: DataFrame containing trend boundary data.
 
     Returns:
         pt.DataFrame[application.backtesting.BullBearSide.BullBearSide]: A DataFrame with weak trends removed.
@@ -589,7 +582,7 @@ def previous_trend(trends: pt.DataFrame[BullBearSide]) -> tuple[list[int | None]
     Find the previous trend and its movement for each row in a DataFrame of trends.
 
     Args:
-        trends (pd.DataFrame): A DataFrame containing trend data with columns 'movement_start_time' and 'movement_end_time'.
+        trends: DataFrame with `movement_start_time` and `movement_end_time` columns.
 
     Returns:
         Tuple[List[Optional[int]], List[Optional[float]]]: A tuple containing two lists:
@@ -606,9 +599,8 @@ def previous_trend(trends: pt.DataFrame[BullBearSide]) -> tuple[list[int | None]
                 previous_trends_movement.append(possible_previous_trends["movement"].max())
                 continue
             else:
-                log(
+                log_w(
                     f"did not find any previous trend for trend stat@{bull_bear_side_repr(_start, this_trend)})",
-                    stack_trace=False,
                 )
         else:
             raise Exception(f"movement_start_time is not valid:{this_trend['movement_start_time']}")

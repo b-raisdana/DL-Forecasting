@@ -3,6 +3,7 @@ from typing import Literal
 import pandas as pd
 import pandera.typing as pt
 from config import TopTYPE, app_config
+from domain.ohlcv.ohlcv import get_base_timeframe_ohlcv
 from domain.schemas.common.OHLCV import OHLCV
 from domain.schemas.market_structure.PeakValley import MultiTimeframePeakValley, PeakValley
 from helper.data_preparation import (
@@ -15,8 +16,7 @@ from helper.data_preparation import (
 from helper.functions import date_range
 from helper.logging import profile_it
 from helper.schema_casting import cast_and_validate, empty_df, index_names
-from infrastructure.ohlcv.disk_cache import cache_on_disk
-from infrastructure.ohlcv.ohlcv import get_base_timeframe_ohlcv
+from infrastructure.disk_cache import cache_on_disk
 
 
 def calculate_strength(
@@ -71,7 +71,7 @@ def insert_distance(
     - right_top_value or left_top_value: Value of the top in the specified direction.
     - right_crossing or left_crossing: Boolean indicating whether OHLCV data is crossing the peak/valley.
     - right_crossing_time or left_crossing_time: Time index where the crossing occurs in the specified direction.
-    - right_crossing_value or left_crossing_value: Value of the OHLCV data at the crossing point in the specified direction.
+    - right_crossing_value or left_crossing_value: OHLCV value at the crossing point.
     """
     if top_type == TopTYPE.PEAK:  # todo: test
         base = insert_crossing2(
@@ -131,7 +131,7 @@ def insert_crossing2(
     - right_base_target or left_base_target: Value of the base in the specified direction.
     - right_crossing or left_crossing: Boolean indicating whether OHLCV data is crossing the peak/valley.
     - right_crossing_time or left_crossing_time: Time index where the crossing occurs in the specified direction.
-    - right_crossing_value or left_crossing_value: Value of the OHLCV data at the crossing point in the specified direction.
+    - right_crossing_value or left_crossing_value: OHLCV value at the crossing point.
     """
     if hasattr(target.index, "names") and "timeframe" in target.index.names:
         raise ValueError("Expected single-timeframe target but 'timeframe' in target.index.names")
@@ -249,7 +249,8 @@ def drop_base_without_crossing2(
 ):
     n = len(target)
     if "target_index" not in bases_to_compare.columns:
-        # bases_to_compare['target_index'] = nearest_match(bases_to_compare.index.get_level_values('date'), target.index,
+        # bases_to_compare["target_index"] = nearest_match(
+        #     bases_to_compare.index.get_level_values("date"), target.index,
         #                                                  direction='forward', shift=0)
         # if direction == 'left':
         #     pass
@@ -290,12 +291,6 @@ def drop_base_without_crossing2(
         else:  # direction == 'right':
             target["min_value"] = target[target_compare_column].iloc[::-1].rolling(window=n, min_periods=0).min()
             target["min_value"] = target["min_value"].shift(-1)
-        try:
-            len(bases_to_compare["target_index"])
-            nop = target.loc[bases_to_compare["target_index"]]
-        except:
-            nop = 1
-            pass
         bases_to_compare["target_min_value"] = target.loc[bases_to_compare["target_index"], "min_value"].tolist()
         without_crossings = bases_to_compare[
             bases_to_compare[base_target_column].isna()
@@ -401,17 +396,13 @@ def find_crossing_single_iteration(
     # if high/low of 'target' is higher/lower than 'base' high/low it is crossing
     target[f"{direction}_crossing"] = more_significant(target[target_compare_column], target[reverse + "_base_target"])
     target: pd.DataFrame
-    if direction == "right":
-        date_chooser = "min"
-    else:
-        date_chooser = "max"
+    date_chooser = "min" if direction == "right" else "max"
     target["target_date"] = target.index
     crossed_bases = (
         target[target[f"{direction}_crossing"]].groupby(by=[f"{reverse}_base_index"]).agg({"target_date": date_chooser})
     )
-    if app_config.check_assertions and bases_shall_have_crossing:
-        if crossed_bases["target_date"].isna().any().any():
-            raise AssertionError("crossed_bases['target_date'].isna().any().any()")
+    if app_config.check_assertions and bases_shall_have_crossing and crossed_bases["target_date"].isna().any().any():
+        raise AssertionError("crossed_bases['target_date'].isna().any().any()")
     if return_both:
         target.loc[crossed_bases["target_date"], "crossed_base_index"] = crossed_bases.index
         return crossed_bases, target
@@ -623,8 +614,8 @@ def major_timeframe(multi_timeframe_df: pd.DataFrame, timeframe: str) -> pt.Data
 def higher_or_eq_timeframe(multi_timeframe_df: pd.DataFrame, timeframe: str):
     try:
         index = app_config.timeframes.index(timeframe)
-    except ValueError:
-        raise Exception(f"timeframe:{timeframe} should be in [{app_config.timeframes}]!")
+    except ValueError as err:
+        raise Exception(f"timeframe:{timeframe} should be in [{app_config.timeframes}]!") from err
     # result = peaks_n_valleys.loc[peaks_n_valleys.index.isin(config.timeframes[index:], level='timeframe')]
     result = multi_timeframe_df.loc[
         multi_timeframe_df.index.get_level_values("timeframe").isin(app_config.timeframes[index:])

@@ -61,6 +61,11 @@ pandas/numpy-adjacent libraries evaluated for this repo, are enforced day to day
   `<repo_root>/data` if unset); the `tf` conda env's `activate.d`/`deactivate.d` hooks set it to
   `/home/brais/dlf-data`, a native ext4 path, so WSL-side runs skip the `drvfs` tax entirely while
   Windows keeps the unchanged default.
+- **Clickable repo-path references in comments/docstrings**: VS Code's built-in path-link detection stops at the first whitespace, so a referenced filename containing a literal space (e.g. some `(handmade)` designset files) never lights up as clickable no matter how the surrounding text is formatted. The `DanLevett.pattern-links` ("Link Patterns") extension fixes this via two custom regex rules, but its `linkTarget` is passed straight to `vscode.Uri.parse()` with no `${workspaceFolder}` substitution or relative-to-document resolution — the target must be a hardcoded absolute `file://` path. That's machine-specific, so it's configured per-machine in the WSL remote's `~/.vscode-server/data/Machine/settings.json` (untracked, not `.vscode/settings.json`), not committed to the repo:
+  - repo-root-relative paths (no leading `/`) starting with `app/`, `docs/`, or `scripts/` get the repo root prepended;
+  - already-absolute paths (leading `/`, not preceded by a word character — avoids double-matching a relative path's inner segments) are used as-is;
+  - `./sibling.py`-style paths resolve against a hardcoded folder (currently `app/application/model_implementations/tier1_000/`, since the rule has no per-document `${fileDirname}` — the extension only substitutes regex capture groups, not editor context) — update that hardcoded folder, or add another rule, if `./`-relative links are needed elsewhere.
+  - All three stay on a single line (the regexes exclude newlines) — a path reference wrapped across lines in source needs joining onto one line to become clickable.
 
 ## methodologies for follow
 

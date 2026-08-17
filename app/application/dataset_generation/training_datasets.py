@@ -4,16 +4,16 @@ from typing import NamedTuple
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from application.dataset_generation.classic_indicators import (
-    add_classic_indicators,
-    classic_indicator_columns,
-    scaleless_indicators,
-)
 from application.dataset_generation.profit_loss.profit_loss_adder import add_long_n_short_profit
 from application.dataset_generation.relative_candle import add_relative_candle_columns, relative_candle_columns
 from application.dataset_generation.volume_feature import add_volume_feature_columns, volume_feature_columns
 from config import app_config
 from domain.schemas.common.MultiTimeframe import MultiTimeframe
+from domain.technical_analysis.classic_indicators import (
+    add_classic_indicators,
+    classic_indicator_columns,
+    scaleless_indicators,
+)
 from helper.data_preparation import pattern_timeframe, single_timeframe, trigger_timeframe
 from helper.functions import date_range
 from helper.importer import pt

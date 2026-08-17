@@ -12,9 +12,9 @@ import pandas as pd
 from application.dataset_generation.training_datasets import train_data_of_mt_n_profit
 from application.model_implementations.shared.base import master_x_shape, overlapped_quarters
 from config import app_config
+from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from helper.functions import date_range_to_string
 from helper.logging.do_log import log_d, log_e, log_i
-from infrastructure.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 
 
 def shm_from_array(arr: np.ndarray) -> tuple[str, tuple[int, ...], str]:
@@ -56,7 +56,8 @@ def ram_dataset_producer(
                 for _ in range(int(100 / NUM_WORKERS)):
                     while meta_q.qsize() >= CACHE_THRESHOLD:
                         # log_d(
-                        #     f"RAM Cache is full ({meta_q.qsize()}>= {CACHE_THRESHOLD}), no new file needed right now. Sleep briefly.")
+                        #     f"RAM Cache is full ({meta_q.qsize()} >= {CACHE_THRESHOLD}); sleeping briefly."
+                        # )
                         time.sleep(0.5)
                     Xs, ys, *_ = train_data_of_mt_n_profit(
                         structure_tf="4h",
@@ -99,10 +100,7 @@ def ram_dataset_consumer(meta_q: queues.Queue, batch_size: int):
                     xs_meta, ys_meta = meta_q.get()
                     # attach shared-mem arrays, then immediately close & unlink *after* copy
                     ys_arr, ys_shm = array_from_shm(*ys_meta)
-                    if cached_ys is None:
-                        cached_ys = ys_arr.copy()
-                    else:
-                        cached_ys = np.concatenate([cached_ys, ys_arr], axis=0)
+                    cached_ys = ys_arr.copy() if cached_ys is None else np.concatenate([cached_ys, ys_arr], axis=0)
                     ys_shm.close()
                     ys_shm.unlink()
 
@@ -189,7 +187,7 @@ def run_producer():
 
     processes = []
 
-    for i in range(NUM_WORKERS):
+    for _i in range(NUM_WORKERS):
         p = mp.Process(target=prod_worker)
         p.start()
         processes.append(p)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Callable
 
 import pandas as pd
@@ -8,13 +9,13 @@ from config import app_config
 from helper.data_preparation import after_under_process_date, concat
 from helper.logging import log_d, log_w
 from helper.schema_casting import all_annotations
-from infrastructure.ohlcv.disk_cache import (
+from infrastructure.disk_cache import (
     datarange_is_not_cachable,
     read_without_index,
     remove_data_file,
+    symbol_data_path,
     write_data_file,
 )
-from infrastructure.ohlcv.fragmented_data import symbol_data_path
 from pandera import DataType
 from pandera import typing as pt
 
@@ -57,27 +58,27 @@ class ExtendedDf:
         if dictionary_of_data is not None:
             if not isinstance(dictionary_of_data, dict):
                 raise ValueError(f"dictionary_of_data should be dict but {type(dictionary_of_data)} given.")
-            if any([isinstance(v, list) for k, v in dictionary_of_data.items()]):
+            if any(isinstance(v, list) for k, v in dictionary_of_data.items()):
                 raise NotImplementedError("List values as dictionary_of_data values!")
             _new = cls._empty_df.copy()
             _index_names = cls.index_names()
             if len(_index_names) > 1:
                 try:
                     the_index = tuple([dictionary_of_data[k] for k in _index_names])
-                except KeyError:
+                except KeyError as err:
                     raise Exception(
                         f"Indexes {_index_names} should have value in the dictionary_of_data: {dictionary_of_data}"
-                    )
+                    ) from err
             else:
                 try:
                     the_index = dictionary_of_data[_index_names[0]]
-                except KeyError:
+                except KeyError as err:
                     raise Exception(
                         f"Indexes {_index_names} should have value in the dictionary_of_data: {dictionary_of_data}"
-                    )
+                    ) from err
             unused_keys = []
             for key in dictionary_of_data:
-                if not strict or key in cls.schema_data_frame_model.to_schema().columns.keys():
+                if not strict or key in cls.schema_data_frame_model.to_schema().columns:
                     if key not in _index_names:
                         # _new[key] = pd.Series()
                         # log_d(f"{key}({type(dictionary_of_data[key])})={dictionary_of_data[key]}")
@@ -92,7 +93,7 @@ class ExtendedDf:
                 if "coerce_dtype('int64')         [nan]".replace(" ", "") in str(e).replace(" ", ""):
                     raise TypeError(
                         "Use pt.Series[pd.Int8Dtype] instead of pt.Series[int] to allow nullable int series: " + str(e)
-                    )
+                    ) from e
                 else:
                     raise e
             return _new
@@ -106,9 +107,8 @@ class ExtendedDf:
         return_bool: bool = False,
         zero_size_allowed: bool = False,
     ) -> pt.DataFrame[BasePanderaDFM] | bool:
-        if not zero_size_allowed:
-            if len(df) == 0:
-                raise Exception("Zero size data not allowed in parameters!")
+        if not zero_size_allowed and len(df) == 0:
+            raise Exception("Zero size data not allowed in parameters!")
         if app_config.check_assertions and cls.schema_data_frame_model is None:
             raise AssertionError(f"Define cls.schema_data_frame_model in child class:{cls.__name__}")
         try:
@@ -182,10 +182,8 @@ class ExtendedDf:
         if date_range_str is None:
             date_range_str = app_config.processing_date_range
         df = None
-        try:
+        with contextlib.suppress(FileNotFoundError):
             df = cls.read_and_index(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
-        except FileNotFoundError:
-            pass
         if zero_size_allowed is None:
             zero_size_allowed = after_under_process_date(date_range_str)
         if df is None or not cls.cast_and_validate(df, return_bool=True, zero_size_allowed=zero_size_allowed):
@@ -270,7 +268,7 @@ class ExtendedDf:
         if cls.column_d_type_assertion_checked:
             return
         d_type: str
-        for key, d_type in column_annotations.items():
+        for _key, d_type in column_annotations.items():
             if not str(d_type).startswith("pandera.typing.pandas.Series["):
                 raise NotImplementedError
         cls.column_d_type_assertion_checked = True

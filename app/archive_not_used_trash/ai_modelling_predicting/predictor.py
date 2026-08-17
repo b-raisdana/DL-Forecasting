@@ -2,13 +2,14 @@ import os
 
 import numpy as np
 import pandas as pd
+from application.dataset_generation.training_datasets import train_data_of_mt_n_profit
 from application.model_implementations.cnn_lstm.trining_datasets import model_dataset_lengths
 from application.preprocessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
 from config import app_config
+from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import single_timeframe
 from helper.functions import profile_it
 from helper.importer import go
-from infrastructure.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from presentation.plotting.plotter import show_and_save_plot
 from tensorflow.python.keras.models import load_model
 
@@ -40,7 +41,7 @@ def prediction_reconstructor(row, prev_row):
     Reconstruct high and low values based on previous row's statistics and current row's predictions.
 
     Args:
-        row: The current row in the rolling window (contains current n_high, n_low, mean_high, mean_low, std_high, std_low).
+        row: Current rolling-window row with normalized highs/lows and summary statistics.
         prev_row: The previous row's statistics (mean_high, mean_low, std_high, std_low).
 
     Returns:
@@ -212,8 +213,8 @@ if __name__ == "__main__":
     structure_tf = "4h"
     base_ohlcv = single_timeframe(mt_ohlcv, "15min")
     batch_size = 1
-    Xs, ys, x_dfs, y_dfs, y_timeframe, y_tester_dfs = zz_train_data_of_mt_n_profit(
-        structure_tf, n_mt_ohlcv, model_dataset_lengths, batch_size
+    Xs, ys, x_dfs, y_dfs, y_timeframe, y_tester_dfs = train_data_of_mt_n_profit(
+        structure_tf, n_mt_ohlcv, model_dataset_lengths, batch_size, dataset_batches=1
     )
     t_predictions = load_and_predict(Xs)
     print("Predictions:", t_predictions)

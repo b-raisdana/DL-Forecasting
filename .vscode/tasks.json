@@ -1,0 +1,171 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "mypy (app)",
+      "type": "process",
+      "command": "${config:python.defaultInterpreterPath}",
+      "args": [
+        "-m",
+        "mypy",
+        "--config-file",
+        "../pyproject.toml",
+        "."
+      ],
+      "options": { "cwd": "${workspaceFolder}/app" },
+      "windows": {
+        "command": "wsl.exe",
+        "args": [
+          "-d",
+          "Ubuntu-24.04",
+          "--",
+          "bash",
+          "-lc",
+          "source ~/miniconda3/etc/profile.d/conda.sh && conda activate tf && cd \"$(wslpath -u \"$1\")/app\" && mypy --config-file ../pyproject.toml .",
+          "_",
+          "${workspaceFolder}"
+        ]
+      },
+      "problemMatcher": {
+        "owner": "mypy",
+        "fileLocation": ["relative", "${workspaceFolder}/app"],
+        "pattern": {
+          "regexp": "^(.*):(\\d+): (error|warning|note): (.*)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "message": 4
+        }
+      },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "group": "test"
+    },
+    {
+      "label": "pytest (fast gate)",
+      "type": "process",
+      "command": "${config:python.defaultInterpreterPath}",
+      "args": [
+        "-m",
+        "pytest",
+        "-m",
+        "unit"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "windows": {
+        "command": "wsl.exe",
+        "args": [
+          "-d",
+          "Ubuntu-24.04",
+          "--",
+          "bash",
+          "-lc",
+          "source ~/miniconda3/etc/profile.d/conda.sh && conda activate tf && cd \"$(wslpath -u \"$1\")\" && python -m pytest -m unit",
+          "_",
+          "${workspaceFolder}"
+        ]
+      },
+      "problemMatcher": {
+        "owner": "pytest",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(app/.*\\.py):(\\d+): (.*)$",
+          "file": 1,
+          "line": 2,
+          "message": 3
+        }
+      },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "group": "test"
+    },
+    {
+      "label": "pre-commit (staged files)",
+      "type": "process",
+      "command": "${config:python.defaultInterpreterPath}",
+      "args": ["-m", "pre_commit", "run", "--hook-stage", "pre-commit"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "windows": {
+        "command": "wsl.exe",
+        "args": [
+          "-d",
+          "Ubuntu-24.04",
+          "--",
+          "bash",
+          "-lc",
+          "source ~/miniconda3/etc/profile.d/conda.sh && conda activate tf && cd \"$(wslpath -u \"$1\")\" && pre-commit run --hook-stage pre-commit",
+          "_",
+          "${workspaceFolder}"
+        ]
+      },
+      "problemMatcher": [
+        {
+          "owner": "ruff",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "pattern": [
+            {
+              "regexp": "^([A-Z]+\\d+) (.*)$",
+              "code": 1,
+              "message": 2,
+              "severity": "error"
+            },
+            {
+              "regexp": "^\\s*--> (.*):(\\d+):(\\d+)$",
+              "file": 1,
+              "line": 2,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "owner": "mypy",
+          "fileLocation": ["relative", "${workspaceFolder}/app"],
+          "pattern": {
+            "regexp": "^\\s*(.*):(\\d+): (error|warning|note): (.*)$",
+            "file": 1,
+            "line": 2,
+            "severity": 3,
+            "message": 4
+          }
+        },
+        {
+          "owner": "pytest",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "pattern": {
+            "regexp": "^(app/.*\\.py):(\\d+): (.*)$",
+            "file": 1,
+            "line": 2,
+            "message": 3
+          }
+        },
+        {
+          "owner": "xenon",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "pattern": {
+            "regexp": "^\\s*(app/.*\\.py):(\\d+) (.* rank [A-F])$",
+            "file": 1,
+            "line": 2,
+            "message": 3,
+            "severity": "error"
+          }
+        },
+        {
+          "owner": "loc",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "pattern": {
+            "regexp": "^\\s*(app/.*\\.py): (\\d+ lines \\(\\+\\d+ over \\d+\\))$",
+            "file": 1,
+            "message": 2,
+            "severity": "error"
+          }
+        }
+      ],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "group": "test"
+    },
+    {
+      "label": "pre-commit checks (mypy + pytest)",
+      "dependsOrder": "sequence",
+      "dependsOn": ["mypy (app)", "pytest (fast gate)"],
+      "group": { "kind": "test", "isDefault": true }
+    }
+  ]
+}

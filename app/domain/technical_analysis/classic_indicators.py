@@ -1,7 +1,6 @@
 import warnings
 
 import pandas as pd
-import pandas_ta as ta
 from helper.importer import ta
 
 warnings.simplefilter(action="ignore", category=FutureWarning)

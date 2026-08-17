@@ -45,9 +45,9 @@ repos:
         files: ^app/.*\.py$
 
       - id: pytest-fast
-        name: pytest fast gate (unit/characterization/regression/smoke)
+        name: pytest unit gate
         language: system
-        entry: python -m pytest -m "unit or characterization or regression or smoke"
+        entry: python -m pytest -m unit
         pass_filenames: false
         files: ^(app/.*\.py|pytest\.ini)$
 

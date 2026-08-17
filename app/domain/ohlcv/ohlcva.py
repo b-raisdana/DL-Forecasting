@@ -1,7 +1,9 @@
 import pandas as pd
 from config import app_config
+from domain.ohlcv.ohlcv import cache_times, get_multi_timeframe_ohlcv
+from domain.ohlcv.volume import insert_volume_rma
+from domain.schemas.common.OHLCV import OHLCV
 from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
-from domain.technical_analysis.atr import insert_atr
 from helper.data_preparation import (
     concat,
     expand_date_range,
@@ -10,8 +12,7 @@ from helper.data_preparation import (
     trim_to_date_range,
 )
 from helper.schema_casting import empty_df
-from infrastructure.ohlcv.disk_cache import cache_on_disk
-from infrastructure.ohlcv.ohlcv import cache_times, get_multi_timeframe_ohlcv
+from infrastructure.disk_cache import cache_on_disk
 from pandera import typing as pt
 
 
@@ -50,3 +51,21 @@ def get_multi_timeframe_ohlcva(date_range_str: str = None) -> pt.DataFrame[Multi
     multi_timeframe_ohlcva = trim_to_date_range(date_range_str, multi_timeframe_ohlcva)
     assert multi_timeframe_times_tester(multi_timeframe_ohlcva, date_range_str)
     return multi_timeframe_ohlcva
+
+
+def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = "pandas_ta") -> pd.DataFrame:
+    if len(timeframe_ohlcv) <= app_config.atr_timeperiod:
+        timeframe_ohlcv["atr"] = pd.NA
+    else:
+        if mode == "pandas_ta":
+            timeframe_ohlcv["atr"] = timeframe_ohlcv.ta.atr(
+                timeperiod=app_config.atr_timeperiod,
+                # high='high',
+                # low='low',
+                # close='close',
+                # mamode='ema',
+            )
+        else:
+            raise Exception(f"Unsupported mode:{mode}")
+    insert_volume_rma(timeframe_ohlcv)
+    return timeframe_ohlcv

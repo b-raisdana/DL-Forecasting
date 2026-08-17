@@ -1,18 +1,28 @@
 """DS-01 "Six-Timeframe Hybrid Temporal Model" per
-docs/ML_Forecasting_System_Design/designsets/Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm (handmade).base.jsonc,
+docs/ML_Forecasting_System_Design/designsets/Tier-1_000.par_branch_mtcn_lstm_perc_gqa_mlp_lgbm(handmade).base.jsonc,
 resolved to its "1-base" hyperparameters (the `//` bound comments in that file are Optuna search bounds,
 not alternative values for a single run — see PROMPT.md's embedded-search-space convention).
 
 Known, documented deviations from the spec (see docs/todos/01-input-data-channels.md and
 docs/todos/02-training-data-labels.md for the upstream gaps driving these):
 
-- `CANDLE_FEATURE_COLUMNS` (6 fields: relative-HLC block + volume/ATR) is a subset of the spec's
-  15-field `candle_dataset` — the missing 9 fields (`higher_extremum_distance`'s 8 price/time-distance
-  terms + `extremum_weight`) need the causal-capped peak/valley detection in
-  01-input-data-channels.md todo steps 1/3/4, not yet implemented anywhere in this repo. Swap
-  `CANDLE_FEATURE_COLUMNS`/`auxiliary_features` width once that lands — everything downstream
-  (ModernTCN input projection, MLP head's aux-feature width) reads its dimensions from this constant,
-  not a hardcoded number.
+- `CANDLE_FEATURE_COLUMNS` is now the full 15-field `candle_dataset` (relative_OHLC's 5 + V + the 8
+  `higher_extremum_distance` price/time-distance terms + `extremum_weight`), computed via
+  domain/price_action/CausalExtremum.py (Step A/B causal-capped reach) and
+  application/dataset_generation/extremum_features.py (Step C/D orchestration), wired in by
+  datafeeder_input3_outcome1.py. A few genuinely underspecified edges in the jsonc were resolved as
+  judgment calls, documented at the point of implementation (datafeeder_input3_outcome1.py /
+  CausalExtremum.py) rather than repeated here in full — summarized:
+  - **Peak wins ties** in Step A's `extremum_sign` when a candle's peak-reach and valley-reach are
+    exactly equal (not specified in the jsonc either way).
+  - **1M/4M/1Y have no native cached series** in this codebase (app_config.timeframes stops at 1W) —
+    plus2TF/plus3TF targets that land on 1M/4M/1Y are sourced from the 1W branch's own Step A/B reach
+    output instead of a synthesized coarser series (valid because Step A's reach is computed purely
+    from elapsed time against TF_MINUTES thresholds, not from literal coarser-candle construction).
+  - **Empty eligible-event pool -> 0.0** for both `price_normal_distance` and `time_distance` (the
+    early-history "no signal yet" case), rather than NaN — matches the existing NaN-scrub convention
+    at the end of `build_dataset()`, which still catches genuine indicator-warmup NaNs (e.g. ATR not
+    yet warmed) separately.
 - `input_set=3` (not the "1-base" row's `input_set=1`) — variation 1 needs 256 candles on every
   branch including 1W (≈4.9 years of history); the largest verified gap-free cached BTCUSDT range is
   995 days (≈2.7 years). Variation 3 (64 candles on 1D/1W) is a spec-sanctioned option in the same
@@ -41,12 +51,21 @@ BRANCH_WINDOW_LENGTHS: dict[str, int] = {  # input_set=3 (see module docstring)
     "1W": 64,
 }
 CANDLE_FEATURE_COLUMNS: list[str] = [
-    "rel_close",
+    "relative_normal_close",
     "rel_high_close",
     "rel_close_low",
     "gap",
     "rel_candle_height",
-    "volume_atr",
+    "log_volume_sma_ratio",
+    "price_normal_distance_plus2tf_peak",
+    "price_normal_distance_plus2tf_valley",
+    "price_normal_distance_plus3tf_peak",
+    "price_normal_distance_plus3tf_valley",
+    "time_distance_plus2tf_peak",
+    "time_distance_plus2tf_valley",
+    "time_distance_plus3tf_peak",
+    "time_distance_plus3tf_valley",
+    "extremum_weight",
 ]
 CANDLE_FEATURE_DIM = len(CANDLE_FEATURE_COLUMNS)
 AUX_FEATURE_DIM = CANDLE_FEATURE_DIM * len(BRANCH_TIMEFRAMES)  # LAST candle only, flattened, all branches
@@ -102,7 +121,7 @@ def _ffn_block(d_model: int, dropout_rate: float, name: str) -> tf_keras.Sequent
     )
 
 
-class ModernTCNBlock(layers.Layer):
+class ModernTCNBlock(layers.Layer):  # type: ignore[misc]  # TensorFlow's Layer is untyped.
     """Large-kernel depthwise conv + ConvNeXt-style inverted-bottleneck ConvFFN (4x expansion), per
     03-Model & Architecture Engineering.md § local feature extraction / PROMPT.md's param formula.
     Pre-norm + residual around each of the two sub-layers, per the model-wide
@@ -125,7 +144,7 @@ class ModernTCNBlock(layers.Layer):
         return x
 
 
-class TimeframeBranchEncoder(layers.Layer):
+class TimeframeBranchEncoder(layers.Layer):  # type: ignore[misc]  # TensorFlow's Layer is untyped.
     """One independent per-timeframe branch: raw-feature projection -> ModernTCN (depth layers) ->
     stacked unidirectional LSTM (LSTM_layers), sequence-preserving throughout (return_sequences=True
     on every LSTM layer — Perceiver fusion needs the full "*_encoded_sequence", not a summary vector).
@@ -159,7 +178,7 @@ class TimeframeBranchEncoder(layers.Layer):
         return x
 
 
-class GroupedQueryAttention(layers.Layer):
+class GroupedQueryAttention(layers.Layer):  # type: ignore[misc]  # TensorFlow's Layer is untyped.
     """Hand-rolled: Keras' built-in MultiHeadAttention has no kv_heads<heads support (verified against
     the installed keras==3.9.1 signature), so GQA itself must be hand-rolled — the one block in this
     model lib-first genuinely can't cover. Q/K/V/O formula per PROMPT.md § Memory sizing convention.
@@ -198,7 +217,7 @@ class GroupedQueryAttention(layers.Layer):
         return self.o_proj(attended)
 
 
-class PerceiverFusion(layers.Layer):
+class PerceiverFusion(layers.Layer):  # type: ignore[misc]  # TensorFlow's Layer is untyped.
     """Learnable latent-token bank cross-attends into the concatenated multi-timeframe sequence,
     stacked Perceiver_cross_attention_layers times (cross-attn only — no self-attention among latents
     inside this block; that role is filled by the separate downstream GQA stage, per
@@ -267,7 +286,7 @@ class PerceiverFusion(layers.Layer):
         return cast(tf.Tensor, latents)
 
 
-class GQAEncoder(layers.Layer):
+class GQAEncoder(layers.Layer):  # type: ignore[misc]  # TensorFlow's Layer is untyped.
     """Refines the Perceiver's output latents: model_dependencies_between_latent_representations /
     capture_global_interactions / refine_cross-timeframe_representation, per Tier-1_000's
     dependency_modeling.attention.GQA.purpose. Pre-norm + residual, GQA_layers stacked blocks."""
@@ -309,10 +328,10 @@ def _pool(x: tf.Tensor, method: str) -> tf.Tensor:
     )
 
 
-class PredictionHead(layers.Layer):
+class PredictionHead(layers.Layer):  # type: ignore[misc]  # TensorFlow's Layer is untyped.
     """MLP trunk (fusion_concatenation of the pooled deep representation + auxiliary_features) ->
     action_head (3-class softmax) + mean_std_pairs for [mfe, rer] (heteroscedastic, Gaussian NLL —
-    outcome_set=1 in Tier-1_000.action_mfe_rer (handmade).outcome.jsonc, not the skew/kurtosis
+    outcome_set=1 in Tier-1_000.action_mfe_rer(handmade).outcome.jsonc, not the skew/kurtosis
     outcome_set=2)."""
 
     def __init__(self, config: dict[str, object], **kwargs: object) -> None:
@@ -350,7 +369,7 @@ class PredictionHead(layers.Layer):
         }
 
 
-class Tier1000Model(tf_keras.Model):
+class Tier1000Model(tf_keras.Model):  # type: ignore[misc]  # TensorFlow's Model is untyped.
     """DS-01: six ModernTCN+LSTM timeframe branches -> Perceiver latent-bottleneck fusion -> GQA ->
     pooling -> MLP dual-head prediction. See module docstring for resolved config and deviations."""
 
@@ -372,12 +391,12 @@ class Tier1000Model(tf_keras.Model):
         latents = self.fusion(branch_sequences, training=training)
         latents = self.gqa(latents, training=training)
         pooled = _pool(latents, self.pooling_method)
-        return self.prediction_head(pooled, inputs["auxiliary_features"], training=training)
+        return cast(dict[str, tf.Tensor], self.prediction_head(pooled, inputs["auxiliary_features"], training=training))
 
 
 def gaussian_nll_loss(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
     """Gaussian NLL for a jointly-trained (mean, std) pair — mfe_params/rer_params' own loss, per
-    Tier-1_000.action_mfe_rer (handmade).outcome.jsonc outcome_set=1 ("mean+std trained jointly per
+    Tier-1_000.action_mfe_rer(handmade).outcome.jsonc outcome_set=1 ("mean+std trained jointly per
     pair, not two independent MSE heads"). y_pred: (batch, 2) = [mean, std]; y_true: (batch, 1)
     realized value.
     """

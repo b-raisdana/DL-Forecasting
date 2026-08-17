@@ -12,19 +12,18 @@ import pandas as pd
 from application.dataset_generation.training_datasets import train_data_of_mt_n_profit
 from application.model_implementations.shared.base import dataset_folder, master_x_shape, overlapped_quarters
 from config import app_config
+from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from domain.schemas.common.MultiTimeframe import MultiTimeframe
 from helper.functions import date_range_to_string
 from helper.importer import pt
 from helper.logging import sync_br_lib_init
 from helper.logging.do_log import log_d
-from infrastructure.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 
 
 def batch_generator_zip_pkl(
     x_shape: dict[str, tuple[int, int]], batch_size: int
 ) -> Iterator[tuple[dict[str, np.ndarray], np.ndarray]]:
-    # x_shape_structure_127,5_pattern_253,5_trigger_254,5_double_255,5_indicators_129,12_batch_size_400
-    folder_name = "x_shape_structure_127,5_pattern_253,5_trigger_254,5_double_255,5_indicators_129,12_batch_size_400"  # dataset_folder(x_shape, 400)
+    folder_name = dataset_folder(x_shape, batch_size)
     folder_path: str = os.path.join(app_config.path_of_data, folder_name)
     cached_xs = {}
     cached_ys = None
@@ -40,10 +39,7 @@ def batch_generator_zip_pkl(
                     cached_xs[key] = np.concatenate([cached_xs[key], value], axis=0)
                 else:
                     cached_xs[key] = value
-            if cached_ys is None:
-                cached_ys = ys
-            else:
-                cached_ys = np.concatenate([cached_ys, ys], axis=0)
+            cached_ys = ys if cached_ys is None else np.concatenate([cached_ys, ys], axis=0)
             while len(cached_ys) >= batch_size:
                 picked_xs = {}
                 for key in cached_xs:
@@ -232,10 +228,7 @@ def batch_generator(start, end, x_shape: dict[str, tuple[int, int]], batch_size:
                         cached_xs[key] = np.concatenate([cached_xs[key], value], axis=0)
                     else:
                         cached_xs[key] = value
-                if cached_ys is None:
-                    cached_ys = ys
-                else:
-                    cached_ys = np.concatenate([cached_ys, ys], axis=0)
+                cached_ys = ys if cached_ys is None else np.concatenate([cached_ys, ys], axis=0)
                 while len(cached_ys) >= batch_size:
                     picked_xs = {}
                     for key in cached_xs:

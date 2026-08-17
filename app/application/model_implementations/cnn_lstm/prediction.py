@@ -19,8 +19,8 @@ from application.dataset_generation.training_datasets import train_data_of_mt_n_
 from application.model_implementations.cnn_lstm_attention.cnn_lstm_attention_model import MultiHeadAttentionLayer
 from application.model_implementations.shared.base import dataset_folder, master_x_shape, overlapped_quarters
 from config import app_config
+from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from helper.functions import date_range_to_string
-from infrastructure.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from tensorflow import keras as tf_keras
 
 
@@ -123,7 +123,6 @@ def predict_once(x_shape: dict[str, tuple[int, int]]) -> None:
         ),
         "final",
     ] = True
-    accuracy = len(df[df["final"].eq(True)]) / len(df)
     # ----------------------------------------------------------- show result
     print(f"\nSelected row #{row} – time-frame: {y_timeframe}")
     # print(f"Ground-truth  : {gt_y}")

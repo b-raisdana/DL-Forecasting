@@ -2,7 +2,7 @@ import pandas as pd
 from config import app_config
 from helper.functions import date_range_to_string
 from helper.logging import log_d
-from infrastructure.ohlcv.atr import read_multi_timeframe_ohlcva
+from infrastructure.ohlcv.ohlcva import read_multi_timeframe_ohlcva
 
 log_d("Start")
 app_config.processing_date_range = date_range_to_string(

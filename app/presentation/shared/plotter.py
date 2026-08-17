@@ -7,7 +7,7 @@ import pandas as pd
 from config import app_config
 from helper.data_preparation import date_range_of_data
 from helper.logging import profile_it
-from infrastructure.ohlcv.fragmented_data import symbol_data_path
+from infrastructure.disk_cache import symbol_data_path
 from plotly import graph_objects as plgo
 
 DEBUG = False
@@ -20,11 +20,11 @@ def plot_multiple_figures(
     if path_of_plot is None:
         path_of_plot = os.path.join(symbol_data_path(), app_config.path_of_plots)
     figures_html = []
-    for i, figure in enumerate(figures):
+    for _i, figure in enumerate(figures):
         figures_html.append(figure.to_html())
 
     combined_html = "<html><head></head><body>"
-    for i, figure_html in enumerate(figures_html):
+    for _i, figure_html in enumerate(figures_html):
         combined_html += figure_html
     combined_html += "</body></html>"
 

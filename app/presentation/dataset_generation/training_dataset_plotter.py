@@ -1,7 +1,7 @@
 import textwrap
 
 import pandas as pd
-from application.dataset_generation.classic_indicators import classic_indicator_columns, scaleless_indicators
+from domain.technical_analysis.classic_indicators import classic_indicator_columns, scaleless_indicators
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 from presentation.shared.plotter import show_and_save_plot
@@ -38,7 +38,7 @@ def plot_train_data_of_mt_n_profit(
     fig = plot_classic_indicators(fig, x_dfs, n)
     plot_prediction_verifier(fig, n, y_tester_dfs)
     plot_prediction(fig, n, y_dfs)
-    fig.update_layout(xaxis=dict(rangeslider=dict(visible=False)))
+    fig.update_layout(xaxis={"rangeslider": {"visible": False}})
     show_and_save_plot(fig.update_yaxes(fixedrange=False))
 
 
@@ -78,7 +78,7 @@ def plot_prediction(fig: go.Figure, n: int, y_dfs: list[pd.DataFrame]) -> None:
         ", ".join(
             [
                 f"{col}: {val:.2f}"
-                if isinstance(val, (int, float)) and not (val != val)
+                if isinstance(val, (int, float)) and val == val
                 else f"{col}: NaN"
                 if val != val
                 else f"{col}: {val}"
@@ -92,7 +92,7 @@ def plot_prediction(fig: go.Figure, n: int, y_dfs: list[pd.DataFrame]) -> None:
         y=1,
         text=formatted_predictions,
         showarrow=False,
-        font=dict(size=12, color="black"),
+        font={"size": 12, "color": "black"},
         align="left",
         bgcolor="white",
         opacity=0.7,

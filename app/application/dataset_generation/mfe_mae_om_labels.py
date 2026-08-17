@@ -25,12 +25,18 @@ regression_label_columns = ["mfe", "rer"]
 def _atr_255_15min_floor(five_min_index: pd.DatetimeIndex, fifteen_min_ohlc: pd.DataFrame) -> npt.NDArray[np.float64]:
     """ATR(255, 15min), forward-filled onto five_min_index from the last *completed* 15min candle —
     merge_asof(direction='backward') so no anchor ever reads a still-forming or future 15min bar."""
-    atr = ta.atr(
+    atr_series = ta.atr(
         high=fifteen_min_ohlc["high"],
         low=fifteen_min_ohlc["low"],
         close=fifteen_min_ohlc["close"],
         length=ATR_FLOOR_LENGTH,
-    ).rename("atr_255_15min")
+    )
+    if atr_series is None:
+        raise ValueError(
+            f"ATR({ATR_FLOOR_LENGTH}, 15min) needs at least {ATR_FLOOR_LENGTH} 15min bars, got "
+            f"{len(fifteen_min_ohlc)} — pass a wider date_range_str."
+        )
+    atr = atr_series.rename("atr_255_15min")
     anchors = pd.DataFrame(index=five_min_index.rename("date")).reset_index()
     atr_frame = atr.rename_axis("date").reset_index()
     merged = pd.merge_asof(anchors, atr_frame, on="date", direction="backward")

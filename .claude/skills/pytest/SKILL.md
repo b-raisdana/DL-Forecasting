@@ -15,7 +15,7 @@ Windows Python installs (`py -3.9`...`3.14`) lack this project's deps (`pandas`,
 wsl.exe -d Ubuntu-24.04 -- bash -lc '
   source ~/miniconda3/etc/profile.d/conda.sh && conda activate tf &&
   cd /mnt/c/Code/DL-Forecasting &&
-  pytest -m "unit or characterization or regression or smoke"
+  pytest -m unit
 '
 ```
 
@@ -23,7 +23,7 @@ wsl.exe -d Ubuntu-24.04 -- bash -lc '
 
 **Data cache lives off `/mnt/c`.** The code clone stays on the `drvfs` mount (needed for Windows git/VS Code access), but cached OHLCV under `data/` (`Config.path_of_data`) moved to a native ext4 path, `/home/brais/dlf-data` — `drvfs` is the worst case for its ~19.5k small per-day zip files (each open crosses the WSL2 9p protocol). The `tf` conda env's `activate.d`/`deactivate.d` hooks set `DLF_DATA_ROOT=/home/brais/dlf-data` automatically on `conda activate tf`, so nothing extra to do. Only `e2e`/`perf` tests touch real `data/` at all (see [test-strategy](../test-strategy/SKILL.md) fixture/data policy); unit/characterization/regression/smoke never read it. Full rationale: [docs/infrastructure.md § environments](../../../docs/infrastructure.md#environments).
 
-Fast gate (every commit): `pytest -m "unit or characterization or regression or smoke"`. Full run (nightly/manual, includes `e2e`/`perf`): `pytest`. The fast gate is wired into `.pre-commit-config.yaml` alongside the `mypy`/`ruff`/`xenon` incremental ratchet ([infrastructure.md § incremental ratchet](../../../docs/infrastructure.md#incremental-ratchet-mypyruffxenon-scope)) — local/per-commit only, bypassable with `--no-verify`. No CI workflow exists yet; promote the same fast-gate command to a required check when one lands.
+Fast gate (every commit): `pytest -m unit`. Full run (nightly/manual, includes integration, `e2e`, and `perf`): `pytest`. Live broker OHLCV fetches are integration tests, never pre-commit tests. The fast gate is wired into `.pre-commit-config.yaml` alongside the `mypy`/`ruff`/`xenon` incremental ratchet ([infrastructure.md § incremental ratchet](../../../docs/infrastructure.md#incremental-ratchet-mypyruffxenon-scope)) — local/per-commit only, bypassable with `--no-verify`. No CI workflow exists yet; promote the same fast-gate command to a required check when one lands.
 
 ## Repo config
 

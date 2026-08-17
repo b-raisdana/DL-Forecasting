@@ -12,10 +12,11 @@ from application.model_implementations.tier1_000.model import (
     CANDLE_FEATURE_COLUMNS,
 )
 from config import app_config
+from helper.functions import date_range_to_string
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
-SYMBOLS = ["BTCUSDT", "ETHUSDT", "AIOUSDT", "TRXUSDT", "BNBUSDT"]
+SYMBOLS = ["BTCUSDT", "ETHUSDT", "TRXUSDT", "BNBUSDT", "EOSUSDT", "SOLUSDT"]
 RANGE_DAYS = 14
 _ACTION_LABELS = ["long", "short", "none"]
 _AUX_FEATURE_NAMES = [f"{tf_name}_{column}" for tf_name in BRANCH_TIMEFRAMES for column in CANDLE_FEATURE_COLUMNS]
@@ -65,51 +66,47 @@ def cache_summary(symbols: list[str] = SYMBOLS) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def load_cached_multi_timeframe_ohlcv(
-    symbol: str, start: pd.Timestamp | None = None, end: pd.Timestamp | None = None
-) -> pd.DataFrame:
-    chosen = _select_cache_file(symbol, start, end)
-    df = _read_cached_frame(chosen)
-    if start is not None or end is not None:
-        start = df.index.get_level_values("date").min() if start is None else start
-        end = df.index.get_level_values("date").max() if end is None else end
-        df = df.loc[pd.IndexSlice[:, start:end], :]
-    return df.sort_index()
+def load_cached_multi_timeframe_ohlcv(symbol: str, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
+    """Stitches every locally cached daily file overlapping [start, end] together — the on-disk cache
+    is one file per calendar day (see cache_summary()), so no single file ever covers a multi-day
+    window on its own."""
+    files = [item for item in cached_multi_timeframe_files(symbol) if item.end > start and item.start < end]
+    if not files:
+        raise FileNotFoundError(f"No local cached multi-timeframe OHLCV covers {symbol} {start} to {end}")
+    df = pd.concat([_read_cached_frame(item) for item in files]).sort_index()
+    df = df[~df.index.duplicated(keep="first")]
+    return df.loc[pd.IndexSlice[:, start:end], :]
 
 
-def _select_cache_file(symbol: str, start: pd.Timestamp | None, end: pd.Timestamp | None) -> CacheFile:
+def _full_cached_span(symbol: str) -> tuple[pd.Timestamp, pd.Timestamp]:
     files = cached_multi_timeframe_files(symbol)
     if not files:
         raise FileNotFoundError(f"No local cached multi-timeframe OHLCV found for {symbol}")
-    if start is None or end is None:
-        return max(files, key=lambda item: item.end - item.start)
-    matches = [item for item in files if item.start <= start and item.end >= end]
-    if not matches:
-        raise FileNotFoundError(f"No single cached file covers {symbol} {start} to {end}")
-    return min(matches, key=lambda item: item.end - item.start)
+    return min(item.start for item in files), max(item.end for item in files)
 
 
 def random_cached_period(symbol: str, days: int = RANGE_DAYS, seed: int = 7) -> tuple[pd.Timestamp, pd.Timestamp]:
-    files = [item for item in cached_multi_timeframe_files(symbol) if item.end - item.start >= pd.Timedelta(days=days)]
-    if not files:
+    start, end = _full_cached_span(symbol)
+    if end - start < pd.Timedelta(days=days):
         raise FileNotFoundError(f"No local cached {days}-day period found for {symbol}")
-    chosen = max(files, key=lambda item: item.end - item.start)
     rng = np.random.default_rng(abs(hash((symbol, seed))) % (2**32))
-    max_offset_hours = int(((chosen.end - chosen.start) - pd.Timedelta(days=days)) / pd.Timedelta(hours=1))
-    start = chosen.start + pd.Timedelta(hours=int(rng.integers(0, max(1, max_offset_hours + 1))))
-    return start, start + pd.Timedelta(days=days)
+    max_offset_hours = int(((end - start) - pd.Timedelta(days=days)) / pd.Timedelta(hours=1))
+    period_start = start + pd.Timedelta(hours=int(rng.integers(0, max(1, max_offset_hours + 1))))
+    return period_start, period_start + pd.Timedelta(days=days)
 
 
 def build_review_samples(symbol: str, sample_count: int = 5) -> list[dict[str, object]]:
     """Builds `sample_count` NOW samples straight from
     `datafeeder_input3_outcome1.build_dataset()`'s `DatasetBundle` — the literal per-branch feature
     windows + mfe/rer/action labels the Tier1_000 model trains on, not a separate ad hoc
-    reconstruction of them. Uses the largest single locally cached multi-timeframe file for `symbol`
-    as `build_dataset()`'s `date_range_str`, so this stays an offline review of already-fetched data
-    (no broker/exchange call — `build_dataset` only fetches on a cache miss, and this range is by
-    construction already on disk).
+    reconstruction of them. Uses the full locally cached span for `symbol` (the on-disk cache is
+    fragmented into one file per calendar day, and the model's widest branch window (1W x 64) needs
+    many months of lookback, far more than any single day) as `build_dataset()`'s `date_range_str` —
+    stays an offline review of already-fetched data as long as that span is fully cached (no
+    broker/exchange call — `build_dataset` only fetches on a cache miss).
     """
-    date_range_str = _select_cache_file(symbol, None, None).date_range
+    start, end = _full_cached_span(symbol)
+    date_range_str = date_range_to_string(start=start, end=end)
     bundle = build_dataset(symbol, date_range_str)
     if bundle.n_samples < sample_count:
         raise RuntimeError(f"Only {bundle.n_samples} samples built for {symbol} — need {sample_count}")
