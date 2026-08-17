@@ -9,7 +9,7 @@ behavior to pin.
 import numpy as np
 import pandas as pd
 import pytest
-from ai_modelling.dataset_generator.mfe_mae_om_labels import HORIZON_BARS, RER_BOUND, add_mfe_mae_om_labels
+from application.dataset_generation.mfe_mae_om_labels import HORIZON_BARS, RER_BOUND, add_mfe_mae_om_labels
 
 pytestmark = pytest.mark.unit
 

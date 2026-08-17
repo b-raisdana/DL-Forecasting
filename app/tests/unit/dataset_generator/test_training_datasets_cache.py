@@ -13,7 +13,7 @@ from unittest.mock import Mock
 import pandas as pd
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
-from ai_modelling.dataset_generator import training_datasets
+from application.dataset_generation import training_datasets
 
 pytestmark = pytest.mark.unit
 

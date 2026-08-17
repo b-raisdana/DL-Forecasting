@@ -6,7 +6,7 @@ leak into an anchor's features. See that function's docstring for the shifted-me
 import numpy as np
 import pandas as pd
 import pytest
-from ai_modelling.tier1_000.datafeeder import _last_closed_position
+from application.model_implementations.tier1_000.datafeeder import _last_closed_position
 
 pytestmark = pytest.mark.unit
 

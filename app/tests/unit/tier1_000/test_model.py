@@ -10,7 +10,7 @@ in the same pytest process.
 import numpy as np
 import pytest
 import tensorflow as tf
-from ai_modelling.tier1_000.model import (
+from application.model_implementations.tier1_000.model import (
     AUX_FEATURE_DIM,
     BRANCH_TIMEFRAMES,
     BRANCH_WINDOW_LENGTHS,

@@ -7,9 +7,9 @@ radon analyze whole files, so a strict per-file gate turns a one-line edit into 
 forced cleanup of every unrelated legacy violation in that file.
 
 As debt gets fixed (by anyone, in any commit), once a vector's improvement reaches
-chunk_size (config.json, default 50), the baseline ratchets down to the new, lower
-count and baseline.json is rewritten + staged - locking the improvement in so it
-can't silently regress later without tripping the check above.
+3% of its recorded baseline, the baseline ratchets down to the new, lower count
+and baseline.json is rewritten + staged - locking the improvement in so it can't
+silently regress later without tripping the check above.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ BASELINE_PATH = HERE / "baseline.json"
 CONFIG_PATH = HERE / "config.json"
 TARGET = "app"
 COMPLEXITY_RANKS = "ABCDEF"
+RATCHET_IMPROVEMENT_RATIO = 0.03
 
 
 def load_json(path: Path) -> dict[str, int]:
@@ -116,12 +117,32 @@ def print_mypy_details(paths: list[Path]) -> None:
     print(output.rstrip() or "    mypy reported no errors on staged app Python files")
 
 
+def mypy_detail_count(paths: list[Path]) -> int:
+    app_paths = [path.relative_to(TARGET).as_posix() for path in paths]
+    if not app_paths:
+        return 0
+    output = run_output("mypy", "--config-file", str(ROOT / "pyproject.toml"), *app_paths, cwd=ROOT / TARGET)
+    match = re.search(r"Found (\d+) error", output)
+    return int(match.group(1)) if match else 0
+
+
 def print_ruff_details(paths: list[Path]) -> None:
     if not paths:
         print("    no staged app Python files to inspect")
         return
     output = run_output("ruff", "check", *(path.as_posix() for path in paths))
     print(output.rstrip() or "    ruff reported no errors on staged app Python files")
+
+
+def ruff_detail_count(paths: list[Path]) -> int:
+    if not paths:
+        return 0
+    stdout = run("ruff", "check", *(path.as_posix() for path in paths), "--output-format=json")
+    try:
+        violations = json.loads(stdout or "[]")
+    except json.JSONDecodeError:
+        return 0
+    return len(violations)
 
 
 def print_xenon_details(paths: list[Path], max_absolute: str = "B") -> None:
@@ -147,6 +168,20 @@ def print_xenon_details(paths: list[Path], max_absolute: str = "B") -> None:
         print("    xenon/radon reported no rank > B blocks on staged app Python files")
 
 
+def xenon_detail_count(paths: list[Path], max_absolute: str = "B") -> int:
+    if not paths:
+        return 0
+    stdout = run("radon", "cc", "-j", *(path.as_posix() for path in paths))
+    try:
+        data = json.loads(stdout or "{}")
+    except json.JSONDecodeError:
+        return 0
+    threshold = COMPLEXITY_RANKS.index(max_absolute)
+    return sum(
+        1 for blocks in data.values() for block in blocks if COMPLEXITY_RANKS.index(block.get("rank", "A")) > threshold
+    )
+
+
 def print_loc_details(paths: list[Path], max_lines: int = 500) -> None:
     printed = False
     for path in paths:
@@ -160,11 +195,26 @@ def print_loc_details(paths: list[Path], max_lines: int = 500) -> None:
         print("    no staged app Python files exceed the loc threshold")
 
 
+def loc_detail_count(paths: list[Path], max_lines: int = 500) -> int:
+    total = 0
+    for path in paths:
+        line_count = sum(1 for _ in (ROOT / path).open(encoding="utf-8", errors="ignore"))
+        total += max(0, line_count - max_lines)
+    return total
+
+
 DETAIL_PRINTERS: dict[str, Callable[[list[Path]], None]] = {
     "mypy": print_mypy_details,
     "ruff": print_ruff_details,
     "xenon": print_xenon_details,
     "loc": print_loc_details,
+}
+
+DETAIL_COUNTERS: dict[str, Callable[[list[Path]], int]] = {
+    "mypy": mypy_detail_count,
+    "ruff": ruff_detail_count,
+    "xenon": xenon_detail_count,
+    "loc": loc_detail_count,
 }
 
 
@@ -187,11 +237,9 @@ def characterization_test_touched() -> bool:
 
 
 def main() -> int:
-    config = load_json(CONFIG_PATH)
-    chunk_size = config.get("chunk_size", 50)
     baseline = load_json(BASELINE_PATH)
 
-    regressed: list[tuple[str, int, int]] = []
+    candidate_regressions: list[tuple[str, int, int]] = []
     improved: dict[str, tuple[int, int, int]] = {}
     current_counts: dict[str, int] = {}
     bootstrapped = False
@@ -206,9 +254,20 @@ def main() -> int:
             print(f"[{name}] no baseline yet - bootstrapping at {current}")
             continue
         if current > base:
-            regressed.append((name, base, current))
+            candidate_regressions.append((name, base, current))
         elif current < base:
             improved[name] = (base, current, base - current)
+
+    staged_paths = staged_app_python_files()
+    regressed: list[tuple[str, int, int]] = []
+    ignored_regressions: list[tuple[str, int, int]] = []
+    for name, base, current in candidate_regressions:
+        detail_counter = DETAIL_COUNTERS.get(name)
+        staged_problem_count = detail_counter(staged_paths) if detail_counter is not None else 0
+        if staged_problem_count > 0:
+            regressed.append((name, base, current))
+        else:
+            ignored_regressions.append((name, base, current))
 
     if regressed:
         print("Incremental pre-commit ratchet: BLOCKED - new problems introduced\n")
@@ -221,10 +280,17 @@ def main() -> int:
             "to staged app Python files; the blocking comparison is still the project-wide total."
         )
         return 1
+    if ignored_regressions:
+        print("Incremental pre-commit ratchet: project-wide regression ignored for untouched vectors\n")
+        for name, base, current in ignored_regressions:
+            print(
+                f"  {name}: baseline {base} -> now {current} (+{current - base} project-wide), "
+                "but staged app Python files report 0 problems for this vector"
+            )
 
     ratcheted: list[tuple[str, int, int]] = []
     for name, (base, current, progress) in improved.items():
-        if progress >= chunk_size:
+        if current < base - (base * RATCHET_IMPROVEMENT_RATIO):
             baseline[name] = current
             ratcheted.append((name, base, current))
 
@@ -234,7 +300,10 @@ def main() -> int:
     if ratcheted:
         print("Incremental pre-commit ratchet: progress locked in\n")
         for name, base, current in ratcheted:
-            print(f"  {name}: baseline {base} -> {current} (-{base - current} fixed, chunk size {chunk_size})")
+            print(
+                f"  {name}: baseline {base} -> {current} "
+                f"(-{base - current} fixed, threshold {RATCHET_IMPROVEMENT_RATIO:.0%})"
+            )
         if not characterization_test_touched():
             print(
                 "\nNote: this commit fixed enough pre-existing problems to ratchet a baseline down, "

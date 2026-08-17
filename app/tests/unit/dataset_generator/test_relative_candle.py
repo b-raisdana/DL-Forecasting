@@ -6,7 +6,7 @@ captured from running the function — this is new spec-conformance code, not le
 
 import pandas as pd
 import pytest
-from ai_modelling.dataset_generator.relative_candle import (
+from application.dataset_generation.relative_candle import (
     add_relative_candle_columns,
     relative_candle_columns,
 )

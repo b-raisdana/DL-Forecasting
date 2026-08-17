@@ -8,7 +8,7 @@ spec-conformance code, not legacy behavior to pin.
 import numpy as np
 import pandas as pd
 import pytest
-from ai_modelling.dataset_generator.volume_feature import (
+from application.dataset_generation.volume_feature import (
     add_volume_feature_columns,
     volume_feature_columns,
 )
@@ -20,7 +20,7 @@ pytestmark = pytest.mark.unit
 def short_atr_period(monkeypatch: pytest.MonkeyPatch) -> None:
     # Real app_config.atr_timeperiod (14) would need a much longer fixture just to clear
     # RMA's min_periods warm-up; shrink it here so a 4-row fixture is enough to hand-derive.
-    from Config import app_config
+    from config import app_config
 
     monkeypatch.setattr(app_config, "atr_timeperiod", 2)
 

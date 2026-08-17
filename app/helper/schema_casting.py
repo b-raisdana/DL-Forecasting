@@ -1,13 +1,11 @@
-# mypy: ignore-errors
 import logging
 import string
 from typing import Any
 
 import pandas as pd
 import pandera
-from br_py.do_log import log_d, log_w
-from helper.br_py.br_py.do_log import log_e
 from helper.functions import Pandera_DFM_Type
+from helper.logging.do_log import log_d, log_e, log_w
 from pandera import DataType
 
 

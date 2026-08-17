@@ -9,7 +9,7 @@ exactly the affected test(s) fail; that failure is the point (confirm it's inten
 import numpy as np
 import pandas as pd
 import pytest
-from ai_modelling.dataset_generator.profit_loss.profit_loss_adder import (
+from application.dataset_generation.profit_loss.profit_loss_adder import (
     long_n_short_drawdown,
     max_profit_n_loss,
     profit_n_loss,
