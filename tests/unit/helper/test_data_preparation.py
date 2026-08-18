@@ -6,8 +6,8 @@ cast_and_validate/pandera validation is bypassed via monkeypatch since that mach
 pre-existing and already exercised elsewhere. See the cache-or-generate skill.
 """
 
-import os
 from collections.abc import Generator
+from pathlib import Path
 from unittest.mock import Mock
 
 import pandas as pd
@@ -96,7 +96,7 @@ def test_different_date_range_is_a_cache_miss(monkeypatch: MonkeyPatch, fixed_df
 
 def test_not_cachable_range_is_never_memoized(monkeypatch: MonkeyPatch, fixed_df: pd.DataFrame) -> None:
     monkeypatch.setattr(disk_cache, "datarange_is_not_cachable", lambda date_range_str: True)
-    monkeypatch.setattr(os, "remove", Mock())
+    monkeypatch.setattr(Path, "unlink", Mock())
     read_mock = Mock(return_value=fixed_df)
 
     _read(monkeypatch, read_mock)

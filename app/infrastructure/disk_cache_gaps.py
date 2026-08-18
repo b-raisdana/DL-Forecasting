@@ -1,5 +1,4 @@
 import itertools
-import os
 from datetime import datetime
 
 from helper.functions import date_range, date_range_to_string
@@ -9,6 +8,7 @@ from infrastructure.disk_cache import (
     _feather_file_path,
     _find_covering_file,
     _legacy_file_pattern,
+    _parquet_file_path,
     _window_date_range_strs,
     _window_freq,
     datarange_is_not_cachable,
@@ -25,11 +25,13 @@ internals to answer "what's missing"/"what already overlaps", it never writes.
 
 
 def _window_present(data_frame_type: str, window_date_range_str: str, file_path: str) -> bool:
-    """A window counts as present if it has its own canonical file (feather or legacy zip) or an
-    existing legacy file fully contains it (same containment check
+    """A window counts as present if it has its own canonical file (parquet, or legacy feather/zip) or
+    an existing legacy file fully contains it (same containment check
     disk_cache._seed_window_from_legacy_file() uses to backfill from)."""
-    if os.path.exists(_feather_file_path(data_frame_type, window_date_range_str, file_path)) or os.path.exists(
-        _csv_zip_file_path(data_frame_type, window_date_range_str, file_path)
+    if (
+        _parquet_file_path(data_frame_type, window_date_range_str, file_path).exists()
+        or _feather_file_path(data_frame_type, window_date_range_str, file_path).exists()
+        or _csv_zip_file_path(data_frame_type, window_date_range_str, file_path).exists()
     ):
         return True
     window_start, window_end = date_range(window_date_range_str)
@@ -80,14 +82,13 @@ def find_overlapping_cache_files(
         file_path = symbol_data_path()
     query_start, query_end = date_range(date_range_str)
     pattern = _legacy_file_pattern(data_frame_type)
-    try:
-        entries = os.listdir(_data_frame_type_dir(data_frame_type, file_path))
-    except FileNotFoundError:
+    type_dir = _data_frame_type_dir(data_frame_type, file_path)
+    if not type_dir.is_dir():
         return []
 
     overlaps: list[tuple[str, str, datetime]] = []
-    for entry in entries:
-        match = pattern.match(entry)
+    for entry in type_dir.iterdir():
+        match = pattern.match(entry.name)
         if not match:
             continue
         candidate_range = match.group("range")

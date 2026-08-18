@@ -156,6 +156,16 @@ are cross-cutting enablers other topics depend on rather than a pipeline stage o
     Other files already over the `loc` vector's 500-line threshold, same one-cluster-per-commit approach (paths below reflect the todo step 12 directory-layer migration, `market_structure/` renamed to `price_action/` in a later pass): `domain/price_action/PeakValley.py` (776 lines), `application/dataset_generation/profit_loss/profit_loss_adder.py` (765), `domain/price_action/BullBearSide.py` (712), `application/dataset_generation/training_datasets.py` (633), `domain/price_action/ftc.py` (620), `helper/data_preparation.py` (613, up from its prior count above).
 
     **2026-08-16 `loc` baseline bump, with an explicit payoff plan.** The todo step 12 directory-layer migration grew the four files above while moving/reformatting them (`profit_loss_adder.py` 657->765, `PeakValley.py` 694->776, `BullBearSide.py` 636->712, `ftc.py` 579->620) and pushed two more over the 500-line threshold for the first time (`training_datasets.py` at 633, `data_preparation.py` at 613) - a genuine +116 project-wide regression on the `loc` vector (1003->1119), not a rename artifact. Blocking the migration commit on an unrelated split effort wasn't worth it, so `scripts/git-hooks/incremental-precommit/baseline.json` was re-baselined to 1119 instead. Endpoint: this todo step's split plan (`data_preparation.py`'s clusters above, plus the same one-cluster-per-commit treatment for the other five files) is what pays this back down - the six files listed above are the full scope of what this bump covers, not a general license to keep growing them.
+14. **(decision) Data pipeline upgrade — Feather → Parquet migration.** Plan at
+    [data_pipeline_upgrade_plan.md](../data_pipeline_upgrade_plan.md): mirrors the existing
+    CSV-zip → Feather on-touch migration one format further, in `infrastructure/disk_cache.py`
+    (`_feather_file_path`/`write_data_file`/`_read_raw_data_file`/`remove_data_file`) and
+    `disk_cache_layout.py`'s `_legacy_file_pattern`. Scoped deliberately narrow — a broader review
+    (dataset catalog, DuckDB, extended data-quality checks, a found cache-key bug where `read_file()`
+    doesn't hash generation parameters so a changed indicator param can silently serve a stale cached
+    file) was cut back to just this first step; revisit the rest only once this lands. Not started —
+    review and prioritize against the other open decisions in this file (steps 1, 7-8, 11-13) before
+    picking this up.
 
 ## appendix: current implementation status
 

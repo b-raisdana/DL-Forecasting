@@ -36,7 +36,7 @@ def test_write_data_file_places_file_under_per_type_subfolder(tmp_path):
 
     type_dir = os.path.join(file_path, "myindicator")
     assert os.listdir(file_path) == ["myindicator"]
-    assert os.listdir(type_dir) == ["myindicator.20-01-01.00-00T20-01-03.00-00.feather"]
+    assert os.listdir(type_dir) == ["myindicator.20-01-01.00-00T20-01-03.00-00.parquet"]
 
 
 @pytest.mark.unit
@@ -49,6 +49,41 @@ def test_data_frame_type_dir_migrates_pre_existing_flat_file(tmp_path):
 
     assert not os.path.exists(flat_path)
     assert os.path.exists(os.path.join(type_dir, "legacytype.20-01-01.00-00T20-01-02.00-00.feather"))
+
+
+@pytest.mark.unit
+def test_read_migrates_legacy_feather_file_to_parquet_on_whole_file_read(tmp_path):
+    file_path = str(tmp_path)
+    df = _df(value=[1.0, 2.0, 3.0])
+    disk_cache._data_frame_type_dir("legacy_feather_type", file_path)  # ensure the type dir exists
+    feather_path = disk_cache._feather_file_path("legacy_feather_type", "20-01-01.00-00T20-01-03.00-00", file_path)
+    df.reset_index().to_feather(feather_path, compression="zstd")
+
+    result = disk_cache.read_without_index(
+        "legacy_feather_type", "20-01-01.00-00T20-01-03.00-00", file_path, n_rows=None, skip_rows=None
+    )
+
+    parquet_path = disk_cache._parquet_file_path("legacy_feather_type", "20-01-01.00-00T20-01-03.00-00", file_path)
+    assert not os.path.exists(feather_path)
+    assert os.path.exists(parquet_path)
+    assert result["value"].tolist() == [1.0, 2.0, 3.0]
+
+
+@pytest.mark.unit
+def test_read_prefers_parquet_over_a_coexisting_legacy_feather_file(tmp_path):
+    file_path = str(tmp_path)
+    disk_cache._data_frame_type_dir("both_formats_type", file_path)
+    feather_path = disk_cache._feather_file_path("both_formats_type", "20-01-01.00-00T20-01-03.00-00", file_path)
+    parquet_path = disk_cache._parquet_file_path("both_formats_type", "20-01-01.00-00T20-01-03.00-00", file_path)
+    _df(value=[1.0, 2.0, 3.0]).reset_index().to_feather(feather_path, compression="zstd")
+    _df(value=[9.0, 9.0, 9.0]).reset_index().to_parquet(parquet_path, compression="zstd")
+
+    result = disk_cache.read_without_index(
+        "both_formats_type", "20-01-01.00-00T20-01-03.00-00", file_path, n_rows=None, skip_rows=None
+    )
+
+    assert result["value"].tolist() == [9.0, 9.0, 9.0]
+    assert os.path.exists(feather_path)  # untouched — parquet already covers this file, no migration needed
 
 
 @pytest.mark.unit
@@ -71,7 +106,7 @@ def test_write_data_file_allows_nan_in_explicitly_allowed_column(tmp_path):
     )
 
     type_dir = os.path.join(file_path, "allowed_type")
-    assert os.listdir(type_dir) == ["allowed_type.20-01-01.00-00T20-01-03.00-00.feather"]
+    assert os.listdir(type_dir) == ["allowed_type.20-01-01.00-00T20-01-03.00-00.parquet"]
 
 
 @pytest.mark.unit

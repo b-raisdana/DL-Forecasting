@@ -1,5 +1,4 @@
 import contextlib
-import os
 from collections import OrderedDict
 from collections.abc import Callable, Iterable
 from datetime import datetime, timedelta
@@ -15,9 +14,14 @@ from helper.data_preparation import after_under_process_date, trim_to_date_range
 from helper.functions import Pandera_DFM_Type, date_range, date_range_to_string, morning
 from helper.logging.do_log import log_i, log_w
 from helper.schema_casting import cast_and_validate, empty_df
+from infrastructure.disk_cache_layout import _csv_zip_file_path as _csv_zip_file_path
 from infrastructure.disk_cache_layout import _data_frame_type_dir as _data_frame_type_dir
 from infrastructure.disk_cache_layout import _disallowed_nan_columns as _disallowed_nan_columns
+from infrastructure.disk_cache_layout import _feather_file_path as _feather_file_path
 from infrastructure.disk_cache_layout import _legacy_file_pattern as _legacy_file_pattern
+from infrastructure.disk_cache_layout import _migrate_csv_zip_to_parquet as _migrate_csv_zip_to_parquet
+from infrastructure.disk_cache_layout import _migrate_feather_to_parquet as _migrate_feather_to_parquet
+from infrastructure.disk_cache_layout import _parquet_file_path as _parquet_file_path
 from infrastructure.disk_cache_layout import _schema_nullable_columns as _schema_nullable_columns
 from infrastructure.disk_cache_layout import _window_freq as _window_freq
 from infrastructure.disk_cache_layout import cleanup_redundant_cache_files as cleanup_redundant_cache_files
@@ -25,9 +29,9 @@ from infrastructure.disk_cache_layout import symbol_data_path as symbol_data_pat
 
 """
 Everything this repo needs to persist/read a (data_frame_type, date_range_str) artifact as a
-feather/ZSTD (or legacy CSV-zip) file and never recompute or re-fetch it twice within its validity
-scope — the disk-level half of the cache-or-generate skill. `cache_on_disk` is the primitive new
-artifact types should use; `read_file`/`write_data_file` are its building blocks for callers (like
+Parquet/ZSTD (or legacy Feather/ZSTD/CSV-zip) file and never recompute or re-fetch it twice within its
+validity scope — the disk-level half of the cache-or-generate skill. `cache_on_disk` is the primitive
+new artifact types should use; `read_file`/`write_data_file` are its building blocks for callers (like
 domain.schemas.common.ExtendedDf.read_file) that need a class-bound variant instead of a decorator.
 
 Calendar-windowed caching (`cache_on_disk(..., windowed=True)` / `read_file_windowed()`), the legacy-
@@ -117,14 +121,6 @@ def _record_cache_generation(file_name_prefix: str, written_bytes: int) -> None:
     state["bytes"] = 0
 
 
-def _feather_file_path(data_frame_type: str, date_range_str: str, file_path: str) -> str:
-    return os.path.join(_data_frame_type_dir(data_frame_type, file_path), f"{data_frame_type}.{date_range_str}.feather")
-
-
-def _csv_zip_file_path(data_frame_type: str, date_range_str: str, file_path: str) -> str:
-    return os.path.join(_data_frame_type_dir(data_frame_type, file_path), f"{data_frame_type}.{date_range_str}.zip")
-
-
 def write_data_file(
     df: pd.DataFrame,
     data_frame_type: str,
@@ -133,10 +129,10 @@ def write_data_file(
     nan_allowed_columns: frozenset[str] | None = None,
 ) -> None:
     """
-    Persist df as the primary feather/ZSTD artifact for (data_frame_type, date_range_str) — the
-    write-side counterpart to _read_raw_data_file()'s feather-first read. Every generator writes
+    Persist df as the primary Parquet/ZSTD artifact for (data_frame_type, date_range_str) — the
+    write-side counterpart to _read_raw_data_file()'s parquet-first read. Every generator writes
     through here instead of hand-rolling a CSV-zip write, so newly generated data lands as
-    feather/ZSTD from the first write, with no CSV-zip round-trip. Lands under
+    Parquet/ZSTD from the first write, with no CSV-zip/feather round-trip. Lands under
     _data_frame_type_dir(data_frame_type, file_path), not flat in file_path.
 
     nan_allowed_columns, when given (not None), gates a write-time guard: any other column
@@ -152,22 +148,26 @@ def write_data_file(
                 f"declare them nullable in the pandera schema, or pass nan_allowed_columns=[...] to "
                 f"cache_on_disk(), if NaN is genuinely expected there."
             )
-    feather_file_path = _feather_file_path(data_frame_type, date_range_str, file_path)
-    df.reset_index().to_feather(feather_file_path, compression="zstd")
-    log_i(f"wrote feather/ZSTD cache file: {os.path.abspath(feather_file_path)}")
-    _record_cache_generation(data_frame_type, os.path.getsize(feather_file_path))
+    parquet_file_path = _parquet_file_path(data_frame_type, date_range_str, file_path)
+    df.reset_index().to_parquet(parquet_file_path, compression="zstd")
+    log_i(f"wrote Parquet/ZSTD cache file: {parquet_file_path.resolve()}")
+    _record_cache_generation(data_frame_type, parquet_file_path.stat().st_size)
 
 
 def remove_data_file(data_frame_type: str, date_range_str: str, file_path: str) -> None:
     """
-    Delete whichever on-disk format (feather/ZSTD, primary, or legacy CSV-zip) currently backs this
-    (data_frame_type, date_range_str) — used for date ranges datarange_is_not_cachable() flags as
-    touching the live/incomplete present, which must never be left on disk between reads.
+    Delete whichever on-disk format (Parquet/ZSTD primary, or legacy Feather/ZSTD or CSV-zip)
+    currently backs this (data_frame_type, date_range_str) — used for date ranges
+    datarange_is_not_cachable() flags as touching the live/incomplete present, which must never be
+    left on disk between reads.
     """
     try:
-        os.remove(_feather_file_path(data_frame_type, date_range_str, file_path))
+        _parquet_file_path(data_frame_type, date_range_str, file_path).unlink()
     except FileNotFoundError:
-        os.remove(_csv_zip_file_path(data_frame_type, date_range_str, file_path))
+        try:
+            _feather_file_path(data_frame_type, date_range_str, file_path).unlink()
+        except FileNotFoundError:
+            _csv_zip_file_path(data_frame_type, date_range_str, file_path).unlink()
 
 
 def _slice_rows(df: pd.DataFrame, n_rows: int | None, skip_rows: int | None) -> pd.DataFrame:
@@ -178,41 +178,38 @@ def _slice_rows(df: pd.DataFrame, n_rows: int | None, skip_rows: int | None) -> 
     return df.iloc[start:end].reset_index(drop=True)
 
 
-def _migrate_csv_zip_to_feather(df: pd.DataFrame, feather_file_path: str, csv_zip_file_path: str) -> None:
-    """Best-effort backup of a freshly-read whole CSV-zip file to feather/ZSTD; the legacy CSV-zip is
-    only removed once the feather write has succeeded."""
-    try:
-        df.to_feather(feather_file_path, compression="zstd")
-    except Exception as e:
-        log_w(f"Failed to back up {csv_zip_file_path} to feather/ZSTD ({feather_file_path}): {e}")
-        return
-    log_i(f"wrote feather/ZSTD cache file: {os.path.abspath(feather_file_path)}")
-    os.remove(csv_zip_file_path)
-
-
 def _read_raw_data_file(
     data_frame_type: str, date_range_str: str, file_path: str, n_rows: int | None, skip_rows: int | None
 ) -> pd.DataFrame:
     """
-    Read the flat (index not yet set) data file for (data_frame_type, date_range_str). Feather/ZSTD is
-    the primary on-disk format; the legacy CSV-zip format is still readable for files that predate the
-    feather migration. A whole-file CSV-zip read (no skip_rows/n_rows slicing) is transparently migrated
-    to feather/ZSTD and the old CSV-zip removed, so each file only ever pays the CSV-parsing cost once.
+    Read the flat (index not yet set) data file for (data_frame_type, date_range_str). Parquet/ZSTD is
+    the primary on-disk format; the legacy Feather/ZSTD and CSV-zip formats are still readable for
+    files that predate the Parquet migration. A whole-file legacy read (no skip_rows/n_rows slicing)
+    is transparently migrated to Parquet/ZSTD (CSV-zip migrates straight to Parquet, skipping the
+    Feather tier) and the old file removed, so each file only ever pays the feather/CSV-parsing cost
+    once.
     """
+    parquet_file_path = _parquet_file_path(data_frame_type, date_range_str, file_path)
+    if parquet_file_path.exists():
+        df = pd.read_parquet(parquet_file_path)
+        return _slice_rows(df, n_rows, skip_rows)
+
     feather_file_path = _feather_file_path(data_frame_type, date_range_str, file_path)
-    if os.path.exists(feather_file_path):
+    if feather_file_path.exists():
         df = pd.read_feather(feather_file_path)
+        if skip_rows is None and n_rows is None:
+            _migrate_feather_to_parquet(df, parquet_file_path, feather_file_path)
         return _slice_rows(df, n_rows, skip_rows)
 
     csv_zip_file_path = _csv_zip_file_path(data_frame_type, date_range_str, file_path)
     try:
         df = pd.read_csv(csv_zip_file_path, sep=",", header=0, skiprows=skip_rows, nrows=n_rows)
     except BadZipFile as err:
-        os.remove(csv_zip_file_path)
+        csv_zip_file_path.unlink()
         raise Exception(f"{csv_zip_file_path} is not a zip file!") from err
 
     if skip_rows is None and n_rows is None:
-        _migrate_csv_zip_to_feather(df, feather_file_path, csv_zip_file_path)
+        _migrate_csv_zip_to_parquet(df, parquet_file_path, csv_zip_file_path)
     return df
 
 
@@ -412,13 +409,12 @@ def _find_covering_file(
     _seed_window_from_legacy_file() — a window is usually covered by many nested legacy ranges.
     """
     pattern = _legacy_file_pattern(data_frame_type)
-    try:
-        entries = os.listdir(_data_frame_type_dir(data_frame_type, file_path))
-    except FileNotFoundError:
+    type_dir = _data_frame_type_dir(data_frame_type, file_path)
+    if not type_dir.is_dir():
         return None
     best: tuple[str, str, datetime, datetime] | None = None
-    for entry in entries:
-        match = pattern.match(entry)
+    for entry in type_dir.iterdir():
+        match = pattern.match(entry.name)
         if not match:
             continue
         candidate_range = match.group("range")
@@ -443,8 +439,10 @@ def _seed_window_from_legacy_file(data_frame_type: str, window_date_range_str: s
     finds it and never calls generator(). Does not touch the legacy file itself; a separate,
     explicit cleanup_redundant_cache_files() pass removes files that become fully redundant.
     """
-    if os.path.exists(_feather_file_path(data_frame_type, window_date_range_str, file_path)) or os.path.exists(
-        _csv_zip_file_path(data_frame_type, window_date_range_str, file_path)
+    if (
+        _parquet_file_path(data_frame_type, window_date_range_str, file_path).exists()
+        or _feather_file_path(data_frame_type, window_date_range_str, file_path).exists()
+        or _csv_zip_file_path(data_frame_type, window_date_range_str, file_path).exists()
     ):
         return
     window_start, window_end = date_range(window_date_range_str)
