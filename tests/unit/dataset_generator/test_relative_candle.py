@@ -10,6 +10,7 @@ from application.dataset_generation.relative_candle import (
     add_relative_candle_columns,
     relative_candle_columns,
 )
+
 from tests.conftest import ZigzagOhlcFactory
 
 pytestmark = pytest.mark.unit

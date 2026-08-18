@@ -38,7 +38,7 @@
         }
       },
       "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
-      "group": "test"
+      "group": { "kind": "build", "isDefault": true }
     },
     {
       "label": "pytest (fast gate)",
@@ -99,13 +99,13 @@
       "problemMatcher": [
         {
           "owner": "ruff",
+          "severity": "error",
           "fileLocation": ["relative", "${workspaceFolder}"],
           "pattern": [
             {
               "regexp": "^([A-Z]+\\d+) (.*)$",
               "code": 1,
-              "message": 2,
-              "severity": "error"
+              "message": 2
             },
             {
               "regexp": "^\\s*--> (.*):(\\d+):(\\d+)$",
@@ -138,23 +138,23 @@
         },
         {
           "owner": "xenon",
+          "severity": "error",
           "fileLocation": ["relative", "${workspaceFolder}"],
           "pattern": {
             "regexp": "^\\s*(app/.*\\.py):(\\d+) (.* rank [A-F])$",
             "file": 1,
             "line": 2,
-            "message": 3,
-            "severity": "error"
+            "message": 3
           }
         },
         {
           "owner": "loc",
+          "severity": "error",
           "fileLocation": ["relative", "${workspaceFolder}"],
           "pattern": {
             "regexp": "^\\s*(app/.*\\.py): (\\d+ lines \\(\\+\\d+ over \\d+\\))$",
             "file": 1,
-            "message": 2,
-            "severity": "error"
+            "message": 2
           }
         }
       ],

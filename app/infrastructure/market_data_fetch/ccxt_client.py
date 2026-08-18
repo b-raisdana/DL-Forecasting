@@ -1,20 +1,22 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 import ccxt
 import pandas as pd
-from ccxt import NetworkError, RequestTimeout
 from config import app_config
 from helper.data_preparation import map_symbol
 from helper.functions import date_range
 from helper.logging import profile_it
-from helper.logging.do_log import log_e, log_i
+from helper.logging.do_log import log_i
 
 """
-Broker-agnostic ccxt fetch engine — pagination/retry and the pandas<->ccxt timeframe/symbol maps,
-shared by every per-broker package under market_data_fetch/ (kucoin/, binance/, ...). Kucoin and
-Binance both speak ccxt's unified BASE/QUOTE symbol format, so only the exchange class differs
-per broker; that's SUPPORTED_BROKERS' whole job. Each per-broker fetch_ohlcv.py is a thin wrapper
-binding its own broker id here rather than re-implementing fetch/retry logic.
+Broker-agnostic ccxt fetch engine — the pandas<->ccxt timeframe/symbol maps shared by every
+per-broker package under market_data_fetch/ (kucoin/, binance/, ...). Kucoin and Binance both
+speak ccxt's unified BASE/QUOTE symbol format, so only the exchange class differs per broker;
+that's SUPPORTED_BROKERS' whole job. Pagination and retry are delegated to ccxt's own
+`paginate`/`fetch_paginated_call_deterministic` machinery (params={"paginate": True, ...})
+instead of a hand-rolled batching loop, so every broker gets its native per-endpoint page size,
+retry count, and rate limiting for free. Each per-broker fetch_ohlcv.py is a thin wrapper binding
+its own broker id here.
 """
 
 SUPPORTED_BROKERS: dict[str, type] = {
@@ -102,42 +104,40 @@ def fetch_ohlcv(
         params = {}
     if start is None or start.tzinfo is None or start.utcoffset() != timedelta(0):
         raise ValueError("start must be a timezone-aware UTC datetime")
+    if not number_of_ticks:
+        return []
     exchange = broker_exchange(broker)
     if timeframe is None:
         timeframe = app_config.timeframes[0]
 
     # Convert pandas timeframe to CCXT timeframe
     ccxt_timeframe = pandas_to_ccxt_timeframes[timeframe]
-    output_list = []
-    width_of_timeframe = pd.to_timedelta(timeframe).total_seconds()
-    max_query_size = 1000
-    for batch_start in range(0, number_of_ticks, max_query_size):
-        if start < datetime.now(UTC):
-            start_timestamp = int((start.timestamp() + batch_start * width_of_timeframe) * 1000)
-            this_query_size = min(number_of_ticks - batch_start, max_query_size)
-            last_error = None
-            for _ in range(20):
-                try:
-                    response = exchange.fetch_ohlcv(
-                        symbol,
-                        timeframe=ccxt_timeframe,
-                        since=start_timestamp,
-                        limit=min(number_of_ticks - batch_start, this_query_size),
-                        params=params,
-                    )
-                    break
-                except RequestTimeout as e:
-                    log_e("ccxt.RequestTimeout:" + str(e))
-                    last_error = e
-                except NetworkError as e:
-                    log_e("ccxt.NetworkError:" + str(e))
-                    last_error = e
-            else:
-                raise last_error
-            log_i(
-                "fetch_ohlcv@"
-                f"{broker}@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}",
-            )
-            output_list.extend(response)
+    since = int(start.timestamp() * 1000)
+    until = since + number_of_ticks * int(pd.to_timedelta(timeframe).total_seconds() * 1000)
+    # ceil(number_of_ticks / 1000) + 1: a safe upper bound on the calls ccxt's own pagination
+    # needs, regardless of the broker's actual per-request page size (1000-1500 candles).
+    pagination_calls = -(-number_of_ticks // 1000) + 1
 
-    return output_list
+    # Driving fetch_paginated_call_deterministic directly (rather than via the params={"paginate":
+    # True} convenience flag on exchange.fetch_ohlcv) sidesteps a ccxt bug: kucoin's fetch_ohlcv
+    # routes through internal helpers (fetch_spot_ohlcv/fetch_contract_ohlcv/fetch_utaohlcv) whose
+    # method name isn't the literal "fetchOHLCV" string that fetch_paginated_call_deterministic's
+    # result filter checks for, so the convenience flag silently returns an empty list on kucoin.
+    # Calling it with the literal method name (aliased by ccxt to fetch_ohlcv on every broker)
+    # keeps ccxt's own pagination, retry, and rate-limit handling while avoiding that bug.
+    response = exchange.fetch_paginated_call_deterministic(
+        "fetchOHLCV",
+        symbol,
+        since,
+        number_of_ticks,
+        ccxt_timeframe,
+        {
+            "paginationCalls": pagination_calls,
+            "maxRetries": 20,
+            **params,
+            "until": until,
+        },
+        None,
+    )
+    log_i(f"fetch_ohlcv@{broker}@{start}#{number_of_ticks}>{len(response)}")
+    return response

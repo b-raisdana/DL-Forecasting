@@ -16,6 +16,7 @@ from application.dataset_generation.profit_loss.profit_loss_adder import (
     quantile_maxes,
     stop_loss,
 )
+
 from tests.conftest import ZigzagOhlcFactory
 
 pytestmark = pytest.mark.characterization

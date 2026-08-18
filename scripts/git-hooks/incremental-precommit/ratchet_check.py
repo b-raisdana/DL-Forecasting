@@ -68,8 +68,15 @@ def ruff_count() -> int:
     return len(violations)
 
 
+def _exclude_tests(paths: list[Path]) -> list[Path]:
+    return [path for path in paths if "tests" not in path.parts]
+
+
 def xenon_count(max_absolute: str = "B") -> int:
-    stdout = run("radon", "cc", TARGET, "-j")
+    # Cyclomatic complexity isn't a meaningful signal for test code (parametrized/assert-heavy
+    # loops are idiomatic there, not a design smell), so app/tests/ is excluded entirely - see
+    # docs/infrastructure.md#incremental-ratchet-mypyruffxenon-scope.
+    stdout = run("radon", "cc", TARGET, "-j", "-i", "tests")
     try:
         data = json.loads(stdout or "{}")
     except json.JSONDecodeError:
@@ -146,6 +153,7 @@ def ruff_detail_count(paths: list[Path]) -> int:
 
 
 def print_xenon_details(paths: list[Path], max_absolute: str = "B") -> None:
+    paths = _exclude_tests(paths)
     if not paths:
         print("    no staged app Python files to inspect")
         return
@@ -169,6 +177,7 @@ def print_xenon_details(paths: list[Path], max_absolute: str = "B") -> None:
 
 
 def xenon_detail_count(paths: list[Path], max_absolute: str = "B") -> int:
+    paths = _exclude_tests(paths)
     if not paths:
         return 0
     stdout = run("radon", "cc", "-j", *(path.as_posix() for path in paths))
@@ -289,7 +298,7 @@ def main() -> int:
             )
 
     ratcheted: list[tuple[str, int, int]] = []
-    for name, (base, current, progress) in improved.items():
+    for name, (base, current, _progress) in improved.items():
         if current < base - (base * RATCHET_IMPROVEMENT_RATIO):
             baseline[name] = current
             ratcheted.append((name, base, current))

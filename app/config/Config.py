@@ -1,9 +1,9 @@
 import base64
 import hashlib
-import os
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -34,7 +34,7 @@ class TopTYPE(Enum):
     VALLEY = "valley"
 
 
-_ROOT_PATH = os.path.dirname(os.path.dirname(__file__))
+_ROOT_PATH = Path(__file__).resolve().parent.parent.parent
 
 
 class Config(BaseSettings):  # type: ignore[explicit-any]
@@ -49,7 +49,7 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
         validate_assignment=True,
     )
 
-    root_path: str = _ROOT_PATH
+    root_path: Path = _ROOT_PATH
     # self.processing_date_range = '17-12-24.00-00T17-12-31.23-59'
     processing_date_range: str = "17-12-01.00-00T17-12-31.23-59"
     limit_to_under_process_period: bool = False
@@ -94,12 +94,14 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
 
     INFINITY_TIME_DELTA: timedelta = timedelta(days=10 * 365)
 
-    path_of_data: str = Field(
-        default=os.path.join(_ROOT_PATH, "data"),
+    path_of_data: Path = Field(
+        default=_ROOT_PATH / "data",
         validation_alias="DLF_DATA_ROOT",
     )
-    path_of_logs: str = os.path.join(_ROOT_PATH, "logs")
-    path_of_test_plots: str = "test_plots"
+    path_of_logs: Path = Field(
+        default=_ROOT_PATH / "logs",
+        validation_alias="DLF_LOGS_ROOT",
+    )
 
     # infrastructure.disk_cache windowing (see app/infrastructure/ohlcv/README.md): default
     # calendar-window size for any data_frame_type without an entry in cache_window_freq_overrides,
@@ -174,13 +176,14 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def path_of_plots(self) -> str:
-        return os.path.join(self.path_of_data, "plots")
+    def path_of_plots(self) -> Path:
+        return self.path_of_data / "plots"
 
 
 app_config = Config()
 
 config_as_json = app_config.model_dump_json()
+
 config_digest = str.translate(
     base64.b64encode(hashlib.md5(config_as_json.encode("utf-8")).digest()).decode("ascii"),
     {
@@ -190,11 +193,11 @@ config_digest = str.translate(
     },
 )
 
-dump_filename = os.path.join(app_config.path_of_logs, f"Config.{config_digest}.json")
-if not os.path.exists(app_config.path_of_logs):
-    os.makedirs(app_config.path_of_logs)
-if not os.path.exists(dump_filename):
-    with open(dump_filename, "w+") as config_file:
-        config_file.write(config_as_json)
+app_config.path_of_logs.mkdir(parents=True, exist_ok=True)
+
+dump_filename = app_config.path_of_logs / f"Config.{config_digest}.json"
+
+if not dump_filename.exists():
+    dump_filename.write_text(config_as_json, encoding="utf-8")
 
 app_config.id = config_digest
