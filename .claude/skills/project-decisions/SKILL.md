@@ -1,6 +1,6 @@
 ---
 name: project-decisions
-description: Use for any of — adding a "fetch/compute and persist" function (cache-or-generate); placing a new module/file under app/ (code-layers); adding network I/O or CPU-heavy fan-out (concurrency-and-blocking); before hand-rolling a new algorithm/transform (lib-first); deciding what test type a change needs (test-strategy); writing/reviewing pandas/numpy code (vectorized-pandas-numpy); or touching a file that reads/writes the OHLCV/indicator/label disk cache (feather/ZSTD migration-on-touch). One skill, several independent sections — read only the one(s) that match.
+description: Use for any of — adding a "fetch/compute and persist" function (cache-or-generate); placing a new module/file under app/ (code-layers); adding network I/O or CPU-heavy fan-out (concurrency-and-blocking); before hand-rolling a new algorithm/transform (lib-first); building a filesystem path, CLI entrypoint, or settings/validation model (paths-cli-config); deciding what test type a change needs (test-strategy); writing/reviewing pandas/numpy code (vectorized-pandas-numpy); or touching a file that reads/writes the OHLCV/indicator/label disk cache (feather/ZSTD migration-on-touch). One skill, several independent sections — read only the one(s) that match.
 ---
 
 # Project decisions
@@ -9,6 +9,7 @@ description: Use for any of — adding a "fetch/compute and persist" function (c
 - [Code layers](#code-layers)
 - [Concurrency & blocking](#concurrency--blocking)
 - [Lib-first](#lib-first)
+- [Paths, CLI & config libraries](#paths-cli--config-libraries)
 - [Test strategy](#test-strategy)
 - [Vectorized pandas/numpy](#vectorized-pandasnumpy)
 - [Feather/ZSTD migration on touch](#featherzstd-migration-on-touch)
@@ -98,6 +99,15 @@ Candidates (none adopted yet — evaluate once profiling shows a real bottleneck
 Hand-rolling is justified for: domain-specific market-structure logic with no generic lib equivalent (peak/valley detection, bull/bear/side classification, base-pattern detection); or a lib that's unmaintained, has no vectorized path, or pulls a disproportionate dependency tree. Note the reason in the commit ("no vectorized lib does X, hand-rolled because Y") so the next pass doesn't re-search from scratch.
 
 Anti-pattern: reimplementing rolling-window stats, JSON/CSV/parquet parsing, retry/backoff, or async HTTP plumbing that `pandas`/`pyarrow`/`ccxt`/stdlib already provide; a bespoke thread/process pool instead of `concurrent.futures`/`joblib`.
+
+## Paths, CLI & config libraries
+
+Trigger: building a filesystem path, a CLI entrypoint, or a settings/validation model.
+
+- **Paths**: `pathlib.Path`, not `os.path`/`os.listdir`/`os.remove`/string-joined paths, in new code. `os.path` still runs throughout `infrastructure/disk_cache.py` and elsewhere — migrate on touch (same on-touch-only policy as [Feather/ZSTD migration on touch](#featherzstd-migration-on-touch)), never a repo-wide sweep.
+- **CLI entrypoints**: `typer`, not `argparse`, for new CLIs. `fetch_ohlcv_cli.py` and `tier1_000_training.py` still use `argparse.ArgumentParser` — migrate on touch, not preemptively. `typer` isn't in `requirements.txt` yet; add it the first time a CLI is created or migrated.
+- **Settings/config**: `pydantic_settings.BaseSettings` — already the pattern in `config/Config.py` (env-var overridable via `DLF_<FIELD_NAME>`, validated on load and on every assignment). Reuse `app_config`; don't add a second settings mechanism.
+- **Structured data validation outside DataFrames** (function params, non-tabular value objects, API-shaped payloads): `pydantic.BaseModel`. Pandera (`domain/schemas/`) stays the tool for DataFrame-shaped schemas — pydantic doesn't replace it there.
 
 ## Test strategy
 
