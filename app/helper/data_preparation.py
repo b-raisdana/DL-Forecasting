@@ -477,7 +477,7 @@ def expand_date_range(
     return date_range_to_string(start=start, end=end)
 
 
-def after_under_process_date(date_range_str):
+def after_under_process_date(date_range_str: str) -> bool:
     start, _ = date_range(date_range_str)
     _, end = date_range(app_config.processing_date_range)
     if start > end:

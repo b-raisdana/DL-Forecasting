@@ -16,7 +16,7 @@ from helper.functions import date_range_to_string
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
-SYMBOLS = ["BTCUSDT", "ETHUSDT", "TRXUSDT", "BNBUSDT", "EOSUSDT", "SOLUSDT"]
+SYMBOLS = app_config.SYMBOLS
 RANGE_DAYS = 14
 _ACTION_LABELS = ["long", "short", "none"]
 _AUX_FEATURE_NAMES = [f"{tf_name}_{column}" for tf_name in BRANCH_TIMEFRAMES for column in CANDLE_FEATURE_COLUMNS]

@@ -161,6 +161,7 @@ Per direction, computed from the FUTURE window (see [where can be a position?](#
 - `SL`, `MAE` = see [risk factors](#risk-factors)
 - `Risk = MAE × (1 + F) × V` (`V` = position volume, `F` = fee rate — see [trading overhead](#trading-overhead))
 - `OM` (Opportunity Multiple) = `MFE / MAE` — reward-to-risk ratio; drives the direction/None call in [where can be a position?](#where-can-be-a-position)
+- implementation (actual pandas/numpy operations behind `MFE`/`rer`): [Appendix — MFE & RER Implementation](<02-Appendix - MFE & RER Implementation.md>)
 
 Execution levels (`TP1`-`TP4`) — discrete scale-out prices derived from `TP4`/`Risk`, for live order placement, not primary ML targets:
 

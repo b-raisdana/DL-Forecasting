@@ -4,40 +4,55 @@ import os
 import random
 import threading as th
 import time
+from collections.abc import Iterator
 from datetime import datetime
 from multiprocessing import queues, shared_memory
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from application.dataset_generation.training_datasets import train_data_of_mt_n_profit
 from application.model_implementations.shared.base import master_x_shape, overlapped_quarters
 from config import app_config
 from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
+from domain.schemas.common.MultiTimeframe import MultiTimeframe
 from helper.functions import date_range_to_string
 from helper.logging.do_log import log_d, log_e, log_i
+from pandera import typing as pt
+
+if TYPE_CHECKING:
+    import tensorflow as tf
+
+# (name, shape, dtype) triple identifying a SharedMemory-backed array — what shm_from_array()
+# hands back and array_from_shm() consumes to reattach it in another process.
+_ShmMeta = tuple[str, tuple[int, ...], str]
+_MetaQueue = "queues.Queue[tuple[dict[str, _ShmMeta], _ShmMeta]]"
 
 
-def shm_from_array(arr: np.ndarray) -> tuple[str, tuple[int, ...], str]:
+def shm_from_array(arr: npt.NDArray[np.generic]) -> _ShmMeta:
     """Copy a NumPy array into a fresh SharedMemory block and return (name, shape, dtype)."""
     shm = shared_memory.SharedMemory(create=True, size=arr.nbytes)
     np.ndarray(arr.shape, arr.dtype, buffer=shm.buf)[:] = arr
     return shm.name, arr.shape, str(arr.dtype)  # caller responsible for shm.unlink() later
 
 
-def array_from_shm(name: str, shape, dtype) -> np.ndarray:
+def array_from_shm(
+    name: str, shape: tuple[int, ...], dtype: str
+) -> tuple[npt.NDArray[np.generic], shared_memory.SharedMemory]:
     """Map an existing SharedMemory block into a NumPy array (no copy)."""
     shm = shared_memory.SharedMemory(name=name)
     return np.ndarray(shape, np.dtype(dtype), buffer=shm.buf), shm
 
 
 def ram_dataset_producer(
-    meta_q: queues.Queue,
+    meta_q: "queues.Queue[tuple[dict[str, _ShmMeta], _ShmMeta]]",
     start: datetime,
     end: datetime,
     batch_size: int = 400,
     forecast_trigger_bars: int = 3 * 4 * 4 * 4 * 1,
     verbose: bool = True,
-):
+) -> None:
     quarters = overlapped_quarters(date_range_to_string(start=start, end=end))
     log_i("Producer started")
     while True:
@@ -46,13 +61,15 @@ def ram_dataset_producer(
             if verbose:
                 log_d(f"quarter {q_start} → {q_end}")
             app_config.processing_date_range = date_range_to_string(start=q_start, end=q_end)
-            symbol_list = ["BNBUSDT", "BTCUSDT", "EOSUSDT", "ETHUSDT", "SOLUSDT", "TRXUSDT"]
+            symbol_list = list(app_config.SYMBOLS)
             random.shuffle(symbol_list)
             for symbol in symbol_list:
                 if verbose:
                     log_d(f"Symbol {symbol}")
                 app_config.under_process_symbol = symbol
-                mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
+                mt_ohlcv = cast(
+                    "pt.DataFrame[MultiTimeframe]", read_multi_timeframe_ohlcv(app_config.processing_date_range)
+                )
                 for _ in range(int(100 / NUM_WORKERS)):
                     while meta_q.qsize() >= CACHE_THRESHOLD:
                         # log_d(
@@ -80,7 +97,9 @@ def ram_dataset_producer(
                     )
 
 
-def ram_dataset_consumer(meta_q: queues.Queue, batch_size: int):
+def ram_dataset_consumer(
+    meta_q: "queues.Queue[tuple[dict[str, _ShmMeta], _ShmMeta]]", batch_size: int
+) -> Iterator[tuple[dict[str, npt.NDArray[np.generic]], npt.NDArray[np.generic]]]:
     while True:
         try:
             mgr = MyManager(address=("127.0.0.1", 50055), authkey=b"secret123")
@@ -88,8 +107,8 @@ def ram_dataset_consumer(meta_q: queues.Queue, batch_size: int):
             meta_q = mgr.get_meta_queue()
             check_queue(meta_q)
 
-            cached_xs: dict[str, np.ndarray] = {}
-            cached_ys: np.ndarray | None = None
+            cached_xs: dict[str, npt.NDArray[np.generic]] = {}
+            cached_ys: npt.NDArray[np.generic] | None = None
             while True:
                 # refill local cache until we have at least one full batch
                 while cached_ys is None or len(cached_ys) < batch_size:
@@ -132,22 +151,24 @@ def ram_dataset_consumer(meta_q: queues.Queue, batch_size: int):
             continue
 
 
-def check_queue(meta_q):
+def check_queue(
+    meta_q: "queues.Queue[tuple[dict[str, _ShmMeta], _ShmMeta]]",
+) -> "queues.Queue[tuple[dict[str, _ShmMeta], _ShmMeta]]":
     try:
         size = meta_q.qsize()  # remote call
         log_d(f"meta_queue size = {size}")
     except Exception as e:
-        log_e("Error while querying queue:", e)
+        log_e(f"Error while querying queue: {e}")
         mgr = MyManager(address=("127.0.0.1", 50055), authkey=b"secret123")
         mgr.connect()  # dial the manager
         meta_q = mgr.get_meta_queue()  # proxy object
     return meta_q
 
 
-def build_ram_dataset(batch_size=80):
+def build_ram_dataset(batch_size: int = 80) -> "tf.data.Dataset":
     import tensorflow as tf
 
-    def gen():
+    def gen() -> Iterator[tuple[dict[str, npt.NDArray[np.generic]], npt.NDArray[np.generic]]]:
         yield from ram_dataset_consumer(meta_q, batch_size)
 
     output_signature = (
@@ -163,17 +184,20 @@ NUM_WORKERS = 15
 # CACHE_PREFIX = "tf_input_cache"
 CACHE_THRESHOLD = 200
 
-meta_q = mp.Queue(maxsize=CACHE_THRESHOLD)
+meta_q: "queues.Queue[tuple[dict[str, _ShmMeta], _ShmMeta]]" = mp.Queue(maxsize=CACHE_THRESHOLD)
 
 
 class MyManager(mpm.SyncManager):
-    pass
+    # get_meta_queue is registered dynamically below (MyManager.register(...)); this stub only
+    # declares its shape for type-checking callers like ram_dataset_consumer()/check_queue().
+    def get_meta_queue(self) -> "queues.Queue[tuple[dict[str, _ShmMeta], _ShmMeta]]":
+        raise NotImplementedError  # overwritten by MyManager.register() below
 
 
 MyManager.register("get_meta_queue", callable=lambda: meta_q)
 
 
-def run_producer():
+def run_producer() -> None:
     # Register the actual meta_q
 
     mgr = MyManager(address=("127.0.0.1", 50055), authkey=b"secret123")
@@ -182,7 +206,7 @@ def run_producer():
     print("Server PID", os.getpid())
     print("Address", mgr.address)
 
-    def prod_worker():
+    def prod_worker() -> None:
         ram_dataset_producer(meta_q=meta_q, start=pd.to_datetime("2024-03-01"), end=pd.to_datetime("2024-09-01"))
 
     processes = []

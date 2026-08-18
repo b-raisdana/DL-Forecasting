@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 
 from application.model_implementations.tier1_000.train import TrainingPresenter, run_training
+from config import app_config
 
 
 class ConsoleTrainingPresenter:
@@ -44,7 +45,14 @@ class ConsoleTrainingPresenter:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train the Tier-1_000 design set, with checkpoint/resume.")
-    parser.add_argument("--symbol", default="BTCUSDT")
+    parser.add_argument(
+        "--symbol",
+        default=None,
+        help=(
+            "symbol to train on; if omitted, sequentially trains on every symbol in "
+            "app_config.TRAIN_SYMBOLS (app_config.SYMBOLS minus the reserved validation symbol)"
+        ),
+    )
     parser.add_argument("--date-range", default="22-02-10.00-00T24-10-31.23-59")
     parser.add_argument("--budget-minutes", type=float, default=10.0, help="wall-clock training budget")
     parser.add_argument("--checkpoint-interval-minutes", type=float, default=10.0)
@@ -62,14 +70,18 @@ def _parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
     args = _parse_args()
     presenter: TrainingPresenter = ConsoleTrainingPresenter()
-    run_training(
-        symbol=args.symbol,
-        date_range_str=args.date_range,
-        budget_seconds=args.budget_minutes * 60.0,
-        steps_per_epoch=args.steps_per_epoch,
-        validation_steps=args.validation_steps,
-        run_key=args.run_key,
-        checkpoint_interval_seconds=args.checkpoint_interval_minutes * 60.0,
-        reset_params=args.reset_params,
-        presenter=presenter,
-    )
+    symbols = [args.symbol] if args.symbol else app_config.TRAIN_SYMBOLS
+    for symbol in symbols:
+        run_key = args.run_key if args.symbol else f"{args.run_key}_{symbol}"
+        print(f"[presenter] === training {symbol} (run_key={run_key}) ===")
+        run_training(
+            symbol=symbol,
+            date_range_str=args.date_range,
+            budget_seconds=args.budget_minutes * 60.0,
+            steps_per_epoch=args.steps_per_epoch,
+            validation_steps=args.validation_steps,
+            run_key=run_key,
+            checkpoint_interval_seconds=args.checkpoint_interval_minutes * 60.0,
+            reset_params=args.reset_params,
+            presenter=presenter,
+        )

@@ -1,12 +1,13 @@
 import base64
 import hashlib
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytz
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -56,6 +57,11 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
     under_process_symbol: str = "BTCUSDT"
     under_process_exchange: str = "Kucoin"
     under_process_market: str = "Spot"
+    # full traded-symbol universe. VALIDATION_SYMBOL (BTC/USDT) is reserved for validation/final-test
+    # and excluded from training — see docs/ML_Forecasting_System_Design/02-Data, Label & Feature
+    # Engineering.md § validation & train/test splitting.
+    SYMBOLS: list[str] = ["BNBUSDT", "BTCUSDT", "EOSUSDT", "ETHUSDT", "SOLUSDT", "TRXUSDT"]
+    VALIDATION_SYMBOL: str = "BTCUSDT"
     files_to_load: list[str] = [
         "17-01-01.0-01TO17-12-31.23-59.1min",
         "17-01-01.0-01TO17-12-31.23-59.5min",
@@ -112,6 +118,10 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
         "multi_timeframe_ohlcv": "D",
         "multi_timeframe_ohlcva": "D",
     }
+    # Floor for default (no --date-range) OHLCV gap-fill backfill: how far back
+    # presentation.market_data.fetch_ohlcv_cli walks before reporting "all up to date" and stopping.
+    # Same single-timestamp format as one half of a date_range_str ("%y-%m-%d.%H-%M").
+    ohlcv_oldest_fetch_date: str = "17-01-01.00-00"
     # Warn if a data_frame_type's cache-file generation rate, extrapolated to 24h, exceeds this many
     # bytes; re-evaluated at most once per cache_generation_monitor_interval_minutes per prefix.
     cache_generation_warn_bytes_per_day: int = Field(default=1_000_000_000, gt=0)
@@ -154,6 +164,15 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
     id: str = ""
     GLOBAL_CACHE: dict[str, object] = Field(default_factory=dict)
 
+    # ClickHouse (docker-compose `clickhouse` service) connection — HTTP interface, used by
+    # clickhouse-connect. Defaults match docker-compose.yml's own CLICKHOUSE_USER/PASSWORD/DB
+    # defaults; override via DLF_CLICKHOUSE_* env vars for a non-local instance.
+    clickhouse_host: str = "localhost"
+    clickhouse_port: int = Field(default=8123, gt=0)
+    clickhouse_user: str = "dlf"
+    clickhouse_password: str = "dlf"
+    clickhouse_database: str = "dl_forecasting"
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def structure_timeframes(self) -> list[str]:
@@ -178,6 +197,19 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
     @property
     def path_of_plots(self) -> Path:
         return self.path_of_data / "plots"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def TRAIN_SYMBOLS(self) -> list[str]:
+        """`SYMBOLS` minus `VALIDATION_SYMBOL` — the non-BTC universe training draws from."""
+        return [symbol for symbol in self.SYMBOLS if symbol != self.VALIDATION_SYMBOL]
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def ohlcv_oldest_fetch_datetime(self) -> datetime:
+        """`ohlcv_oldest_fetch_date` parsed the same way `helper.functions.date_range()` parses each
+        half of a date_range_str."""
+        return datetime.strptime(self.ohlcv_oldest_fetch_date, "%y-%m-%d.%H-%M").replace(tzinfo=pytz.UTC)
 
 
 app_config = Config()

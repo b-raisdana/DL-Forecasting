@@ -1,20 +1,27 @@
 import contextlib
 import os
-import re
 from collections import OrderedDict
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import get_args, get_type_hints
+from typing import TypedDict, cast, get_args, get_type_hints
 from zipfile import BadZipFile
 
 import pandas as pd
+import pandera
 import pytz
 from config import app_config
 from helper.data_preparation import after_under_process_date, trim_to_date_range
 from helper.functions import Pandera_DFM_Type, date_range, date_range_to_string, morning
-from helper.logging.do_log import log_w
+from helper.logging.do_log import log_i, log_w
 from helper.schema_casting import cast_and_validate, empty_df
+from infrastructure.disk_cache_layout import _data_frame_type_dir as _data_frame_type_dir
+from infrastructure.disk_cache_layout import _disallowed_nan_columns as _disallowed_nan_columns
+from infrastructure.disk_cache_layout import _legacy_file_pattern as _legacy_file_pattern
+from infrastructure.disk_cache_layout import _schema_nullable_columns as _schema_nullable_columns
+from infrastructure.disk_cache_layout import _window_freq as _window_freq
+from infrastructure.disk_cache_layout import cleanup_redundant_cache_files as cleanup_redundant_cache_files
+from infrastructure.disk_cache_layout import symbol_data_path as symbol_data_path
 
 """
 Everything this repo needs to persist/read a (data_frame_type, date_range_str) artifact as a
@@ -31,25 +38,24 @@ generic) — read that first if you're touching any of the `_window_*`/`*_cache_
 """
 
 
-def symbol_data_path(
-    path_of_data: str = None,
-    exchange: str = None,
-    market: str = None,
-    trading_pair: str = None,
-) -> str:
-    if path_of_data is None:
-        path_of_data = app_config.path_of_data
-    if exchange is None:
-        exchange = app_config.under_process_exchange
-    if market is None:
-        market = app_config.under_process_market
-    if trading_pair is None:
-        trading_pair = app_config.under_process_symbol
-    return os.path.join(path_of_data, exchange, market, trading_pair)
+# `generator(date_range_str, **kwargs) -> DataFrame` callables read_file()/read_file_windowed()/
+# cache_on_disk() accept — genuinely arbitrary per artifact type (extra kwargs like
+# `base_timeframe`, `symbols`, ...), so a precise Protocol would reject real generators; the ignore
+# is for Callable's `...`, itself an explicit Any under disallow_any_explicit. Return type is
+# `object`, not `pd.DataFrame`: a generator's return annotation is legitimately either a
+# pt.DataFrame[Model] or a bare Model class read only by _resolve_caster_model() (see its
+# docstring), never actually returned as a Model instance — read_file()/read_file_windowed() cast
+# the real call result to pd.DataFrame themselves once generator() has run.
+_Generator = Callable[..., object]  # type: ignore[explicit-any]
+
+# What cache_on_disk()'s decorator hands back: unlike _Generator, this always returns a pd.DataFrame
+# at runtime (read_file()/read_file_windowed() do), so callers of a decorated `get_...` function get
+# an accurate type back instead of _Generator's deliberately-loose `object`.
+_Wrapper = Callable[..., pd.DataFrame]  # type: ignore[explicit-any]
 
 
 # @cache
-def datarange_is_not_cachable(date_range_str):
+def datarange_is_not_cachable(date_range_str: str) -> bool:
     _, end = date_range(date_range_str)
     return end > morning(datetime.utcnow().replace(tzinfo=pytz.UTC))
 
@@ -83,7 +89,12 @@ def _read_file_cache_put(cache_key: _ReadFileCacheKey, df: pd.DataFrame) -> None
 # resets on restart, same tradeoff as _read_file_cache above. Evaluated lazily on write, at most once
 # per app_config.cache_generation_monitor_interval_minutes per prefix, so it never re-evaluates sooner
 # than that regardless of how many files a given prefix writes in between.
-_cache_generation_state: dict[str, dict[str, object]] = {}
+class _CacheGenerationState(TypedDict):
+    window_start: datetime
+    bytes: int
+
+
+_cache_generation_state: dict[str, _CacheGenerationState] = {}
 
 
 def _record_cache_generation(file_name_prefix: str, written_bytes: int) -> None:
@@ -107,22 +118,43 @@ def _record_cache_generation(file_name_prefix: str, written_bytes: int) -> None:
 
 
 def _feather_file_path(data_frame_type: str, date_range_str: str, file_path: str) -> str:
-    return os.path.join(file_path, f"{data_frame_type}.{date_range_str}.feather")
+    return os.path.join(_data_frame_type_dir(data_frame_type, file_path), f"{data_frame_type}.{date_range_str}.feather")
 
 
 def _csv_zip_file_path(data_frame_type: str, date_range_str: str, file_path: str) -> str:
-    return os.path.join(file_path, f"{data_frame_type}.{date_range_str}.zip")
+    return os.path.join(_data_frame_type_dir(data_frame_type, file_path), f"{data_frame_type}.{date_range_str}.zip")
 
 
-def write_data_file(df: pd.DataFrame, data_frame_type: str, date_range_str: str, file_path: str) -> None:
+def write_data_file(
+    df: pd.DataFrame,
+    data_frame_type: str,
+    date_range_str: str,
+    file_path: str,
+    nan_allowed_columns: frozenset[str] | None = None,
+) -> None:
     """
     Persist df as the primary feather/ZSTD artifact for (data_frame_type, date_range_str) — the
     write-side counterpart to _read_raw_data_file()'s feather-first read. Every generator writes
     through here instead of hand-rolling a CSV-zip write, so newly generated data lands as
-    feather/ZSTD from the first write, with no CSV-zip round-trip.
+    feather/ZSTD from the first write, with no CSV-zip round-trip. Lands under
+    _data_frame_type_dir(data_frame_type, file_path), not flat in file_path.
+
+    nan_allowed_columns, when given (not None), gates a write-time guard: any other column
+    containing NaN raises rather than silently caching it. None (the default, used by callers outside
+    the cache_on_disk path — e.g. legacy-file seeding/migration) skips the guard entirely. The
+    cache_on_disk-driven generator path always passes a resolved set — see read_file().
     """
+    if nan_allowed_columns is not None:
+        offending = _disallowed_nan_columns(df, nan_allowed_columns)
+        if offending:
+            raise Exception(
+                f"Refusing to cache NaN in column(s) {offending} for '{data_frame_type}' {date_range_str} — "
+                f"declare them nullable in the pandera schema, or pass nan_allowed_columns=[...] to "
+                f"cache_on_disk(), if NaN is genuinely expected there."
+            )
     feather_file_path = _feather_file_path(data_frame_type, date_range_str, file_path)
     df.reset_index().to_feather(feather_file_path, compression="zstd")
+    log_i(f"wrote feather/ZSTD cache file: {os.path.abspath(feather_file_path)}")
     _record_cache_generation(data_frame_type, os.path.getsize(feather_file_path))
 
 
@@ -154,11 +186,12 @@ def _migrate_csv_zip_to_feather(df: pd.DataFrame, feather_file_path: str, csv_zi
     except Exception as e:
         log_w(f"Failed to back up {csv_zip_file_path} to feather/ZSTD ({feather_file_path}): {e}")
         return
+    log_i(f"wrote feather/ZSTD cache file: {os.path.abspath(feather_file_path)}")
     os.remove(csv_zip_file_path)
 
 
 def _read_raw_data_file(
-    data_frame_type: str, date_range_str: str, file_path: str, n_rows: int, skip_rows: int
+    data_frame_type: str, date_range_str: str, file_path: str, n_rows: int | None, skip_rows: int | None
 ) -> pd.DataFrame:
     """
     Read the flat (index not yet set) data file for (data_frame_type, date_range_str). Feather/ZSTD is
@@ -183,23 +216,28 @@ def _read_raw_data_file(
     return df
 
 
-def read_without_index(data_frame_type, date_range_str, file_path, n_rows, skip_rows):
+def read_without_index(
+    data_frame_type: str, date_range_str: str, file_path: str, n_rows: int | None, skip_rows: int | None
+) -> pd.DataFrame:
     return _read_raw_data_file(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
 
 
-def read_by_date(data_frame_type, date_range_str, file_path, n_rows, skip_rows):
+def read_by_date(
+    data_frame_type: str, date_range_str: str, file_path: str, n_rows: int | None, skip_rows: int | None
+) -> pd.DataFrame:
     df = _read_raw_data_file(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
     df["date"] = pd.to_datetime(df["date"])
     df.set_index("date", inplace=True)
     # Convert the 'date' index to UTC if it's timezone-unaware
-    if len(df) > 0 and df.index.tz is None:
-        df.index = df.index.tz_localize("UTC")
+    date_index = cast(pd.DatetimeIndex, df.index)
+    if len(df) > 0 and date_index.tz is None:
+        df.index = date_index.tz_localize("UTC")
 
     return df
 
 
 def read_with_timeframe(
-    data_frame_type: str, date_range_str: str, file_path: str, n_rows: int, skip_rows: int
+    data_frame_type: str, date_range_str: str, file_path: str, n_rows: int | None, skip_rows: int | None
 ) -> pd.DataFrame:
     """
     Read data from a compressed CSV file, adjusting the index based on the data frame type.
@@ -235,16 +273,17 @@ def read_with_timeframe(
 
 
 def read_file(
-    date_range_str: str,
+    date_range_str: str | None,
     data_frame_type: str,
-    generator: Callable,
+    generator: _Generator,
     caster_model: type[Pandera_DFM_Type],
-    skip_rows=None,
-    n_rows=None,
-    file_path: str = None,
+    skip_rows: int | None = None,
+    n_rows: int | None = None,
+    file_path: str | None = None,
     zero_size_allowed: None | bool = None,
-    generator_params: dict = None,
-):
+    generator_params: dict[str, object] | None = None,
+    nan_allowed_columns: frozenset[str] | None = None,
+) -> pd.DataFrame:
     """
     Read data from a file and return a DataFrame. If the file does not exist or the DataFrame does not
     match the expected columns, the generator function is used to build and persist the DataFrame.
@@ -259,6 +298,12 @@ def read_file(
     An in-process LRU memo sits in front of the disk read (see cache-or-generate skill) for
     datarange_is_not_cachable()==False ranges, keyed on (data_frame_type, date_range_str, file_path,
     skip_rows, n_rows) — the exact inputs that determine the file's content.
+
+    A freshly-generated df is never cached with an unexpected NaN in it: the columns allowed to
+    contain NaN are caster_model's own pandera nullable=True columns, unioned with
+    nan_allowed_columns (extra columns to allow beyond what the schema already declares nullable —
+    see cache_on_disk(nan_allowed_columns=...)). Any other column containing NaN raises rather than
+    silently caching it.
 
     Parameters:
         date_range_str (str): The date range string used to construct the filename.
@@ -320,8 +365,14 @@ def read_file(
                 "read_file() cannot generate on a cache miss when skip_rows/n_rows is set; "
                 "pre-populate the cache with a full read first."
             )
-        df = generator(date_range_str, **generator_params)
-        write_data_file(df, data_frame_type, date_range_str, file_path)
+        df = cast(pd.DataFrame, generator(date_range_str, **generator_params))
+        write_data_file(
+            df,
+            data_frame_type,
+            date_range_str,
+            file_path,
+            nan_allowed_columns=_schema_nullable_columns(caster_model) | frozenset(nan_allowed_columns or ()),
+        )
     if zero_size_allowed and len(df) == 0:
         raise Exception("Zero size data!")
     df = caster_model.validate(df)
@@ -331,17 +382,6 @@ def read_file(
     elif cache_key is not None:
         _read_file_cache_put(cache_key, df)
     return df
-
-
-_DATE_RANGE_STR_RE = r"\d{2}-\d{2}-\d{2}\.\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{2}-\d{2}"
-
-
-def _legacy_file_pattern(data_frame_type: str) -> "re.Pattern":
-    return re.compile(rf"^{re.escape(data_frame_type)}\.(?P<range>{_DATE_RANGE_STR_RE})\.(?P<ext>feather|zip)$")
-
-
-def _window_freq(data_frame_type: str) -> str:
-    return app_config.cache_window_freq_overrides.get(data_frame_type, app_config.default_cache_window_freq)
 
 
 def _window_date_range_strs(date_range_str: str, window_freq: str) -> list[str]:
@@ -373,7 +413,7 @@ def _find_covering_file(
     """
     pattern = _legacy_file_pattern(data_frame_type)
     try:
-        entries = os.listdir(file_path)
+        entries = os.listdir(_data_frame_type_dir(data_frame_type, file_path))
     except FileNotFoundError:
         return None
     best: tuple[str, str, datetime, datetime] | None = None
@@ -425,13 +465,14 @@ def _seed_window_from_legacy_file(data_frame_type: str, window_date_range_str: s
 
 
 def read_file_windowed(
-    date_range_str: str,
+    date_range_str: str | None,
     data_frame_type: str,
-    generator: Callable,
+    generator: _Generator,
     caster_model: type[Pandera_DFM_Type],
-    file_path: str = None,
+    file_path: str | None = None,
     zero_size_allowed: None | bool = None,
-    generator_params: dict = None,
+    generator_params: dict[str, object] | None = None,
+    nan_allowed_columns: frozenset[str] | None = None,
 ) -> pd.DataFrame:
     """
     Windowed counterpart to read_file() — see README.md § windowing for the full design. Decomposes
@@ -473,6 +514,7 @@ def read_file_windowed(
                 file_path=file_path,
                 zero_size_allowed=zero_size_allowed,
                 generator_params=generator_params,
+                nan_allowed_columns=nan_allowed_columns,
             )
         )
     df = pd.concat(window_dfs)
@@ -480,61 +522,7 @@ def read_file_windowed(
     return trim_to_date_range(date_range_str, df)
 
 
-def cleanup_redundant_cache_files(
-    data_frame_type: str, file_path: str = None, window_freq: str | None = None, dry_run: bool = False
-) -> list[tuple[str, int]]:
-    """
-    Delete every on-disk cache file for data_frame_type whose whole date-range span is already fully,
-    exactly reconstructable from OTHER cache files for the same data_frame_type at window_freq
-    granularity (defaults to this prefix's configured window). See README.md § cleanup. Typical
-    target: a pre-windowing file that duplicates the canonical window tiles now sitting underneath it
-    (e.g. a multi-year "full range" file where every day in it also has its own daily tile). A file is
-    never deleted on the strength of its own span alone — every constituent window period must be
-    backed by a DIFFERENT file, so a genuine window tile is never mistaken for redundant.
-
-    Returns the (path, size_in_bytes) pairs deleted (or, if dry_run, that would be deleted).
-    """
-    if file_path is None:
-        file_path = symbol_data_path()
-    if window_freq is None:
-        window_freq = _window_freq(data_frame_type)
-    pattern = _legacy_file_pattern(data_frame_type)
-    try:
-        entries = os.listdir(file_path)
-    except FileNotFoundError:
-        return []
-
-    files: list[tuple[str, datetime, datetime]] = []
-    exact_index: dict[tuple[datetime, datetime], list[str]] = {}
-    for entry in entries:
-        match = pattern.match(entry)
-        if not match:
-            continue
-        start, end = date_range(match.group("range"))
-        files.append((entry, start, end))
-        exact_index.setdefault((start, end), []).append(entry)
-
-    removed: list[tuple[str, int]] = []
-    for entry, start, end in files:
-        periods = pd.period_range(start=start, end=end, freq=window_freq)
-        fully_covered_by_others = True
-        for period in periods:
-            key = (period.start_time.tz_localize(pytz.UTC), period.end_time.floor("min").tz_localize(pytz.UTC))
-            other_files = [f for f in exact_index.get(key, []) if f != entry]
-            if not other_files:
-                fully_covered_by_others = False
-                break
-        if not fully_covered_by_others:
-            continue
-        full_path = os.path.join(file_path, entry)
-        size = os.path.getsize(full_path)
-        if not dry_run:
-            os.remove(full_path)
-        removed.append((full_path, size))
-    return removed
-
-
-def _resolve_caster_model(generator: Callable) -> type[Pandera_DFM_Type]:
+def _resolve_caster_model(generator: _Generator) -> type[Pandera_DFM_Type]:
     """Pull the pandera model read_file() should validate/write against straight from generator's own
     return-type annotation, so cache_on_disk() callers don't repeat it. Accepts either a bare model class
     (`-> OHLCV`) or a pandera DataFrame-typed annotation (`-> pt.DataFrame[OHLCV]`), unwrapping the latter
@@ -546,17 +534,18 @@ def _resolve_caster_model(generator: Callable) -> type[Pandera_DFM_Type]:
             f"(the pandera model to validate/write against) — none found."
         )
     type_args = get_args(return_hint)
-    return type_args[0] if type_args else return_hint
+    return cast("type[Pandera_DFM_Type]", type_args[0] if type_args else return_hint)
 
 
 def cache_on_disk(
     file_name_prefix: str,
     after_read: Callable[[pd.DataFrame], None] | None = None,
-    skip_rows=None,
-    n_rows=None,
+    skip_rows: int | None = None,
+    n_rows: int | None = None,
     zero_size_allowed: None | bool = None,
     windowed: bool = False,
-):
+    nan_allowed_columns: Iterable[str] | None = None,
+) -> Callable[[_Generator], _Wrapper]:
     """
     Decorate a `generator(date_range_str, file_path=None, **kwargs) -> DataFrame` function so calling it
     directly *is* the read-or-generate-and-cache entry point for this artifact type — this repo no longer
@@ -573,13 +562,22 @@ def cache_on_disk(
     `app_config.cache_window_freq_overrides[file_name_prefix]` (default `app_config.default_cache_window_freq`),
     and calls `generator` once per window via `read_file_windowed()` instead of once for the whole range.
     Not compatible with `skip_rows`/`n_rows` (same restriction `read_file()` already has on a cache miss).
+
+    `nan_allowed_columns` lists columns, beyond whatever caster_model's pandera schema already declares
+    `nullable=True`, that are allowed to contain NaN in a freshly-generated df before it's cached — any
+    other column with NaN raises (see write_data_file()). Most generators need this to stay unset; it's
+    an escape hatch for a column that's genuinely NaN-producing but not worth marking nullable in the
+    schema itself.
     """
 
-    def decorator(generator: Callable) -> Callable:
-        caster_model = _resolve_caster_model(generator)
+    def decorator(generator: _Generator) -> _Wrapper:
+        caster_model: type[pandera.DataFrameModel] = _resolve_caster_model(generator)
+        resolved_nan_allowed_columns = frozenset(nan_allowed_columns or ())
 
         @wraps(generator)
-        def wrapper(date_range_str: str = None, file_path: str = None, **generator_params):
+        def wrapper(
+            date_range_str: str | None = None, file_path: str | None = None, **generator_params: object
+        ) -> pd.DataFrame:
             if windowed:
                 if skip_rows or n_rows is not None:
                     raise Exception("cache_on_disk(windowed=True) does not support skip_rows/n_rows.")
@@ -591,6 +589,7 @@ def cache_on_disk(
                     file_path=file_path,
                     zero_size_allowed=zero_size_allowed,
                     generator_params=generator_params,
+                    nan_allowed_columns=resolved_nan_allowed_columns,
                 )
             else:
                 result = read_file(
@@ -603,6 +602,7 @@ def cache_on_disk(
                     file_path=file_path,
                     zero_size_allowed=zero_size_allowed,
                     generator_params=generator_params,
+                    nan_allowed_columns=resolved_nan_allowed_columns,
                 )
             if after_read is not None:
                 after_read(result)

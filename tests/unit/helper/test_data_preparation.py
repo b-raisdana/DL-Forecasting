@@ -133,6 +133,7 @@ def test_cache_miss_uses_generators_return_value_without_a_disk_reread(
         "ohlcv",
         "24-01-01.00-00T24-01-02.00-00",
         "dummy",
+        nan_allowed_columns=frozenset(),
     )
     # only the failed first attempt — no second read_with_timeframe() call after the generator runs
     assert read_mock.call_count == 1

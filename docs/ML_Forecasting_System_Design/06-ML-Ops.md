@@ -49,7 +49,10 @@ The KPI table's warning/critical columns are Utilization thresholds. The USE Met
 
 ### disk I/O — WSL2 caveat
 
-The repo lives under `/mnt/c/Code/DL-Forecasting` — the Windows filesystem accessed through WSL2's 9p/virtiofs translation layer, meaningfully slower than native ext4 for small/random reads. Rule that out ("is this the translation tax, not real disk hardware") before concluding disk itself is the bottleneck.
+As of 2026-08-18 the repo lives under `/home/brais/code/DL-Forecasting`, native WSL ext4 — not the
+`drvfs`-mounted Windows filesystem (WSL2's 9p/virtiofs translation layer), which was meaningfully
+slower for small/random reads. That translation tax no longer applies here; if disk I/O still looks
+like a bottleneck, it's the real hardware, not the WSL2 mount layer.
 
 ### collection tooling
 

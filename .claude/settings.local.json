@@ -7,7 +7,12 @@
       "Bash(wsl.exe -d Ubuntu-24.04 -- bash -lc 'df -h /home; du -sh /mnt/c/Code/DL-Forecasting/data 2>/dev/null')",
       "Bash(wsl.exe -d Ubuntu-24.04 -- bash -lc 'time cp -a /mnt/c/Code/DL-Forecasting/data /home/brais/dlf-data')",
       "Bash(wsl.exe -d *)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(wsl.exe -d Ubuntu-24.04 -- bash -lc 'source ~/miniconda3/etc/profile.d/conda.sh && conda activate tf && cd /mnt/c/Code/DL-Forecasting && pytest -m unit tests/unit/infrastructure/test_disk_cache.py tests/unit/application/market_data/test_fetch_market_data.py tests/unit/presentation/market_data/test_fetch_ohlcv_cli.py -v 2>&1 | tail -100')",
+      "Bash(pytest -m unit tests/unit/infrastructure/test_disk_cache.py tests/unit/application/market_data/test_fetch_market_data.py tests/unit/presentation/market_data/test_fetch_ohlcv_cli.py -v)",
+      "Bash(pytest -m unit)",
+      "Bash(git add *)",
+      "Bash(mypy app/infrastructure/disk_cache.py app/application/market_data/fetch_market_data.py app/presentation/market_data/fetch_ohlcv_cli.py app/domain/ohlcv/ohlcv.py --show-error-codes)"
     ]
   }
 }

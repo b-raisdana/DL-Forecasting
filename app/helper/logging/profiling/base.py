@@ -1,6 +1,7 @@
 import inspect
 import sys
 import time
+from collections.abc import Callable
 from functools import wraps
 
 import numpy as np
@@ -11,9 +12,9 @@ from ..do_log.log_it import log_d
 from .serialization import serialize_it
 
 
-def profile_it(func):
+def profile_it[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     @wraps(func)
-    def _measure_time(*args, **kwargs):
+    def _measure_time(*args: P.args, **kwargs: P.kwargs) -> R:
         start_time = time.time()
         function_parameters = parameters_to_str(args, kwargs)
         log_d(f"{func.__name__}({function_parameters}) started", stack_offset=1)

@@ -21,6 +21,7 @@
     - [CCXT](#ccxt)
     - [plotly](#plotly)
     - [Docker](#docker)
+    - [ClickHouse](#clickhouse)
     - [vectorbt — not yet integrated](#vectorbt--not-yet-integrated)
 
 ## general guide
@@ -45,22 +46,20 @@ pandas/numpy-adjacent libraries evaluated for this repo, are enforced day to day
 - Rejected: a dedicated Windows venv running mypy/ruff/xenon directly. Doubles the environments to
   maintain, can't install the real deps (see above), so mypy would ignore-missing-import everything into
   implicit `Any` - defeats the point of the strict/no-`Any` gate below.
-- **Filesystem location — code**: the clone lives on the Windows-mounted drive (`C:\Code\DL-Forecasting`
-  = WSL `/mnt/c/Code/DL-Forecasting`, via `drvfs`), not a native WSL ext4 volume (e.g. under `~/`).
-  Deliberate: it's the one location both Windows (`git.exe`, VS Code) and WSL (`tf` conda env) can
-  read/write as the same clone, with no separate checkout or sync step. Rejected fix: moving the whole
-  clone to a native WSL path — Windows-side git/VS Code would then need `\\wsl$\...` (or a second
-  checkout kept in sync), reintroducing the dual-environment problem this layout avoids.
-- **Filesystem location — data cache**: unlike the clone, the training-data cache under `data/` is
-  gitignored, so Windows-side tooling never touches it — only the WSL `tf` env reads/writes it (dataset
-  generation, training; `pytest`'s fast markers don't touch real `data/`, see the `pytest` skill's
-  fixture/data policy). `drvfs` I/O is substantially slower than a native Linux
-  filesystem, and this cache is the worst case for it: ~19.5k small per-day zip files under
-  `data/Kucoin/Spot/*` (~8GB), each open crossing the WSL2 9p protocol. Since nothing requires dual-OS
-  access here, `Config.path_of_data` is overridable via the `DLF_DATA_ROOT` env var (defaults to
-  `<repo_root>/data` if unset); the `tf` conda env's `activate.d`/`deactivate.d` hooks set it to
-  `/home/brais/dlf-data`, a native ext4 path, so WSL-side runs skip the `drvfs` tax entirely while
-  Windows keeps the unchanged default.
+- **Filesystem location — code and data**: as of 2026-08-18, the whole clone (code and the `data/`
+  cache alike) lives on a native WSL ext4 volume, `/home/brais/code/DL-Forecasting` — not the
+  Windows-mounted `drvfs` drive. `Config.path_of_data` needs no override (`DLF_DATA_ROOT` still exists
+  as a generic escape hatch, just unused here); it resolves to `<repo_root>/data` by default, which is
+  now correct since `<repo_root>` itself is already native ext4. This replaced an earlier drvfs-based
+  layout (`C:\Code\DL-Forecasting` = WSL `/mnt/c/Code/DL-Forecasting`) that put code on `drvfs` for
+  dual Windows/WSL access, with the `data/` cache carved out separately to a native path
+  (`/home/brais/dlf-data`) because `drvfs` was the worst case for its ~19.5k small per-day cache files
+  (each open crossing the WSL2 9p protocol). That split no longer exists — `/mnt/c/Code/DL-Forecasting`
+  isn't a live clone (checked: only a stale `.zip` backup remains on `C:\Code`), and `dlf-data` was
+  merged back into `data/` and removed. Windows-side access (VS Code, Explorer) now goes through the
+  `\\wsl.localhost\Ubuntu-24.04\home\brais\code\DL-Forecasting` UNC path instead of a drive-letter
+  mount — the "second checkout to keep in sync" concern that previously ruled this out doesn't apply,
+  since it's the same native filesystem, not a separate copy.
 - **Clickable repo-path references in comments/docstrings**: VS Code's built-in path-link detection stops at the first whitespace, so a referenced filename containing a literal space (e.g. some `(handmade)` designset files) never lights up as clickable no matter how the surrounding text is formatted. The `DanLevett.pattern-links` ("Link Patterns") extension fixes this via two custom regex rules, but its `linkTarget` is passed straight to `vscode.Uri.parse()` with no `${workspaceFolder}` substitution or relative-to-document resolution — the target must be a hardcoded absolute `file://` path. That's machine-specific, so it's configured per-machine in the WSL remote's `~/.vscode-server/data/Machine/settings.json` (untracked, not `.vscode/settings.json`), not committed to the repo:
   - repo-root-relative paths (no leading `/`) starting with `app/`, `docs/`, or `scripts/` get the repo root prepended;
   - already-absolute paths (leading `/`, not preceded by a word character — avoids double-matching a relative path's inner segments) are used as-is;
@@ -200,6 +199,21 @@ visualization.
 ### Docker
 
 containerized runtime (`Dockerfile`, `docker-compose.yml`).
+
+### ClickHouse
+
+Target store for migrating `infrastructure.disk_cache`'s on-disk (feather/ZSTD) artifact cache off flat files — columnar range queries replace the hand-rolled calendar-windowing/legacy-file-migration/gap-finding machinery that exists only because flat files can't range-query natively.
+
+- **Runtime**: `docker-compose.yml` `clickhouse` service (`clickhouse/clickhouse-server:24.8`), HTTP `:8123` + native TCP `:9000`, data/logs bind-mounted to `docker_volume/clickhouse/` (native ext4, already gitignored — same rationale as [environments](#environments)'s filesystem-location note: avoids the WSL2 9p/drvfs penalty).
+- **WSL access**: `localhost:8123` works from both WSL and Windows — WSL2's `localhostForwarding` (on by default) makes this transparent regardless of which Docker runtime backs it, no IP/hostname juggling needed.
+- **Python client**: `clickhouse-connect` (`requirements.txt`) — official HTTP client; `query_df`/`insert_df` read/write pandas DataFrames directly, a better fit for this repo's pandas-centric pipeline than the older TCP-only `clickhouse-driver`.
+- **Config**: `Config.clickhouse_host/_port/_user/_password/_database` (all `DLF_CLICKHOUSE_*`-overridable), defaults matching `docker-compose.yml`'s own `CLICKHOUSE_USER=dlf`/`CLICKHOUSE_PASSWORD=dlf`/`CLICKHOUSE_DB=dl_forecasting`. `infrastructure/clickhouse_client.py` (`get_clickhouse_client()`, `clickhouse_is_reachable()`) is the connection factory — first building block only, see below.
+- **Docker runtime blocker (as of 2026-08-18)**: this WSL distro has no `docker`/`dockerd` — Docker Desktop is installed on Windows but WSL integration isn't enabled for `Ubuntu-24.04`, and a native install needs `sudo` (password-protected, unavailable to the agent that set this up). Either unblocks it:
+  - Docker Desktop → Settings → Resources → WSL Integration → enable `Ubuntu-24.04` → Apply & Restart. Fastest — no packages to install, backend already present.
+  - Native engine inside WSL: `curl -fsSL https://get.docker.com | sudo sh && sudo usermod -aG docker $USER` (relogin or `newgrp docker` after) — skips Docker Desktop's translation layer entirely; needs the `sudo` password once.
+
+  Either way: `docker compose up -d clickhouse` from the repo root once a runtime is live.
+- **Migration scope — deferred, needs review before implementing**: `infrastructure.disk_cache`'s generic `(data_frame_type, date_range_str)` engine backs ~20+ callers (`domain/price_action/*`, `domain/schemas/common/ExtendedDf.py`, `infrastructure/ohlcv/*`, ...), each with its own pandera-typed column set. A full swap means a schema-per-`data_frame_type` ClickHouse table (`MergeTree`, partitioned/ordered by date) driven off each caster model — replacing, not just relocating, the calendar-windowing, legacy-CSV-migration, gap-finding, and cleanup logic in `disk_cache.py`/`disk_cache_layout.py`/`disk_cache_gaps.py`, since ClickHouse does arbitrary-range queries natively and most of that hand-rolled machinery becomes unnecessary rather than portable. Large blast radius across every artifact type — do it as a reviewed, incremental cutover (one `data_frame_type` at a time, same precedent as the `project-decisions` skill's feather/ZSTD migration-on-touch rule), not a single unreviewed pass.
 
 ### vectorbt — not yet integrated
 

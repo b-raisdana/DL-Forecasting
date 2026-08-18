@@ -1,5 +1,6 @@
 import random
 from datetime import datetime
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -7,13 +8,15 @@ from application.dataset_generation.training_datasets import train_data_of_mt_n_
 from application.model_implementations.shared.base import master_x_shape, overlapped_quarters
 from config import app_config
 from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
+from domain.schemas.common.MultiTimeframe import MultiTimeframe
 from helper.functions import date_range_to_string
 from helper.logging.do_log import log_d, log_i
+from pandera import typing as pt
 from scipy.spatial.distance import cosine, jensenshannon
 from scipy.stats import ks_2samp, wasserstein_distance
 
 
-def compare_columns_similarity(X_df: pd.DataFrame):
+def compare_columns_similarity(X_df: pd.DataFrame) -> pd.DataFrame:
     results = []
     features = [col for col in X_df.columns if col not in ["symbol", "timeframe"]]
     symbols = X_df["symbol"].unique()
@@ -56,7 +59,9 @@ def compare_columns_similarity(X_df: pd.DataFrame):
 
                 # Compute absolute diff of stats
                 stat_diff = {
-                    stat: abs(stat_df.loc[(feat, stat, sym1)] - stat_df.loc[(feat, stat, sym2)])
+                    # pandas-stubs' typed .loc doesn't accept a mixed (str, str, <numpy unique() element>)
+                    # MultiIndex tuple key precisely — this indexing is fine at runtime.
+                    stat: abs(stat_df.loc[(feat, stat, sym1)] - stat_df.loc[(feat, stat, sym2)])  # type: ignore[index]
                     for stat in ["mean", "std", "min", "25%", "50%", "75%", "max"]
                 }
 
@@ -79,7 +84,7 @@ def compare_columns_similarity(X_df: pd.DataFrame):
     return df_results
 
 
-def summarize_feature_similarity(comparison: pd.DataFrame):
+def summarize_feature_similarity(comparison: pd.DataFrame) -> None:
     with pd.option_context(
         "display.max_rows",
         None,
@@ -115,7 +120,7 @@ def summarize_feature_similarity(comparison: pd.DataFrame):
         print(comparison.sort_values(by="cosine_similarity").head(20))
 
 
-def summarize_symbol_similarity(df_results: pd.DataFrame, top_n=5):
+def summarize_symbol_similarity(df_results: pd.DataFrame, top_n: int = 5) -> None:
     grouped = (
         df_results.groupby(["symbol_1", "symbol_2"])[
             ["js_divergence", "cosine_similarity", "wasserstein_distance", "ks_statistic"]
@@ -144,12 +149,12 @@ def pairs_stat_compare(
     start: datetime,
     end: datetime,
     batch_size: int = 100,
-    number_of_batches=100,
+    number_of_batches: int = 100,
     forecast_trigger_bars: int = 3 * 4 * 4 * 4 * 1,
     verbose: bool = True,
-):
-    X_df = None
-    y_df = None
+) -> None:
+    X_df: pd.DataFrame | None = None
+    y_df: pd.DataFrame | None = None
     pd.set_option("display.precision", 3)
 
     quarters = overlapped_quarters(date_range_to_string(start=start, end=end))
@@ -160,13 +165,15 @@ def pairs_stat_compare(
         if verbose:
             log_d(f"quarter {q_start} → {q_end}")
         app_config.processing_date_range = date_range_to_string(start=q_start, end=q_end)
-        symbol_list = ["BNBUSDT", "BTCUSDT", "EOSUSDT", "ETHUSDT", "SOLUSDT", "TRXUSDT"]
+        symbol_list = list(app_config.SYMBOLS)
         # random.shuffle(symbol_list)
         for symbol in symbol_list:
             if verbose:
                 log_d(f"Symbol {symbol}")
             app_config.under_process_symbol = symbol
-            mt_ohlcv = read_multi_timeframe_ohlcv(app_config.processing_date_range)
+            mt_ohlcv = cast(
+                "pt.DataFrame[MultiTimeframe]", read_multi_timeframe_ohlcv(app_config.processing_date_range)
+            )
             for _ in range(number_of_batches):
                 _, _, x_dfs, y_dfs, *_ = train_data_of_mt_n_profit(
                     structure_tf="4h",
@@ -179,18 +186,19 @@ def pairs_stat_compare(
                 )
                 for k in x_dfs:
                     x_dfs[k]["timeframe"] = k
-                x_dfs = pd.concat(x_dfs)
-                x_dfs["symbol"] = symbol
-                y_dfs = pd.concat(y_dfs)
-                y_dfs["symbol"] = symbol
+                x_batch = pd.concat(x_dfs)
+                x_batch["symbol"] = symbol
+                y_batch = pd.concat(y_dfs)
+                y_batch["symbol"] = symbol
                 if X_df is None:
-                    X_df = x_dfs
-                    y_df = y_dfs
+                    X_df = x_batch
+                    y_df = y_batch
                 else:
-                    X_df = pd.concat([X_df, x_dfs])
-                    y_df = pd.concat([y_df, y_dfs])
+                    X_df = pd.concat([X_df, x_batch])
+                    y_df = pd.concat([y_df, y_batch])
                 if verbose:
                     log_d(f"put {symbol} batch for {app_config.processing_date_range} (size={len(y_df)})")
+    assert X_df is not None and y_df is not None, "no quarters/symbols produced any batches"
     with pd.option_context(
         "display.max_rows",
         None,
