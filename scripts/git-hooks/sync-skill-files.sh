@@ -1,7 +1,7 @@
 #!/bin/sh
 # Keep mirrored skill files identical to their canonical source.
 #
-# .claude/skills, .codex/skills, .devin/skills, .qoder/skills, and .copilot/skills are bidirectional mirrors:
+# .claude/skills, .codex/skills, .devin/skills, .qoder/skills, .copilot/skills, and .kiro/skills are bidirectional mirrors:
 # edit either side, and this hook copies the newest version to the other side.
 # .github/git-commit is the Copilot / VS Code commit-message mirror (see .vscode/settings.json).
 #
@@ -93,7 +93,7 @@ sync_multiple_agents() {
 # Collect all unique skill names across all agents
 seen_skills=""
 
-for skill_parent in "$repo_root"/.claude/skills "$repo_root"/.codex/skills "$repo_root"/.devin/skills "$repo_root"/.qoder/skills "$repo_root"/.copilot/skills; do
+for skill_parent in "$repo_root"/.claude/skills "$repo_root"/.codex/skills "$repo_root"/.devin/skills "$repo_root"/.qoder/skills "$repo_root"/.copilot/skills "$repo_root"/.kiro/skills; do
     [ -d "$skill_parent" ] || continue
     for skill_file in "$skill_parent"/*/SKILL.md; do
         [ -f "$skill_file" ] || continue
@@ -113,7 +113,8 @@ for skill_dir in $seen_skills; do
         ".codex/skills/$skill_dir/SKILL.md" \
         ".devin/skills/$skill_dir/SKILL.md" \
         ".qoder/skills/$skill_dir/SKILL.md" \
-        ".copilot/skills/$skill_dir/SKILL.md"
+        ".copilot/skills/$skill_dir/SKILL.md" \
+        ".kiro/skills/$skill_dir/SKILL.md"
 done
 
 # Special case: git-commit skill also syncs to .github/git-commit/SKILL.md
@@ -123,6 +124,7 @@ sync_multiple_agents "git-commit" \
     ".devin/skills/git-commit/SKILL.md" \
     ".qoder/skills/git-commit/SKILL.md" \
     ".copilot/skills/git-commit/SKILL.md" \
+    ".kiro/skills/git-commit/SKILL.md" \
     ".github/git-commit/SKILL.md"
 
 exit "$changed"

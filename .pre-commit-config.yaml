@@ -52,8 +52,8 @@ repos:
         files: ^(app/.*\.py|pytest\.ini)$
 
       - id: sync-skill-files
-        name: sync mirrored skill files (claude/codex/devin/qoder/copilot bidirectional mirrors)
+        name: sync mirrored skill files (claude/codex/devin/qoder/copilot/kiro bidirectional mirrors)
         language: system
         entry: sh scripts/git-hooks/sync-skill-files.sh
         pass_filenames: false
-        files: ^(\.claude/skills/[^/]+/SKILL\.md|\.codex/skills/[^/]+/SKILL\.md|\.devin/skills/[^/]+/SKILL\.md|\.qoder/skills/[^/]+/SKILL\.md|\.copilot/skills/[^/]+/SKILL\.md|\.github/git-commit/SKILL\.md)$
+        files: ^(\.claude/skills/[^/]+/SKILL\.md|\.codex/skills/[^/]+/SKILL\.md|\.devin/skills/[^/]+/SKILL\.md|\.qoder/skills/[^/]+/SKILL\.md|\.copilot/skills/[^/]+/SKILL\.md|\.kiro/skills/[^/]+/SKILL\.md|\.github/git-commit/SKILL\.md)$
