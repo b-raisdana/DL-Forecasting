@@ -7,9 +7,15 @@ from domain.schemas.common.OHLCV import OHLCV, MultiTimeframeOHLCV
 from helper.data_preparation import after_under_process_date, single_timeframe, times_tester
 from helper.logging import profile_it
 from helper.schema_casting import cast_and_validate
-from infrastructure.disk_cache import cache_on_disk
+from infrastructure.datastore_engine.disk_cache import CachableDataset, cache_on_disk
 from infrastructure.market_data_fetch.ccxt_client import fetch_ohlcv_by_range
 from pandera import typing as pt
+
+# Reused by application.market_data.fetch_market_data/presentation.market_data.fetch_ohlcv_cli
+# (find_cache_gaps()/find_overlapping_cache_files()/cleanup_redundant_cache_files()) instead of
+# repeating the "ohlcv"/"multi_timeframe_ohlcv" data_frame_type strings.
+OHLCV_DATASET = CachableDataset(dataset_folder_name="ohlcv")
+MULTI_TIMEFRAME_OHLCV_DATASET = CachableDataset(dataset_folder_name="multi_timeframe_ohlcv")
 
 
 def cache_times(result: pd.DataFrame) -> None:
@@ -21,7 +27,7 @@ def cache_times(result: pd.DataFrame) -> None:
 
 
 @profile_it
-@cache_on_disk(file_name_prefix="ohlcv", windowed=True)
+@cache_on_disk(OHLCV_DATASET, windowed=True)
 def get_base_timeframe_ohlcv(
     date_range_str: str | None = None, base_timeframe: str | None = None
 ) -> pt.DataFrame[OHLCV]:
@@ -40,7 +46,7 @@ def get_base_timeframe_ohlcv(
 
 
 @profile_it
-@cache_on_disk(file_name_prefix="multi_timeframe_ohlcv", after_read=cache_times, windowed=True)
+@cache_on_disk(MULTI_TIMEFRAME_OHLCV_DATASET, after_read=cache_times, windowed=True)
 def get_multi_timeframe_ohlcv(date_range_str: str | None = None) -> MultiTimeframeOHLCV:
     """One window's worth of multi-timeframe OHLCV, aggregated from get_base_timeframe_ohlcv() — see
     get_base_timeframe_ohlcv()'s docstring for how windowing decomposes an arbitrary date_range_str."""

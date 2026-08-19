@@ -2,15 +2,27 @@ import colorsys
 import os
 import webbrowser
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 from config import app_config
 from helper.data_preparation import date_range_of_data
 from helper.logging import profile_it
-from infrastructure.disk_cache import symbol_data_path
+from infrastructure.datastore_engine.disk_cache import symbol_data_path
 from plotly import graph_objects as plgo
 
 DEBUG = False
+
+
+def _per_symbol_plot_dir() -> str:
+    """app_config.path_of_plots/<symbol>/ — symbol_data_path() is exchange/market/symbol-shaped, but
+    plots are namespaced by symbol alone (see data/README.md). Previously
+    os.path.join(symbol_data_path(), app_config.path_of_plots) here, which silently discarded the
+    symbol segment (os.path.join drops everything before an absolute later argument), collapsing
+    every symbol's plots into one flat directory."""
+    plot_dir = Path(app_config.path_of_plots) / Path(symbol_data_path()).name
+    plot_dir.mkdir(parents=True, exist_ok=True)
+    return str(plot_dir)
 
 
 @profile_it
@@ -18,7 +30,7 @@ def plot_multiple_figures(
     figures: list[plgo.Figure], name: str, save: bool = True, show: bool = True, path_of_plot: str = None
 ):
     if path_of_plot is None:
-        path_of_plot = os.path.join(symbol_data_path(), app_config.path_of_plots)
+        path_of_plot = _per_symbol_plot_dir()
     figures_html = []
     for _i, figure in enumerate(figures):
         figures_html.append(figure.to_html())
@@ -65,7 +77,7 @@ def save_figure(fig: plgo.Figure, file_name: str, file_path: str = "") -> None:
         This function uses the Plotly 'write_html' method to save the figure as an HTML file.
     """
     if file_path == "":
-        file_path = os.path.join(symbol_data_path(), app_config.path_of_plots)
+        file_path = _per_symbol_plot_dir()
     if not os.path.exists(file_path):
         os.mkdir(file_path)
 
@@ -103,7 +115,7 @@ def show_and_save_plot(
     fig: plgo.Figure, save: bool = True, show: bool = True, name_without_prefix: str = None, path_of_plot: str = None
 ):
     if path_of_plot is None:
-        path_of_plot = os.path.join(symbol_data_path(), app_config.path_of_plots)
+        path_of_plot = _per_symbol_plot_dir()
     if name_without_prefix is None:
         name_without_prefix = f"{int(datetime.now().timestamp() * 1000)}"
     file_path = os.path.join(path_of_plot, f"{name_without_prefix}.html")

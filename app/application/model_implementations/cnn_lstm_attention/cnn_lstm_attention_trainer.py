@@ -59,7 +59,7 @@ def train_cnn_lstm_attention_model(
         f".cnn_f{cnn_filters}c{cnn_count}k{cnn_kernel_growing_steps}."
         f"lstm_u{'-'.join([str(i) for i in lstm_units_list])}.dense_u{dense_units}.drop_r{dropout_rate}"
     )
-    model_path_keras = os.path.join(app_config.path_of_data, f"{model_name}.keras")
+    model_path_keras = os.path.join(app_config.path_of_models, f"{model_name}.keras")
     # Check if the model already exists, load if it does
     if model is None:
         if not rebuild_model and os.path.exists(model_path_keras):
@@ -101,7 +101,7 @@ def train_cnn_lstm_attention_model(
         verbose=1,
         save_weights_only=False,
     )
-    tensorboard = setup_tensorboard()
+    setup_tensorboard()
     model.fit(train_dataset.take(1), steps_per_epoch=1, epochs=1, verbose=0)
     # if dataset_mode:
     try:
@@ -208,7 +208,7 @@ def run_cnn_lstm_attention_trainer(round_counter: int):
     #     train_dataset = dataset_generator(mode='train', batch_size=batch_size)
     #     val_dataset = dataset_generator(mode='val', batch_size=batch_size)
     print(f"Round:{round_counter}")
-    for i in range(100):
+    for _i in range(100):
         model = train_cnn_lstm_attention_model(
             train_dataset,
             train_dataset,
@@ -258,6 +258,8 @@ if __name__ == "__main__":
     except Exception as e:
         raise e
 # todo: check input_y data:
-# /home/brais/miniconda3/envs/tf/lib/python3.12/site-packages/keras/src/ops/nn.py:908: UserWarning: You are using a softmax over axis -1 of a tensor of shape (80, 4, 1, 1). This axis has size 1. The softmax operation will always return the value 1, which is likely not what you intended. Did you mean to use a sigmoid instead?
+# keras/src/ops/nn.py:908: UserWarning: You are using a softmax over axis -1 of a tensor of shape
+# (80, 4, 1, 1). This axis has size 1. The softmax operation will always return the value 1, which
+# is likely not what you intended. Did you mean to use a sigmoid instead?
 #  + 1. Use tf.data.experimental.copy_to_device("/GPU:0")
 # To move data to GPU as early as possible in the pipeline:

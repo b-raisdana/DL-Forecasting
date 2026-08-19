@@ -2,8 +2,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from helper.functions import date_range_to_string
-from infrastructure import disk_cache
-from infrastructure.disk_cache_gaps import find_cache_gaps, find_overlapping_cache_files
+from infrastructure.datastore_engine import disk_cache, disk_cache_windowed
+from infrastructure.datastore_engine.disk_cache_gaps import find_cache_gaps, find_overlapping_cache_files
 
 
 def _touch(file_path: str, data_frame_type: str, date_range_str: str) -> None:
@@ -17,7 +17,7 @@ def test_find_cache_gaps_merges_contiguous_missing_daily_windows(tmp_path):
     full_range = date_range_to_string(
         start=datetime(2023, 8, 1, tzinfo=UTC), end=datetime(2023, 8, 9, 23, 59, tzinfo=UTC)
     )
-    windows = disk_cache._window_date_range_strs(full_range, "D")
+    windows = disk_cache_windowed._window_date_range_strs(full_range, "D")
     assert len(windows) == 9  # Aug 1..9
 
     # Aug 1, 5, 6, 7, 9 exist (indices 0, 4, 5, 6, 8) -> Aug 2-4 and Aug 8 are gaps.
@@ -39,7 +39,7 @@ def test_find_cache_gaps_excludes_the_still_open_today_window(tmp_path):
     now = datetime.now(UTC)
     two_days_ago_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=2)
     full_range = date_range_to_string(start=two_days_ago_midnight, end=now)
-    windows = disk_cache._window_date_range_strs(full_range, "D")
+    windows = disk_cache_windowed._window_date_range_strs(full_range, "D")
     assert len(windows) == 3  # two closed days + today (still open)
 
     # Nothing on disk at all -> every closed window is a gap, but today's open window must never
@@ -82,7 +82,7 @@ def test_find_cache_gaps_returns_empty_when_nothing_is_missing(tmp_path):
     full_range = date_range_to_string(
         start=datetime(2023, 8, 1, tzinfo=UTC), end=datetime(2023, 8, 2, 23, 59, tzinfo=UTC)
     )
-    for window in disk_cache._window_date_range_strs(full_range, "D"):
+    for window in disk_cache_windowed._window_date_range_strs(full_range, "D"):
         _touch(file_path, "ohlcv", window)
 
     assert find_cache_gaps("ohlcv", full_range, file_path=file_path, window_freq="D") == []

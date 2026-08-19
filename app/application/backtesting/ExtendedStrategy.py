@@ -18,7 +18,7 @@ from domain.order.SignalDf import SignalDf, SignalDFM
 from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
 from helper.data_preparation import concat, dict_of_list
 from helper.logging import log_d, log_w, profile_it
-from infrastructure.disk_cache import symbol_data_path
+from infrastructure.datastore_engine.disk_cache import symbol_data_path
 from pandera import typing as pt
 
 

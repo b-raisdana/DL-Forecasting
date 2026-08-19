@@ -47,7 +47,7 @@ def ceil_start_of_slide(t_date: datetime, slide: timedelta) -> datetime:
 def dataset_folder(x_shape: dict[str, tuple[int, int]], batch_size: int, create: bool = False) -> str:
     serialized = json.dumps({"x_shape": x_shape, "batch_size": batch_size})
     folder_name = sanitize_filename(serialized)
-    folder_path = os.path.join(app_config.path_of_data, folder_name)
+    folder_path = os.path.join(app_config.path_of_scratch, folder_name)
     if create and not os.path.exists(folder_path):
         os.makedirs(folder_path)
     return folder_name

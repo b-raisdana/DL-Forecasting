@@ -1,6 +1,6 @@
 ---
 name: project-decisions
-description: Use for any of — adding a "fetch/compute and persist" function (cache-or-generate); placing a new module/file under app/ (code-layers); adding network I/O or CPU-heavy fan-out (concurrency-and-blocking); before hand-rolling a new algorithm/transform (lib-first); building a filesystem path, CLI entrypoint, or settings/validation model (paths-cli-config); deciding what test type a change needs (test-strategy); writing/reviewing pandas/numpy code (vectorized-pandas-numpy); or touching a file that reads/writes the OHLCV/indicator/label disk cache (feather/ZSTD migration-on-touch). One skill, several independent sections — read only the one(s) that match.
+description: Use for any of — adding a "fetch/compute and persist" function (cache-or-generate); placing a new module/file under app/ (code-layers); adding network I/O or CPU-heavy fan-out (concurrency-and-blocking); before hand-rolling a new algorithm/transform (lib-first); building a filesystem path, CLI entrypoint, or settings/validation model (paths-cli-config); deciding what test type a change needs (test-strategy); writing/reviewing pandas/numpy code (vectorized-pandas-numpy); touching a file that reads/writes the OHLCV/indicator/label disk cache (feather/ZSTD migration-on-touch); or a function about to duplicate another's shape with only a small explicit difference (merge-duplicated-logic-dry). One skill, several independent sections — read only the one(s) that match.
 ---
 
 # Project decisions
@@ -13,6 +13,8 @@ description: Use for any of — adding a "fetch/compute and persist" function (c
 - [Test strategy](#test-strategy)
 - [Vectorized pandas/numpy](#vectorized-pandasnumpy)
 - [Feather/ZSTD migration on touch](#featherzstd-migration-on-touch)
+- [Merge duplicated logic (DRY)](#merge-duplicated-logic-dry)
+- [No no-op calls](#no-no-op-calls)
 
 ## Cache or generate
 
@@ -150,3 +152,19 @@ Feather/ZSTD (`write_data_file()`/`read_file()`-native) is the primary on-disk f
 Rule: if a file you're already modifying for another reason still writes via `to_csv(os.path.join(file_path, f'{name}.{date_range_str}.zip'), compression='zip')`, replace that call with `write_data_file(df, '<name>', date_range_str, file_path)` (import from `helper.data_preparation`) as part of the same edit. If the file isn't otherwise being touched, leave it as-is — the read-side (`_read_raw_data_file()` in `helper/data_preparation.py`) already auto-converts any lingering CSV-zip to feather/ZSTD and deletes the zip the first time it's read, so untouched files self-heal on next read regardless.
 
 Don't: proactively grep the whole repo for remaining `.zip` writers and convert them all in one pass — that's the "change whole project at once" this rule exists to avoid.
+
+## Merge duplicated logic (DRY)
+
+Trigger: about to add a function/method whose body is the same shape (same try/except/log/cleanup structure) as an existing one, differing only in a small, explicit piece — a value, a flag, an injected callable.
+
+Rule: merge into one function taking that difference as an explicit parameter rather than keeping near-duplicate bodies side by side. Prefer fewer lines whenever it doesn't cost clarity: merging isn't just a style nicety here, it's the default call when two code paths are genuinely the same logic. Keep the parameter's effect visible at the call site (e.g. `flatten=True`/`flatten=False`) instead of hiding it behind a branch that always runs and happens to no-op for one caller — see [No no-op calls](#no-no-op-calls); DRY-merging a pair of functions must not reintroduce a no-op call one of them had deliberately dropped.
+
+Fixed instance: `_migrate_feather_to_parquet()`/`_migrate_csv_zip_to_parquet()` in `infrastructure/datastore_engine/convert_to_parquest.py` (re-exported through `disk_cache.py`) were identical except for one `flatten_index_to_columns()` call — merged into `_migrate_to_parquet(df, parquet_file_path, source_file_path, *, flatten)`, so the write/log/unlink logic isn't duplicated, while the CSV-zip caller still passes `flatten=False` to skip that call outright.
+
+## No no-op calls
+
+Trigger: about to add a call/guard/branch justified as "for consistency", "for defense-in-depth", or "just in case", that provably does nothing on every actual path it runs on.
+
+Rule: don't. Either the scenario is genuinely reachable — call the real guard and say which case it's for — or it isn't, and the call/branch gets deleted outright rather than kept as inert scaffolding. Same principle as CLAUDE.md's "don't add error handling/validation for scenarios that can't happen," applied to no-op calls specifically: a call whose own docstring admits it's "normally a no-op" on that path is a signal to remove it, not to keep it defensively.
+
+Fixed instance: `_migrate_to_parquet()` in `infrastructure/datastore_engine/convert_to_parquest.py` (then still split into `_migrate_feather_to_parquet()`/`_migrate_csv_zip_to_parquet()`, later merged — see [Merge duplicated logic](#merge-duplicated-logic-dry)) called `flatten_index_to_columns(df)` unconditionally on a frame from `pd.read_csv()`, which never sets a custom index — the call could never do anything on that path, so its caller now passes `flatten=False` to skip it outright rather than relying on the callee's own no-op branch.

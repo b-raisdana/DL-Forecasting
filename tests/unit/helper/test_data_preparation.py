@@ -13,7 +13,7 @@ from unittest.mock import Mock
 import pandas as pd
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
-from infrastructure import disk_cache
+from infrastructure.datastore_engine import disk_cache
 
 pytestmark = pytest.mark.unit
 

@@ -55,7 +55,7 @@ def train_model(
         f".cnn_f{cnn_filters}c{cnn_count}k{cnn_kernel_growing_steps}."
         f"lstm_u{'-'.join([str(i) for i in lstm_units_list])}.dense_u{dense_units}.drop_r{dropout_rate}"
     )
-    model_path_keras = os.path.join(app_config.path_of_data, f"{model_name}.keras")
+    model_path_keras = os.path.join(app_config.path_of_models, f"{model_name}.keras")
     # Check if the model already exists, load if it does
     if model is None:
         tf_config.optimizer.set_jit("autoclustering")  # Or simply True
@@ -91,7 +91,7 @@ def train_model(
         verbose=1,
         save_weights_only=False,
     )
-    tensorboard = setup_tensorboard()
+    setup_tensorboard()
     model.fit(train_dataset.take(1), steps_per_epoch=1, epochs=1, verbose=0)
     # if dataset_mode:
     try:
@@ -195,12 +195,12 @@ def run_trainer(round_counter: int):
     # train_dataset = train_dataset.with_options(threading_options)
     # train_dataset = train_dataset.apply(tf_data.experimental.copy_to_device("/GPU:0"))
 
-    train_dataset = build_npz_dataset(app_config.path_of_data, batch_size=80)
+    train_dataset = build_npz_dataset(app_config.path_of_scratch, batch_size=80)
     # else:
     #     train_dataset = dataset_generator(mode='train', batch_size=batch_size)
     #     val_dataset = dataset_generator(mode='val', batch_size=batch_size)
     print(f"Round:{round_counter}")
-    for i in range(100):
+    for _i in range(100):
         model = train_model(
             train_dataset,
             train_dataset,

@@ -16,7 +16,7 @@ from helper.data_preparation import (
 from helper.functions import date_range
 from helper.logging import profile_it
 from helper.schema_casting import cast_and_validate, empty_df, index_names
-from infrastructure.disk_cache import cache_on_disk
+from infrastructure.datastore_engine.disk_cache import CachableDataset, cache_on_disk
 
 
 def calculate_strength(
@@ -661,7 +661,7 @@ def multi_timeframe_peaks_n_valleys(expanded_date_range: str) -> pt.DataFrame[Mu
     return _peaks_n_valleys
 
 
-@cache_on_disk(file_name_prefix="multi_timeframe_peaks_n_valleys")
+@cache_on_disk(CachableDataset(dataset_folder_name="multi_timeframe_peaks_n_valleys"))
 def get_multi_timeframe_peaks_n_valleys(date_range_str: str = None) -> pt.DataFrame[MultiTimeframePeakValley]:
     biggest_timeframe = app_config.timeframes[-1]
     expanded_date_range = expand_date_range(

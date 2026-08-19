@@ -12,7 +12,7 @@ class ModelArtifactRepository:
     """Own the checkpoint directory for one training run."""
 
     def __init__(self, run_key: str, max_to_keep: int = 3) -> None:
-        self.checkpoint_dir = os.path.join(app_config.path_of_data, "model_artifacts", run_key)
+        self.checkpoint_dir = os.path.join(app_config.path_of_models, "artifacts", run_key)
         self._max_to_keep = max_to_keep
         self._manager: tf.train.CheckpointManager | None = None
 

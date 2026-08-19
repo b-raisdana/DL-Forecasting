@@ -2,18 +2,20 @@ import itertools
 from datetime import datetime
 
 from helper.functions import date_range, date_range_to_string
-from infrastructure.disk_cache import (
+from infrastructure.datastore_engine.disk_cache import (
+    DATASET_DB,
+    CachableDataset,
+    FilePathArg,
     _csv_zip_file_path,
     _data_frame_type_dir,
+    _data_frame_type_of,
     _feather_file_path,
-    _find_covering_file,
     _legacy_file_pattern,
     _parquet_file_path,
-    _window_date_range_strs,
     _window_freq,
     datarange_is_not_cachable,
-    symbol_data_path,
 )
+from infrastructure.datastore_engine.disk_cache_windowed import _find_covering_file, _window_date_range_strs
 
 """
 Gap/overlap discovery over infrastructure.disk_cache's generic windowed (data_frame_type,
@@ -24,7 +26,7 @@ internals to answer "what's missing"/"what already overlaps", it never writes.
 """
 
 
-def _window_present(data_frame_type: str, window_date_range_str: str, file_path: str) -> bool:
+def _window_present(data_frame_type: str, window_date_range_str: str, file_path: FilePathArg) -> bool:
     """A window counts as present if it has its own canonical file (parquet, or legacy feather/zip) or
     an existing legacy file fully contains it (same containment check
     disk_cache._seed_window_from_legacy_file() uses to backfill from)."""
@@ -39,7 +41,10 @@ def _window_present(data_frame_type: str, window_date_range_str: str, file_path:
 
 
 def find_cache_gaps(
-    data_frame_type: str, date_range_str: str, file_path: str | None = None, window_freq: str | None = None
+    dataset: CachableDataset | str,
+    date_range_str: str,
+    file_path: str | None = None,
+    window_freq: str | None = None,
 ) -> list[str]:
     """
     Every window_freq-granularity gap in date_range_str for data_frame_type: windows with neither
@@ -47,9 +52,12 @@ def find_cache_gaps(
     still open (datarange_is_not_cachable() — e.g. today) is never reported, since it's never expected
     to be cached (see Cache-or-generate skill). Contiguous missing windows are merged into one
     date_range_str per run, so e.g. Aug 1/5/6/7/9 present yields two gaps: Aug 2-4 and Aug 8.
+
+    `dataset` accepts either a CachableDataset (reusing the same object cache_on_disk() was declared
+    with) or a bare data_frame_type string.
     """
-    if file_path is None:
-        file_path = symbol_data_path()
+    data_frame_type = _data_frame_type_of(dataset)
+    resolved_file_path: FilePathArg = file_path if file_path is not None else DATASET_DB
     if window_freq is None:
         window_freq = _window_freq(data_frame_type)
     window_ranges = _window_date_range_strs(date_range_str, window_freq)
@@ -57,7 +65,8 @@ def find_cache_gaps(
     missing_indices = [
         i
         for i, window_range in enumerate(window_ranges)
-        if not datarange_is_not_cachable(window_range) and not _window_present(data_frame_type, window_range, file_path)
+        if not datarange_is_not_cachable(window_range)
+        and not _window_present(data_frame_type, window_range, resolved_file_path)
     ]
 
     gaps = []
@@ -70,19 +79,22 @@ def find_cache_gaps(
 
 
 def find_overlapping_cache_files(
-    data_frame_type: str, date_range_str: str, file_path: str | None = None
+    dataset: CachableDataset | str, date_range_str: str, file_path: str | None = None
 ) -> list[tuple[str, str]]:
     """
     Every on-disk (range, ext) for data_frame_type whose own date range merely overlaps
     date_range_str at all — broader than disk_cache._find_covering_file()'s full-containment check,
     since this answers "what existing cached data could migration reuse", not "what already fully
     satisfies one window". Sorted by start.
+
+    `dataset` accepts either a CachableDataset (reusing the same object cache_on_disk() was declared
+    with) or a bare data_frame_type string.
     """
-    if file_path is None:
-        file_path = symbol_data_path()
+    data_frame_type = _data_frame_type_of(dataset)
+    resolved_file_path: FilePathArg = file_path if file_path is not None else DATASET_DB
     query_start, query_end = date_range(date_range_str)
     pattern = _legacy_file_pattern(data_frame_type)
-    type_dir = _data_frame_type_dir(data_frame_type, file_path)
+    type_dir = _data_frame_type_dir(data_frame_type, resolved_file_path)
     if not type_dir.is_dir():
         return []
 

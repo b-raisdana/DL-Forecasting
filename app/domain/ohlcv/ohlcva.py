@@ -12,11 +12,14 @@ from helper.data_preparation import (
     trim_to_date_range,
 )
 from helper.schema_casting import empty_df
-from infrastructure.disk_cache import cache_on_disk
+from infrastructure.datastore_engine.disk_cache import CachableDataset, cache_on_disk
 from pandera import typing as pt
 
+# Reused elsewhere instead of repeating the "multi_timeframe_ohlcva" data_frame_type string.
+MULTI_TIMEFRAME_OHLCVA_DATASET = CachableDataset(dataset_folder_name="multi_timeframe_ohlcva")
 
-@cache_on_disk(file_name_prefix="multi_timeframe_ohlcva", after_read=cache_times, windowed=True)
+
+@cache_on_disk(MULTI_TIMEFRAME_OHLCVA_DATASET, after_read=cache_times, windowed=True)
 def get_multi_timeframe_ohlcva(date_range_str: str = None) -> pt.DataFrame[MultiTimeframeOHLCVA]:
     """
     One cache window's worth of multi-timeframe OHLCVA (see cache_on_disk(windowed=True) /

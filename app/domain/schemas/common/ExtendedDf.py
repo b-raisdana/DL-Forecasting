@@ -9,11 +9,11 @@ from config import app_config
 from helper.data_preparation import after_under_process_date, concat
 from helper.logging import log_d, log_w
 from helper.schema_casting import all_annotations
-from infrastructure.disk_cache import (
+from infrastructure.datastore_engine.disk_cache import (
+    DATASET_DB,
     datarange_is_not_cachable,
     read_without_index,
     remove_data_file,
-    symbol_data_path,
     write_data_file,
 )
 from pandera import DataType
@@ -177,13 +177,12 @@ class ExtendedDf:
             :param data_frame_type:
             :param generator:
         """
-        if file_path is None:
-            file_path = symbol_data_path()
+        resolved_file_path = file_path if file_path is not None else DATASET_DB
         if date_range_str is None:
             date_range_str = app_config.processing_date_range
         df = None
         with contextlib.suppress(FileNotFoundError):
-            df = cls.read_and_index(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
+            df = cls.read_and_index(data_frame_type, date_range_str, resolved_file_path, n_rows, skip_rows)
         if zero_size_allowed is None:
             zero_size_allowed = after_under_process_date(date_range_str)
         if df is None or not cls.cast_and_validate(df, return_bool=True, zero_size_allowed=zero_size_allowed):
@@ -196,12 +195,12 @@ class ExtendedDf:
                     "pre-populate the cache with a full read first."
                 )
             df = generator(date_range_str)
-            write_data_file(df, data_frame_type, date_range_str, file_path)
+            write_data_file(df, data_frame_type, date_range_str, resolved_file_path)
             df = cls.cast_and_validate(df, zero_size_allowed=zero_size_allowed)
         else:
             df = cls.cast_and_validate(df, zero_size_allowed=zero_size_allowed)
         if datarange_is_not_cachable(date_range_str):
-            remove_data_file(data_frame_type, date_range_str, file_path)
+            remove_data_file(data_frame_type, date_range_str, resolved_file_path)
         return df
 
     @classmethod

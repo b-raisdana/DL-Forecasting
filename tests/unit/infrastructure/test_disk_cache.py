@@ -4,7 +4,7 @@ from typing import Annotated
 import pandas as pd
 import pandera
 import pytest
-from infrastructure import disk_cache
+from infrastructure.datastore_engine import disk_cache
 from pandera import typing as pt
 
 
@@ -144,7 +144,10 @@ def test_cache_on_disk_nan_allowed_columns_permits_extra_nonschema_column_nan(tm
     def generator(date_range_str, **kwargs) -> pt.DataFrame[_ExtraColSchema]:
         return _df(value=[1.0, 2.0, 3.0], scratch_col=[float("nan"), 2.0, 3.0])
 
-    get_extra = disk_cache.cache_on_disk(file_name_prefix="extra_type", nan_allowed_columns=["scratch_col"])(generator)
+    dataset = disk_cache.CachableDataset(
+        dataset_folder_name="extra_type", nan_allowed_columns=frozenset({"scratch_col"})
+    )
+    get_extra = disk_cache.cache_on_disk(dataset)(generator)
 
     result = get_extra("20-01-01.00-00T20-01-03.00-00", file_path=str(tmp_path))
 

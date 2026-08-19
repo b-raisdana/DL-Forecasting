@@ -9,6 +9,8 @@ ipywidgets
 nbformat==5.11.1
 pydantic==2.13.4
 pyarrow==25.0.1
+typer==0.27.1
+duckdb
 numpy<2.0 # pandas_ta 0.3.14b0 (last release) uses np.NaN, removed in numpy 2.0
 lightgbm
 # matplotlib

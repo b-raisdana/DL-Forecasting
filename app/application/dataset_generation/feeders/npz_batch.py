@@ -58,10 +58,10 @@ def load_and_delete_npz(path_tensor):
 
 
 def npz_cache_files_clean_up():
-    for fname in os.listdir(app_config.path_of_data):
+    for fname in os.listdir(app_config.path_of_scratch):
         if fname.startswith(CACHE_PREFIX + ".") and fname.endswith(f".{CACHE_EXT}"):
             try:
-                os.remove(os.path.join(app_config.path_of_data, fname))
+                os.remove(os.path.join(app_config.path_of_scratch, fname))
                 log_i(f"Removed old cache file: {fname}")
             except Exception as e:
                 logging.warning(f"Could not remove file {fname}: {e}")
@@ -102,7 +102,7 @@ def npz_cache_generator(
                             # Count existing cache files
                             cache_files = [
                                 f
-                                for f in os.listdir(app_config.path_of_data)
+                                for f in os.listdir(app_config.path_of_scratch)
                                 if f.startswith(CACHE_PREFIX + ".") and f.endswith(f".{CACHE_EXT}")
                             ]
                             while len(cache_files) >= CACHE_THRESHOLD:
@@ -113,7 +113,7 @@ def npz_cache_generator(
                                 time.sleep(0.5)  # small delay to avoid busy-wait
                                 cache_files = [
                                     f
-                                    for f in os.listdir(app_config.path_of_data)
+                                    for f in os.listdir(app_config.path_of_scratch)
                                     if f.startswith(CACHE_PREFIX + ".") and f.endswith(f".{CACHE_EXT}")
                                 ]
                             # Generate a new batch of training data
@@ -128,9 +128,9 @@ def npz_cache_generator(
                             )
                             # Create a unique timestamp for the file name
                             timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S.%f")[:-4]
-                            tmp_path = os.path.join(app_config.path_of_data, f"{CACHE_PREFIX}.{timestamp}.tmp")
+                            tmp_path = os.path.join(app_config.path_of_scratch, f"{CACHE_PREFIX}.{timestamp}.tmp")
                             final_path = os.path.join(
-                                app_config.path_of_data, f"{CACHE_PREFIX}.{timestamp}.{CACHE_EXT}"
+                                app_config.path_of_scratch, f"{CACHE_PREFIX}.{timestamp}.{CACHE_EXT}"
                             )
                             try:
                                 # Save features and labels to a temporary NPZ file
@@ -180,7 +180,7 @@ def npz_dataset_generator(batch_size: int):
             # List all cache files
             cache_files = [
                 f
-                for f in os.listdir(app_config.path_of_data)
+                for f in os.listdir(app_config.path_of_scratch)
                 if f.startswith(CACHE_PREFIX + ".") and f.endswith(f".{CACHE_EXT}")
             ]
             if not cache_files:
@@ -191,7 +191,7 @@ def npz_dataset_generator(batch_size: int):
             # Determine the oldest file (by timestamp in name)
             cache_files.sort()
             oldest_file = cache_files[0]
-            file_path = os.path.join(app_config.path_of_data, oldest_file)
+            file_path = os.path.join(app_config.path_of_scratch, oldest_file)
             try:
                 # Load the .npz file
                 data = np.load(file_path)

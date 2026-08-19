@@ -1,13 +1,13 @@
 from typing import cast
 
 from config import app_config
-from domain.ohlcv.ohlcv import get_base_timeframe_ohlcv
+from domain.ohlcv.ohlcv import OHLCV_DATASET, get_base_timeframe_ohlcv
 from domain.schemas.common.OHLCV import OHLCV
 from helper.functions import date_range
 from helper.logging.do_log import log_i
 from helper.schema_casting import empty_df
-from infrastructure.disk_cache import cleanup_redundant_cache_files, symbol_data_path, write_data_file
-from infrastructure.disk_cache_gaps import find_cache_gaps
+from infrastructure.datastore_engine.disk_cache import DATASET_DB, cleanup_redundant_cache_files, write_data_file
+from infrastructure.datastore_engine.disk_cache_gaps import find_cache_gaps
 from infrastructure.market_data_fetch.ccxt_client import SUPPORTED_BROKERS, fetch_ohlcv_by_range
 from pandera import typing as pt
 
@@ -55,8 +55,10 @@ def fill_ohlcv_gaps(
     Returns the gap ranges actually fetched (excludes confirmed-unavailable ones).
     """
     _bind_broker(broker, trading_pair, market)
-    file_path = symbol_data_path()
-    gaps = find_cache_gaps("ohlcv", date_range_str, file_path=file_path)
+    # file_path deliberately omitted below — find_cache_gaps()/write_data_file()/
+    # cleanup_redundant_cache_files() all default to DATASET_DB (dataset_db_root(), data_frame_type-first)
+    # on their own, same as every other real disk-cache call site (see DatasetDbSentinel).
+    gaps = find_cache_gaps(OHLCV_DATASET, date_range_str)
     if not gaps:
         log_i(f"fill_ohlcv_gaps: {trading_pair}@{broker} already up to date over {date_range_str}")
         return []
@@ -68,10 +70,10 @@ def fill_ohlcv_gaps(
             rows = fetch_ohlcv_by_range(broker.lower(), gap, base_timeframe=base_timeframe)
         if not rows:
             log_i(f"fill_ohlcv_gaps: confirmed no {trading_pair}@{broker} data for {gap} after 2 broker asks")
-            write_data_file(empty_df(OHLCV), "ohlcv", gap, file_path)
+            write_data_file(empty_df(OHLCV), OHLCV_DATASET.dataset_folder_name, gap, DATASET_DB)
             continue
         get_base_timeframe_ohlcv(gap, base_timeframe=base_timeframe)
         filled.append(gap)
 
-    cleanup_redundant_cache_files("ohlcv", file_path=file_path)
+    cleanup_redundant_cache_files(OHLCV_DATASET)
     return filled

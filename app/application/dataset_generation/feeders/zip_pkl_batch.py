@@ -24,7 +24,7 @@ def batch_generator_zip_pkl(
     x_shape: dict[str, tuple[int, int]], batch_size: int
 ) -> Iterator[tuple[dict[str, np.ndarray], np.ndarray]]:
     folder_name = dataset_folder(x_shape, batch_size)
-    folder_path: str = os.path.join(app_config.path_of_data, folder_name)
+    folder_path: str = os.path.join(app_config.path_of_scratch, folder_name)
     cached_xs = {}
     cached_ys = None
     while True:
@@ -95,7 +95,7 @@ def save_validators_zip_pkl(
     timestamp,
 ) -> None:
     zip_file_name = f"validators-{symbol}-{timestamp}.zip"
-    zip_file_path = os.path.join(app_config.path_of_data, folder_name, zip_file_name)
+    zip_file_path = os.path.join(app_config.path_of_scratch, folder_name, zip_file_name)
 
     with zipfile.ZipFile(zip_file_path, "w") as zipf:
         zipf.writestr("X_dfs.pkl", pickle.dumps(X_dfs))
@@ -106,7 +106,7 @@ def save_validators_zip_pkl(
 
 def save_batch_zip_pkl(Xs: dict[str, np.ndarray], ys: np.ndarray, folder_name: str, symbol: str, timestamp) -> None:
     zip_file_name = f"dataset-{symbol}-{timestamp}.zip"
-    zip_file_path = os.path.join(app_config.path_of_data, folder_name, zip_file_name)
+    zip_file_path = os.path.join(app_config.path_of_scratch, folder_name, zip_file_name)
 
     with zipfile.ZipFile(zip_file_path, "w") as zipf:
         # for key in Xs:

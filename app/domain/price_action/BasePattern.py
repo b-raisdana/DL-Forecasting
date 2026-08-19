@@ -17,9 +17,11 @@ from helper.data_preparation import (
 from helper.functions import date_range, date_range_to_string
 from helper.logging import profile_it
 from helper.schema_casting import cast_and_validate, empty_df
-from infrastructure.disk_cache import cache_on_disk
+from infrastructure.datastore_engine.disk_cache import CachableDataset, cache_on_disk
 from pandera import Timestamp
 from pandera import typing as pt
+
+MULTI_TIMEFRAME_BASE_PATTERN_DATASET = CachableDataset(dataset_folder_name="multi_timeframe_base_pattern")
 
 
 def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:
@@ -343,10 +345,17 @@ def multi_timeframe_base_patterns(
     return _multi_timeframe_base_patterns
 
 
-@cache_on_disk(file_name_prefix="multi_timeframe_base_pattern")
+@cache_on_disk(MULTI_TIMEFRAME_BASE_PATTERN_DATASET, windowed=True)
 def get_multi_timeframe_base_patterns(
     date_range_str: str = None, timeframe_shortlist: list["str"] = None
 ) -> pt.DataFrame[MultiTimeframeBasePattern]:
+    """
+    One cache window's worth of multi-timeframe base patterns (see cache_on_disk(windowed=True)):
+    expands its own start by anti_trigger_timeframe-driven lookback before fetching OHLCVA (itself
+    windowed, so lookback comes from already-cached window tiles) and trims back to date_range_str at
+    the end — safe per window since the lookback is re-derived fresh on every call, never carried
+    across windows.
+    """
     if date_range_str is None:
         date_range_str = app_config.processing_date_range
     if timeframe_shortlist is None:

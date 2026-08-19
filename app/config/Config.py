@@ -200,6 +200,19 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
 
     @computed_field  # type: ignore[prop-decorator]
     @property
+    def path_of_models(self) -> Path:
+        """Final trained model artifacts (.keras saves, TF CheckpointManager dirs under
+        path_of_models/"artifacts"/<run_key>/) — see data/README.md."""
+        return self.path_of_data / "models"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def path_of_scratch(self) -> Path:
+        """Ephemeral, regenerable training-batch caches (npz/zip-pkl feeders) — see data/README.md."""
+        return self.path_of_data / "scratch"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
     def TRAIN_SYMBOLS(self) -> list[str]:
         """`SYMBOLS` minus `VALIDATION_SYMBOL` — the non-BTC universe training draws from."""
         return [symbol for symbol in self.SYMBOLS if symbol != self.VALIDATION_SYMBOL]

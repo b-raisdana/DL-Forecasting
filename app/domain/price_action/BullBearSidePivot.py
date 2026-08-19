@@ -14,10 +14,14 @@ from helper.data_preparation import (
 )
 from helper.logging import profile_it
 from helper.schema_casting import cast_and_validate, empty_df
-from infrastructure.disk_cache import cache_on_disk
+from infrastructure.datastore_engine.disk_cache import CachableDataset, cache_on_disk
 from pandera import typing as pt
 from PeakValley import get_multi_timeframe_peaks_n_valleys, major_timeframe
 from PivotsHelper import level_ttl, pivots_level_n_margins
+
+MULTI_TIMEFRAME_BULL_BEAR_SIDE_PIVOTS_DATASET = CachableDataset(
+    dataset_folder_name="multi_timeframe_bull_bear_side_pivots"
+)
 
 
 def remove_overlapping_trends(timeframe_trends: pt.DataFrame[BullBearSide]) -> pt.DataFrame[BullBearSide]:
@@ -134,7 +138,7 @@ def multi_timeframe_bull_bear_side_pivots(
 
 
 @profile_it
-@cache_on_disk(file_name_prefix="multi_timeframe_bull_bear_side_pivots")
+@cache_on_disk(MULTI_TIMEFRAME_BULL_BEAR_SIDE_PIVOTS_DATASET)
 def get_multi_timeframe_bull_bear_side_pivots(
     date_range_str: str = None, timeframe_shortlist: list["str"] = None
 ) -> pt.DataFrame[MultiTimeframePivotDFM]:

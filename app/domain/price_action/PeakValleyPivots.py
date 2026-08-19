@@ -9,11 +9,15 @@ from helper.data_preparation import (
 )
 from helper.logging import profile_it
 from helper.schema_casting import cast_and_validate, empty_df
-from infrastructure.disk_cache import cache_on_disk
+from infrastructure.datastore_engine.disk_cache import CachableDataset, cache_on_disk
 from infrastructure.ohlcv.ohlcva import get_multi_timeframe_ohlcva
 from pandera import typing as pt
 from PeakValley import get_multi_timeframe_peaks_n_valleys
 from PivotsHelper import level_ttl, pivots_level_n_margins
+
+MULTI_TIMEFRAME_MAJOR_TIMES_TOP_PIVOTS_DATASET = CachableDataset(
+    dataset_folder_name="multi_timeframe_major_times_top_pivots"
+)
 
 
 def major_times_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotDFM]:
@@ -72,7 +76,7 @@ def major_times_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotD
 
 
 @profile_it
-@cache_on_disk(file_name_prefix="multi_timeframe_major_times_top_pivots")
+@cache_on_disk(MULTI_TIMEFRAME_MAJOR_TIMES_TOP_PIVOTS_DATASET)
 def get_multi_timeframe_major_times_top_pivots(date_range_str: str = None) -> pt.DataFrame[MultiTimeframePivotDFM]:
     # tops of anti-trigger timeframe
     if date_range_str is None:

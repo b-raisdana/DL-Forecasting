@@ -16,7 +16,7 @@ from domain.schemas.market_structure.PeakValley import MultiTimeframePeakValley,
 from helper.data_preparation import pattern_timeframe, single_timeframe, to_timeframe, trigger_timeframe
 from helper.functions import date_range, date_range_to_string
 from helper.logging import profile_it
-from infrastructure.disk_cache import symbol_data_path
+from infrastructure.datastore_engine.disk_cache import DATASET_DB
 from pandera import typing as pt
 from PeakValley import insert_crossing2, major_timeframe, peaks_only, read_multi_timeframe_peaks_n_valleys, valleys_only
 
@@ -85,7 +85,7 @@ def generate_multi_timeframe_atr_movement_pivots(
     date_range_str: str = None, file_path: str = None, timeframe_shortlist: list["str"] = None
 ) -> pt.DataFrame[MultiTimeframeAtrMovementPivotDFM]:
     if file_path is None:
-        file_path = symbol_data_path()
+        file_path = DATASET_DB
     if date_range_str is None:
         date_range_str = app_config.processing_date_range
     if timeframe_shortlist is None:

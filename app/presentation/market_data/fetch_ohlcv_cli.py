@@ -1,5 +1,5 @@
 """CLI entrypoint: fetch OHLCV candles for one trading pair from one broker and cache them to disk
-(feather/ZSTD, under <data>/<broker>/<market>/<trading_pair>/ — see
+(Parquet/ZSTD, under <data>/dataset_db/ohlcv/<market>/<trading_pair>/<broker>/ — see
 `application.market_data.fetch_market_data.fetch_and_cache_ohlcv`/`fill_ohlcv_gaps`). A rerun over a
 range already on disk is a cache hit — nothing is re-fetched from the broker.
 
@@ -21,9 +21,9 @@ import argparse
 
 from application.market_data.fetch_market_data import fetch_and_cache_ohlcv, fill_ohlcv_gaps
 from config import app_config
+from domain.ohlcv.ohlcv import OHLCV_DATASET
 from helper.functions import date_range_to_string, today_morning
-from infrastructure.disk_cache import symbol_data_path
-from infrastructure.disk_cache_gaps import find_cache_gaps, find_overlapping_cache_files
+from infrastructure.datastore_engine.disk_cache_gaps import find_cache_gaps, find_overlapping_cache_files
 from infrastructure.market_data_fetch.ccxt_client import SUPPORTED_BROKERS
 
 
@@ -66,15 +66,15 @@ def _print_ranges(empty_message: str, found_header: str, lines: list[str]) -> No
         print(f"  {line}")
 
 
-def _run_list_gaps(args: argparse.Namespace, query_range: str, file_path: str) -> None:
+def _run_list_gaps(args: argparse.Namespace, query_range: str) -> None:
     who = f"{args.trading_pair}@{args.broker} over {query_range}"
-    gaps = find_cache_gaps("ohlcv", query_range, file_path=file_path)
+    gaps = find_cache_gaps(OHLCV_DATASET, query_range)
     _print_ranges(f"no gaps for {who}", f"gap(s) for {who}", gaps)
 
 
-def _run_list_overlaps(args: argparse.Namespace, query_range: str, file_path: str) -> None:
+def _run_list_overlaps(args: argparse.Namespace, query_range: str) -> None:
     who = f"{args.trading_pair}@{args.broker} over {query_range}"
-    overlaps = find_overlapping_cache_files("ohlcv", query_range, file_path=file_path)
+    overlaps = find_overlapping_cache_files(OHLCV_DATASET, query_range)
     lines = [f"ohlcv.{range_str}.{ext}" for range_str, ext in overlaps]
     _print_ranges(f"no overlapping cache files for {who}", f"overlapping cache file(s) for {who}", lines)
 
@@ -84,12 +84,11 @@ def _run_list_mode(args: argparse.Namespace) -> None:
     app_config.under_process_symbol = args.trading_pair
     app_config.under_process_market = args.market
     query_range = args.date_range or _default_full_range()
-    file_path = symbol_data_path()
 
     if args.list_gaps:
-        _run_list_gaps(args, query_range, file_path)
+        _run_list_gaps(args, query_range)
     if args.list_overlaps:
-        _run_list_overlaps(args, query_range, file_path)
+        _run_list_overlaps(args, query_range)
 
 
 def _run_fetch_range(args: argparse.Namespace, date_range_str: str) -> None:

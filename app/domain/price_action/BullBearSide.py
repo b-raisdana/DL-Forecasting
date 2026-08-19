@@ -26,7 +26,7 @@ from helper.data_preparation import (
 )
 from helper.logging import log_d, log_e, log_w, profile_it
 from helper.schema_casting import cast_and_validate, empty_df
-from infrastructure.disk_cache import cache_on_disk
+from infrastructure.datastore_engine.disk_cache import CachableDataset, cache_on_disk
 
 
 def insert_previous_n_next_tops(
@@ -660,7 +660,7 @@ def detect_trends(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame
 
 
 @profile_it
-@cache_on_disk(file_name_prefix="multi_timeframe_bull_bear_side_trends")
+@cache_on_disk(CachableDataset(dataset_folder_name="multi_timeframe_bull_bear_side_trends"))
 def get_multi_timeframe_bull_bear_side_trends(
     date_range_str: str = None, timeframe_shortlist: list["str"] = None
 ) -> pt.DataFrame[MultiTimeframeBullBearSide]:
@@ -681,7 +681,7 @@ def get_multi_timeframe_bull_bear_side_trends(
 
 
 @profile_it
-@cache_on_disk(file_name_prefix="multi_timeframe_candle_trend")
+@cache_on_disk(CachableDataset(dataset_folder_name="multi_timeframe_candle_trend"))
 def get_multi_timeframe_candle_trend(
     date_range_str: str = None, timeframe_shortlist: list["str"] = None
 ) -> pt.DataFrame[MultiTimeframeCandleTrend]:

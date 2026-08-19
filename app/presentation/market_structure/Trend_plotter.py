@@ -1,11 +1,11 @@
-import os.path
+from pathlib import Path
 
 import pandas as pd
 from config import TREND, app_config
 from domain.price_action.PeakValley import major_timeframe, peaks_only, valleys_only
 from helper.data_preparation import single_timeframe
 from helper.logging import profile_it
-from infrastructure.disk_cache import symbol_data_path
+from infrastructure.datastore_engine.disk_cache import symbol_data_path
 from presentation.market_structure.PeakValley_plotter import plot_peaks_n_valleys
 from presentation.shared.plotter import file_id, plot_multiple_figures, save_figure
 
@@ -73,7 +73,12 @@ def plot_multi_timeframe_candle_trend(
     multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys, ohlcv, show=True, save=True, path_of_plot=None
 ):
     if path_of_plot is None:
-        path_of_plot = os.path.join(symbol_data_path(), app_config.path_of_plots)
+        # symbol_data_path() is exchange/market/symbol-shaped; plots are namespaced by symbol alone
+        # (see presentation.shared.plotter._per_symbol_plot_dir — same fix, not shared across modules
+        # to avoid importing a private helper).
+        plot_dir = Path(app_config.path_of_plots) / Path(symbol_data_path()).name
+        plot_dir.mkdir(parents=True, exist_ok=True)
+        path_of_plot = str(plot_dir)
 
     figures = []
     _multi_timeframe_peaks = peaks_only(multi_timeframe_peaks_n_valleys)
