@@ -22,7 +22,7 @@ per-data_frame_type cache subdirectory (with on-touch migration of pre-existing 
 into it) that every cache path is built from; the legacy filename pattern shared by
 windowing/cleanup/gap-discovery; the file-path builders for each on-disk format (Parquet is primary,
 Feather/ZSTD and CSV-zip are legacy fallbacks — the format-migration helpers themselves live in
-infrastructure/datastore_engine/convert_to_parquest.py, to avoid a cycle between the two modules); the
+infrastructure/datastore_engine/parquet_housekeeping.py, to avoid a cycle between the two modules); the
 redundant-file cleanup pass; and the NaN-column bookkeeping behind write_data_file()'s write-time
 guard.
 

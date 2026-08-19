@@ -1,7 +1,7 @@
 [tool.ruff]
 target-version = "py312"
 line-length = 120
-extend-exclude = ["*.ipynb", ".testvenv"]
+extend-exclude = ["*.ipynb", ".testvenv", "archive_not_used_trash"]
 
 [tool.ruff.lint]
 # Complexity is xenon/radon's job (docs/infrastructure.md#qa) - not duplicated here.
@@ -16,3 +16,6 @@ no_implicit_optional = true
 warn_return_any = true
 ignore_missing_imports = true
 follow_imports = "silent"
+# archive_not_used_trash/ holds unreachable-from-presentation code kept for reference, not linted -
+# see app/archive_not_used_trash/README.md.
+exclude = "(^|/)archive_not_used_trash/"

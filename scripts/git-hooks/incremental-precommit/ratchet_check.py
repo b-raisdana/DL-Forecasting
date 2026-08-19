@@ -69,14 +69,16 @@ def ruff_count() -> int:
 
 
 def _exclude_tests(paths: list[Path]) -> list[Path]:
-    return [path for path in paths if "tests" not in path.parts]
+    return [path for path in paths if "tests" not in path.parts and "archive_not_used_trash" not in path.parts]
 
 
 def xenon_count(max_absolute: str = "B") -> int:
     # Cyclomatic complexity isn't a meaningful signal for test code (parametrized/assert-heavy
     # loops are idiomatic there, not a design smell), so app/tests/ is excluded entirely - see
-    # docs/infrastructure.md#incremental-ratchet-mypyruffxenon-scope.
-    stdout = run("radon", "cc", TARGET, "-j", "-i", "tests")
+    # docs/infrastructure.md#incremental-ratchet-mypyruffxenon-scope. archive_not_used_trash/ is
+    # unreachable-from-presentation code kept for reference, not linted - see
+    # app/archive_not_used_trash/README.md.
+    stdout = run("radon", "cc", TARGET, "-j", "-i", "tests,archive_not_used_trash")
     try:
         data = json.loads(stdout or "{}")
     except json.JSONDecodeError:
@@ -90,7 +92,7 @@ def xenon_count(max_absolute: str = "B") -> int:
 def loc_count(max_lines: int = 500) -> int:
     total = 0
     for path in (ROOT / TARGET).rglob("*.py"):
-        if "__pycache__" in path.parts:
+        if "__pycache__" in path.parts or "archive_not_used_trash" in path.parts:
             continue
         line_count = sum(1 for _ in path.open(encoding="utf-8", errors="ignore"))
         total += max(0, line_count - max_lines)

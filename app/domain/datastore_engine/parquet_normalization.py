@@ -1,7 +1,7 @@
 import pandas as pd
 
 """
-Pure DataFrame-shape check/fix behind infrastructure.datastore_engine.convert_to_parquest's Parquet
+Pure DataFrame-shape check/fix behind infrastructure.datastore_engine.parquet_housekeeping's Parquet
 conversion and repair: the on-disk convention every dataset_db cache file is written to
 (disk_cache.write_data_file()'s own `df.reset_index().to_parquet(...)`) is a flat frame — `date` (and,
 for multi_timeframe_* types, `timeframe`) as plain columns, default RangeIndex — never a DataFrame with

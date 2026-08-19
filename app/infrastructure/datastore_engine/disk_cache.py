@@ -14,7 +14,6 @@ from helper.data_preparation import after_under_process_date
 from helper.functions import Pandera_DFM_Type, date_range, morning
 from helper.logging.do_log import log_i, log_w
 from helper.schema_casting import cast_and_validate
-from infrastructure.datastore_engine.convert_to_parquest import _migrate_to_parquet as _migrate_to_parquet
 from infrastructure.datastore_engine.disk_cache_layout import DATASET_DB as DATASET_DB
 from infrastructure.datastore_engine.disk_cache_layout import CachableDataset as CachableDataset
 from infrastructure.datastore_engine.disk_cache_layout import FilePathArg as FilePathArg
@@ -34,6 +33,7 @@ from infrastructure.datastore_engine.disk_cache_layout import (
 )
 from infrastructure.datastore_engine.disk_cache_layout import index_by_date as index_by_date
 from infrastructure.datastore_engine.disk_cache_layout import symbol_data_path as symbol_data_path
+from infrastructure.datastore_engine.parquet_housekeeping import _migrate_to_parquet as _migrate_to_parquet
 
 """
 Everything this repo needs to persist/read a (data_frame_type, date_range_str) artifact as a

@@ -2,9 +2,11 @@ import os
 
 import numpy as np
 import pandas as pd
-from application.dataset_generation.training_datasets import train_data_of_mt_n_profit
 from application.model_implementations.cnn_lstm.trining_datasets import model_dataset_lengths
-from application.preprocessing.encoding.rolling_mean_std import read_multi_timeframe_rolling_mean_std_ohlcv
+from archive_not_used_trash.application.dataset_generation.training_datasets import train_data_of_mt_n_profit
+from archive_not_used_trash.application.preprocessing.encoding.rolling_mean_std import (
+    read_multi_timeframe_rolling_mean_std_ohlcv,
+)
 from config import app_config
 from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import single_timeframe

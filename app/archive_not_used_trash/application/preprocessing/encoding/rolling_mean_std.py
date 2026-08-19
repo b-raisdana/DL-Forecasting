@@ -4,9 +4,13 @@ import pandas as pd
 from archive_not_used_trash.domain.schemas.forecasting.MtRollingMeanStdOHLCV import MtRollingMeanStdOHLCV
 from domain.ohlcv.ohlcv import get_multi_timeframe_ohlcv
 from helper.data_preparation import expand_date_range, trim_to_date_range
-from helper.functions import profile_it
 from helper.importer import pt, ta
-from infrastructure.ohlcv.disk_cache import cache_on_disk
+from helper.logging import profile_it
+from infrastructure.datastore_engine.disk_cache import CachableDataset, cache_on_disk
+
+ROLLING_MEAN_STD_MULTI_TIMEFRAME_OHLCV_DATASET = CachableDataset(
+    dataset_folder_name="rolling_mean_std_multi_timeframe_ohlcv"
+)
 
 columns_list = ["open", "close", "high", "low", "volume"]
 timeframe_normalization_length = {
@@ -43,8 +47,15 @@ def reverse_mt_rolling_mean_std(mt_rolling_mean_std):
 
 
 @profile_it
-@cache_on_disk(file_name_prefix="rolling_mean_std_multi_timeframe_ohlcv")
+@cache_on_disk(ROLLING_MEAN_STD_MULTI_TIMEFRAME_OHLCV_DATASET, windowed=True)
 def get_multi_timeframe_rolling_mean_std_ohlcv(date_range_str: str = None) -> MtRollingMeanStdOHLCV:
+    """
+    One cache window's worth of rolling mean/std features (see cache_on_disk(windowed=True)): expands
+    its own start by expander_duration (EMA/rolling-std warm-up, up to 256 bars) before fetching OHLCV
+    (itself windowed) and trims back to date_range_str at the end — the EMA's warm-up-then-trim is an
+    approximation (EMA is nominally infinite-memory) accepted here the same way get_multi_timeframe_ohlcva
+    already accepts it for ATR.
+    """
     expander_duration = sum(
         [pd.to_timedelta(tf) * (lenght + 1) for tf, lenght in timeframe_normalization_length.items()], timedelta()
     )
