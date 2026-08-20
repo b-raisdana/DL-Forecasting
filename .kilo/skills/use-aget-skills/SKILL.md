@@ -5,3 +5,7 @@ license: MIT
 allowed-tools: Bash
 source: https://github.com/github/awesome-copilot/blob/main/skills/git-commit/SKILL.md
 ---
+
+# Kilo Git Commit
+
+This skill is specifically designed for the Kilo agent. Do not propagate to other agent skill directories.

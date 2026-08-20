@@ -108,6 +108,7 @@ done
 
 # Sync each skill across all agents
 for skill_dir in $seen_skills; do
+    [ "$skill_dir" = "use-aget-skills" ] && continue
     sync_multiple_agents "$skill_dir" \
         ".claude/skills/$skill_dir/SKILL.md" \
         ".codex/skills/$skill_dir/SKILL.md" \
