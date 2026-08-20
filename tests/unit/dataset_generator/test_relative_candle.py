@@ -1,6 +1,6 @@
 """Unit tests for relative_candle.py against docs/input-features.md § candle feature schema.
 
-Values are hand-derived from the spec formulas (C/ATR, (H-C)/ATR, (C-L)/ATR, gap, height/ATR), not
+Values are hand-derived from the spec formulas (C/ATR, (H-C)/ATR, (C-L)/ATR, open_gap, height/ATR), not
 captured from running the function — this is new spec-conformance code, not legacy behavior to pin.
 """
 
@@ -45,8 +45,8 @@ def test_rel_close_low_is_close_minus_low_over_atr(after_relative_candle: pd.Dat
     _assert_col(after_relative_candle, "rel_close_low", [7.0, 11.2, 7.0, 11.2, 7.0])
 
 
-def test_gap_is_open_minus_prev_close_over_atr_and_nan_on_first_row(after_relative_candle: pd.DataFrame) -> None:
-    _assert_col(after_relative_candle, "gap", [float("nan"), -2.2, -2.2, -2.2, -2.2])
+def test_open_gap_is_open_minus_prev_close_over_atr_and_nan_on_first_row(after_relative_candle: pd.DataFrame) -> None:
+    _assert_col(after_relative_candle, "open_gap", [float("nan"), -2.2, -2.2, -2.2, -2.2])
 
 
 def test_rel_candle_height_is_high_minus_low_over_atr(after_relative_candle: pd.DataFrame) -> None:

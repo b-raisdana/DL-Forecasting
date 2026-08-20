@@ -54,7 +54,7 @@ CANDLE_FEATURE_COLUMNS: list[str] = [
     "relative_normal_close",
     "rel_high_close",
     "rel_close_low",
-    "gap",
+    "open_gap",
     "rel_candle_height",
     "log_volume_sma_ratio",
     "price_normal_distance_plus2tf_peak",

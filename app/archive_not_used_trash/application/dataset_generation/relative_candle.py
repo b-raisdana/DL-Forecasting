@@ -7,7 +7,7 @@ __relative_candle_columns = [
     "rel_close",
     "rel_high_close",
     "rel_close_low",
-    "gap",
+    "open_gap",
     "rel_candle_height",
 ]
 

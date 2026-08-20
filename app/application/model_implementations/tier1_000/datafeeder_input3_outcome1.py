@@ -65,7 +65,7 @@ from helper.importer import ptd, ta
 _STATIC_CANDLE_COLUMNS: list[str] = [
     "rel_high_close",
     "rel_close_low",
-    "gap",
+    "open_gap",
     "rel_candle_height",
     "log_volume_sma_ratio",
 ]
@@ -219,7 +219,9 @@ def build_dataset(symbol: str, date_range_str: str) -> DatasetBundle:
 
         static_windows = _gather_windows(
             feat_df[_STATIC_CANDLE_COLUMNS].to_numpy(dtype=np.float32), positions, window_len
-        )  # (n_anchors, window_len, 5): rel_high_close, rel_close_low, gap, rel_candle_height, log_volume_sma_ratio
+        )
+        # (n_anchors, window_len, 5):
+        # rel_high_close, rel_close_low, open_gap, rel_candle_height, log_volume_sma_ratio
 
         close_arr = feat_df["close"].to_numpy(dtype=np.float64)
         atr_arr = feat_df["atr"].to_numpy(dtype=np.float64)

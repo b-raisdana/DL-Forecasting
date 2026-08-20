@@ -7,6 +7,8 @@ Computation and caching strategy for features and labels consumed by the trainer
 - **Per sample (recomputed fresh for each anchor, never cached):** `normal_close → rel_normal_close`, `rer`, `MFE / MAE`. Source values may be backfilled or revised without touching a cache.
 - **Precomputed (once over full data history, per timeframe, then queried per sample):** all other features and labels. Computation happens in bulk; individual sample queries are served from the disk-backed datastore.
 
+ATR is the canonical example of minimizing per-sample work: the full per-candle ATR series is precomputed once per timeframe and cached. We deliberately use each candle's own ATR value (not the ATR value pinned to the anchor candle) — this keeps ATR-derived features computable once, cacheable as a series, and independent of which candle happens to be the current NOW-anchor, since the anchor shifts with every new sample.
+
 ## Incremental append-only caching
 
 Caching is incremental and immutable — no updates, only appends. If two anchors are 1 candle apart, only the non-overlapping candle(s) are newly computed; the rest is served from cache.

@@ -12,7 +12,7 @@ Each of the 6 branches (5min, 15min, 1h, 4h, 1D, 1W) produces a `(window_len, 15
 - `relative_normal_close`: `(close - anchor_close) / ATR(256)` — anchor is the LAST 5min candle before the label timestamp (`datafeeder_input3_outcome1.py:229`)
 - `rel_high_close`: `(high - close) / ATR` (`relative_candle.py:31`)
 - `rel_close_low`: `(close - low) / ATR` (`relative_candle.py:32`)
-- `gap`: `(open - prev_close) / ATR` (`relative_candle.py:33`)
+- `open_gap`: `(open - prev_close) / ATR` (`relative_candle.py:33`)
 - `rel_candle_height`: `(high - low) / ATR` (`relative_candle.py:34`)
 
 ATR is `pandas_ta.atr(length=256)` except 1W uses length=20 to avoid warmup crash (`datafeeder_input3_outcome1.py:79`).
@@ -36,6 +36,122 @@ Source branches: plus2TF/plus3TF targets not in the 6 cached timeframes (1M/4M/1
 
 ### auxiliary_features
 LAST candle of every branch, all 15 features flattened: shape `(n_samples, 90)` (`datafeeder_input3_outcome1.py:283`).
+
+## End-to-End Data Flow
+
+Entry point: `build_dataset(symbol, date_range_str)` in `datafeeder_input3_outcome1.py:155`.
+
+```
+build_dataset(symbol, date_range_str)
+│
+├─ read_multi_timeframe_ohlcv(date_range_str)                          [CACHE: disk, windowed]
+│  └─ get_multi_timeframe_ohlcv(date_range_str)
+│     ├─ get_base_timeframe_ohlcv(date_range_str)                      [CACHE: disk, windowed]
+│     │  ├─ fetch_ohlcv_by_range(broker, date_range_str, base_timeframe)
+│     │  │  └─ fetch_ohlcv(broker, symbol, timeframe, start, number_of_ticks, params)
+│     │  │     └─ ccxt exchange.fetch_ohlcv(...)                       [NETWORK I/O]
+│     │  └─ build_base_timeframe_ohlcv(raw_ohlcv, date_range_str, base_timeframe)
+│     │     └─ pd.DataFrame + cast_and_validate(OHLCV)
+│     └─ aggregate_multi_timeframe_ohlcv(ohlcv, date_range_str)
+│        └─ pd.Grouper resample to 15min/1h/4h/1D/1W + concat
+│
+├─ single_timeframe(mt_ohlcv, "5min") → base_ohlc
+├─ single_timeframe(mt_ohlcv, "15min") → fifteen_min_ohlc
+│
+├─ add_mfe_mae_om_labels(base_ohlc, fifteen_min_ohlc)                  [CACHE: per-run]
+│  ├─ _atr_255_15min_floor(five_min_index, fifteen_min_ohlc)
+│  │  └─ ta.atr(high, low, close, length=255) + merge_asof backward
+│  ├─ sliding_window_view(high[1:], HORIZON_BARS) / sliding_window_view(low[1:], HORIZON_BARS)
+│  ├─ _direction_excursions(entry_long, high_windows, low_windows, True, atr_floor)   → mfe_long, mae_long
+│  ├─ _direction_excursions(entry_short, low_windows, high_windows, False, atr_floor) → mfe_short, mae_short
+│  └─ om_long = mfe_long/mae_long, om_short = mfe_short/mae_short
+│     ├─ qualifies_long = om_long > 5.0
+│     ├─ qualifies_short = om_short > 5.0
+│     ├─ action = np.select([long/short/both], default="none")
+│     ├─ mfe = chosen direction's mfe
+│     └─ rer = clip(mae / (mfe - mae + eps), 0, 1/4)
+│
+├─ FOR EACH tf_name IN BRANCH_TIMEFRAMES:
+│  │
+│  ├─ _branch_features(single_timeframe(mt_ohlcv, tf_name), tf_name)
+│  │  ├─ ohlc.copy()
+│  │  ├─ [1W only] ta.atr(length=20) override
+│  │  ├─ add_relative_candle_columns(ohlc)                             [CACHE: per-branch, per-run]
+│  │  │  ├─ ta.atr(length=256) [if 'atr' not present]
+│  │  │  ├─ rel_close = close / atr
+│  │  │  ├─ rel_high_close = (high - close) / atr
+│  │  │  ├─ rel_close_low = (close - low) / atr
+│  │  │  ├─ open_gap = (open - prev_close) / atr
+│  │  │  └─ rel_candle_height = (high - low) / atr
+│  │  ├─ add_volume_feature_columns(ohlc)                              [unused downstream]
+│  │  │  └─ ta.rma(volume, length=14) → volume_atr
+│  │  └─ add_log_sma_volume_feature_column(ohlc, length=256 or 20)
+│  │     └─ ta.sma(volume, length) → log_volume_sma_ratio
+│  │
+│  ├─ _last_closed_position(anchor_index, branch_index, tf_minutes, 5.0)
+│  │  └─ shift = (branch_tf - 5min); merge_asof(shifted_anchors, branch_positions, backward)
+│  │
+│  ├─ build_branch_extremum(features_by_tf[tf_name])                  [CACHE: per-branch, per-run]
+│  │  └─ compute_true_extremum(ohlc)                                   [O(n) monotonic stack]
+│  │     ├─ _reach_minutes(high, times_ns, direction="right", sense="peak")
+│  │     ├─ _reach_minutes(high, times_ns, direction="left", sense="peak")
+│  │     ├─ _reach_minutes(low, times_ns, direction="right", sense="valley")
+│  │     ├─ _reach_minutes(low, times_ns, direction="left", sense="valley")
+│  │     ├─ true_peak_reach = min(left_peak, right_peak)
+│  │     ├─ true_valley_reach = min(left_valley, right_valley)
+│  │     ├─ true_extremum_tf_minutes = floor_to_tf_ladder(max(peak, valley))
+│  │     └─ extremum_sign = +1 (peak wins ties), -1, or 0
+│  │
+│  ├─ _source_for(plus2_tf) → plus2_source (BranchExtremum)
+│  ├─ _source_for(plus3_tf) → plus3_source (BranchExtremum)
+│  │
+│  ├─ align_source_atr(feat_df.index, plus2_source, plus2_native_minutes)   [CACHE: per-branch, per-source]
+│  │  └─ shift = plus2_tf_minutes; merge_asof(shifted, source_positions, backward)
+│  ├─ align_source_atr(feat_df.index, plus3_source, plus3_native_minutes)   [CACHE: per-branch, per-source]
+│  │
+│  ├─ compute_extremum_weight(branch, gather_idx, anchor_time_ns, tf_minutes)
+│  │  └─ weight = sign * log1p(observed/tf_minutes) * min(1, age/observed)
+│  │
+│  └─ compute_higher_extremum_distance(
+│        windowed_close, windowed_time_ns, anchor_time_ns,
+│        plus2_source, plus2_tf_minutes, plus2_atr_windowed,
+│        plus3_source, plus3_tf_minutes, plus3_atr_windowed)
+│     ├─ _threshold_filtered_pool(plus2_source, sign=+1, plus2_tf_minutes)  → peak_pool
+│     ├─ _threshold_filtered_pool(plus2_source, sign=-1, plus2_tf_minutes)  → valley_pool
+│     ├─ _threshold_filtered_pool(plus3_source, sign=+1, plus3_tf_minutes)  → peak_pool
+│     ├─ _threshold_filtered_pool(plus3_source, sign=-1, plus3_tf_minutes)  → valley_pool
+│     └─ FOR EACH anchor a:
+│        ├─ _nearest_and_last(close[a], time[a], peak_pool, cutoff_ns)    → price_peak, time_peak
+│        ├─ _nearest_and_last(close[a], time[a], valley_pool, cutoff_ns)  → price_valley, time_valley
+│        ├─ price_normal = price_diff / atr_aligned
+│        └─ time_normal = log1p(elapsed_minutes / target_tf_minutes)
+│
+├─ auxiliary_features = concat([last_candle_by_tf[0], ..., last_candle_by_tf[5]], axis=1)
+│
+├─ NaN scrub:
+│  └─ clean = ~np.isnan(windows).any(axis=(1,2)) & ~np.isnan(aux).any(axis=1)
+│
+└─ DatasetBundle(
+     branch_windows={tf: windows[clean]},
+     auxiliary_features=aux[clean],
+     mfe=labels["mfe"][clean],
+     rer=labels["rer"][clean],
+     action=labels[["action_long","action_short","action_none"]][clean],
+     anchor_index=anchor_index[clean])
+```
+
+### Cacheable Results
+
+| Method / Step | Scope | Cache Mechanism | Notes |
+|---|---|---|---|
+| `get_base_timeframe_ohlcv` | `(date_range_str, base_timeframe)` | `@cache_on_disk(OHLCV_DATASET, windowed=True)` | Disk-level Parquet/ZSTD; LRU in-process read cache (32 entries). Network fetch only on cold miss. |
+| `get_multi_timeframe_ohlcv` | `date_range_str` | `@cache_on_disk(MULTI_TIMEFRAME_OHLCV_DATASET, windowed=True)` | Depends on `get_base_timeframe_ohlcv`; post-read hook `cache_times` populates `GLOBAL_CACHE["valid_times_{tf}"]`. |
+| `build_branch_extremum` | Per branch (6× per `build_dataset`) | In-memory, recomputed each `build_dataset()` call | Step A (`compute_true_extremum`) is O(n) monotonic-stack. Reused for that branch's own `extremum_weight` and as source pool for lower-TF branches' `higher_extremum_distance`. |
+| `align_source_atr` | Per (encoding_branch, source_branch) pair | In-memory, computed once per branch over full series | Windowed with the same `gather_idx` as all other per-branch channels; not recomputed per anchor. |
+| `_atr_255_15min_floor` | Per `add_mfe_mae_om_labels` call | In-memory | Forward-filled ATR(255) from completed 15min candles onto 5min anchor index. |
+| `_branch_features` | Per branch (6× per `build_dataset`) | In-memory, recomputed each call | Adds ATR + 5 static ratio columns + volume features. Side-effect: populates `ohlc['atr']` for downstream `build_branch_extremum`. |
+
+**Cache key insight:** The two disk-cached functions (`get_base_timeframe_ohlcv`, `get_multi_timeframe_ohlcv`) are the only results that survive across process restarts. All other expensive transforms (`build_branch_extremum`, `align_source_atr`, `_atr_255_15min_floor`) are recomputed each `build_dataset()` invocation even though their inputs are derived from the same cached `mt_ohlcv`.
 
 ## Outcome Features
 
