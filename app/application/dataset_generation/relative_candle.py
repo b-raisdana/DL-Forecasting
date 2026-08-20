@@ -1,5 +1,8 @@
-import pandas as pd
+from __future__ import annotations
+
 import pandas_ta as ta
+from domain.schemas.common.OHLCV import OHLCV
+from helper.importer import ptd
 
 ATR_LENGTH = 256
 
@@ -12,11 +15,11 @@ __relative_candle_columns = [
 ]
 
 
-def relative_candle_columns() -> list[str]:
-    return __relative_candle_columns
+# def relative_candle_columns() -> list[str]:
+# return __relative_candle_columns
 
 
-def add_relative_candle_columns(ohlc: pd.DataFrame) -> pd.DataFrame:
+def add_relative_candle_columns(ohlc: ptd[OHLCV]) -> ptd[OHLCV]:
     """relative-HLC block per docs/input-features.md § candle feature schema.
 
     close/ATR, (high-close)/ATR, (close-low)/ATR, gap=(open-prev_close)/ATR, candle_height/ATR.

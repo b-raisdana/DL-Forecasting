@@ -2,8 +2,8 @@ from datetime import datetime
 
 import pandas as pd
 from BullBearSide import bull_bear_side_repr
-from config import TREND
-from domain.schemas.market_structure.BullBearSide import BullBearSide
+from archive_not_used_trash.config.Config import TREND
+from archive_not_used_trash.domain.schemas.market_structure.BullBearSide import BullBearSide
 from helper.functions import log
 from pandera import typing as pt
 

@@ -7,7 +7,7 @@ import pytz
 from pandas import Timestamp
 from pandera import typing as pt
 
-from domain.schemas.common.ExtendedDf import BaseDFM, ExtendedDf
+from archive_not_used_trash.domain.schemas.common.ExtendedDf import BaseDFM, ExtendedDf
 from domain.schemas.common.MultiTimeframe import MultiTimeframe
 
 

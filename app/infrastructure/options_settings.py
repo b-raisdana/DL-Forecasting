@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import cast
 
 from diskcache import Cache
-from infrastructure.market_data_fetch.ccxt_client import fetch_oldest_available_timestamp, map_to_ccxt_symbol
+from helper.logging.do_log.log_it import log_e
+from infrastructure.market_data_fetch.ccxt_client import fetch_oldest_available_timestamp
 
 # Initialize the options_settings cache in the data directory
 _options_settings_cache_dir = Path("./data/options_settings")
@@ -12,7 +13,7 @@ _options_settings_cache_dir.mkdir(parents=True, exist_ok=True)
 options_settings = Cache(str(_options_settings_cache_dir))
 
 
-def get_oldest_available_timestamp(broker: str, symbol: str) -> datetime | None:
+def get_oldest_available_timestamp(broker: str, symbol: str) -> datetime:
     """
     Get the oldest available timestamp for a trading pair from the broker.
 
@@ -34,9 +35,11 @@ def get_oldest_available_timestamp(broker: str, symbol: str) -> datetime | None:
         return cast(datetime, cached_timestamp)
 
     # Fetch from broker
-    ccxt_symbol = map_to_ccxt_symbol(symbol)
-    oldest_timestamp = fetch_oldest_available_timestamp(broker.lower(), ccxt_symbol)
-
+    oldest_timestamp = fetch_oldest_available_timestamp(broker.lower(), symbol)
+    if not oldest_timestamp:
+        msg = f"Unable to fetch oldest_available_timestamp for {symbol} from {broker}."
+        log_e(msg)
+        raise RuntimeError(msg)
     # Cache the result (even if None, to avoid repeated failed fetches)
     options_settings.set(cache_key, oldest_timestamp)
 

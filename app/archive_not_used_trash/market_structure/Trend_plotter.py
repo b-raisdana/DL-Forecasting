@@ -1,13 +1,14 @@
 from pathlib import Path
 
 import pandas as pd
-from config import TREND, app_config
-from domain.price_action.PeakValley import major_timeframe, peaks_only, valleys_only
+from config import app_config
+from archive_not_used_trash.config.Config import TREND
+from archive_not_used_trash.domain.price_action.PeakValley import major_timeframe, peaks_only, valleys_only
 from helper.data_preparation import single_timeframe
 from helper.logging import profile_it
 from infrastructure.datastore_engine.disk_cache import symbol_data_path
 from archive_not_used_trash.market_structure.PeakValley_plotter import plot_peaks_n_valleys
-from presentation.shared.plotter import file_id, plot_multiple_figures, save_figure
+from archive_not_used_trash.presentation.shared.plotter import file_id, plot_multiple_figures, save_figure
 
 
 @profile_it

@@ -1,5 +1,5 @@
 import pandas as pd
-from config import TopTYPE
+from archive_not_used_trash.config.Config import TopTYPE
 from PeakValley import merge_tops
 
 # todo: left uncompleted

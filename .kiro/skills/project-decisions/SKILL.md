@@ -84,6 +84,19 @@ these are codes we developed before and has good ideas to remeber for optimized 
 do not move them blindly. every thime get the idea and implement it in a better way and try to optimize.
 apply skulls defined project standard on the code.
 
+## Helper imports
+
+Trigger: any module that needs a shared third-party alias or project-wide shortcut. Prefer `app/helper/importer.py` aliases over local `import X as Y` so the mapping is defined once and consumed everywhere.
+
+Current aliases:
+- `go = plotly.graph_objects`
+- `pa = pandera`
+- `pt = pandera.typing`
+- `ptd = pd.DataFrame`
+- `ta = pandas_ta`
+
+Rule: import the alias directly (`from helper.importer import ptd, ta`), then use `ptd(...)` instead of `pd.DataFrame(...)` and `ta.<indicator>(...)` instead of `pandas_ta.<indicator>(...)`. If the file needs other `pd` names (`pd.concat`, `pd.read_parquet`, etc.), keep `import pandas as pd` alongside the helper import — only the DataFrame constructor moves to `ptd`.
+
 ## Lib-first
 
 Trigger: before implementing any new non-trivial algorithm/transform/indicator/concurrency primitive.
@@ -181,3 +194,8 @@ Trigger: about to add a call/guard/branch justified as "for consistency", "for d
 Rule: don't. Either the scenario is genuinely reachable — call the real guard and say which case it's for — or it isn't, and the call/branch gets deleted outright rather than kept as inert scaffolding. Same principle as CLAUDE.md's "don't add error handling/validation for scenarios that can't happen," applied to no-op calls specifically: a call whose own docstring admits it's "normally a no-op" on that path is a signal to remove it, not to keep it defensively.
 
 Fixed instance: `_migrate_to_parquet()` in `infrastructure/datastore_engine/convert_to_parquest.py` (then still split into `_migrate_feather_to_parquet()`/`_migrate_csv_zip_to_parquet()`, later merged — see [Merge duplicated logic](#merge-duplicated-logic-dry)) called `flatten_index_to_columns(df)` unconditionally on a frame from `pd.read_csv()`, which never sets a custom index — the call could never do anything on that path, so its caller now passes `flatten=False` to skip it outright rather than relying on the callee's own no-op branch.
+
+## brief comments
+
+proper naming is always the first choice
+a comment just allowed if what it says is not understandable from the name of nearby method and method arguments and requires to add real knowledge and do what is impossible by using proper naming.

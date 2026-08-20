@@ -6,8 +6,8 @@ import pytz
 from pandas import Timestamp
 from pandera import typing as pt
 
-from domain.schemas.common.ExtendedDf import ExtendedDf
-from domain.schemas.market_structure.Pivot2 import MultiTimeframePivot2DFM, Pivot2DFM
+from archive_not_used_trash.domain.schemas.common.ExtendedDf import ExtendedDf
+from archive_not_used_trash.domain.schemas.market_structure.Pivot2 import MultiTimeframePivot2DFM, Pivot2DFM
 
 
 class AtrMovementPivotDFM(Pivot2DFM):

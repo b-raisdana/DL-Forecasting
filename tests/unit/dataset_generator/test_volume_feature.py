@@ -11,8 +11,6 @@ import pytest
 from application.dataset_generation.volume_feature import (
     add_log_sma_volume_feature_column,
     add_volume_feature_columns,
-    log_sma_volume_feature_columns,
-    volume_feature_columns,
 )
 
 pytestmark = pytest.mark.unit
@@ -25,10 +23,6 @@ def short_atr_period(monkeypatch: pytest.MonkeyPatch) -> None:
     from config import app_config
 
     monkeypatch.setattr(app_config, "atr_timeperiod", 2)
-
-
-def test_volume_feature_columns_lists_the_one_derived_field() -> None:
-    assert volume_feature_columns() == ["volume_atr"]
 
 
 def test_volume_atr_is_volume_over_rma_volume() -> None:
@@ -55,10 +49,6 @@ def test_volume_atr_zero_volume_run_is_nan_not_inf() -> None:
 
 
 # --- add_log_sma_volume_feature_column (additive sibling, gap 2) ---------------------------------
-
-
-def test_log_sma_volume_feature_columns_lists_the_one_derived_field() -> None:
-    assert log_sma_volume_feature_columns() == ["log_volume_sma_ratio"]
 
 
 def test_log_volume_sma_ratio_matches_hand_derived_formula() -> None:

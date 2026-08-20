@@ -16,7 +16,6 @@ from datetime import datetime
 import pytz
 from application.model_implementations.tier1_000.train import TrainingPresenter, run_training
 from config import app_config
-from helper.functions import date_range_to_string
 from infrastructure.options_settings import get_oldest_available_timestamp
 
 
@@ -85,18 +84,11 @@ if __name__ == "__main__":
         if date_range_str is None:
             print(f"[presenter] fetching oldest available timestamp for {symbol}...")
             oldest_timestamp = get_oldest_available_timestamp(app_config.under_process_exchange.lower(), symbol)
-            if oldest_timestamp:
-                # Format: YY-MM-DD.HH-MMTYY-MM-DD.HH-MM
-                # Use oldest timestamp as start, current time as end
-                start_str = oldest_timestamp.strftime("%y-%m-%d.%H-%M")
-                end = datetime.now(pytz.UTC)
-                end_str = end.strftime("%y-%m-%d.%H-%M")
-                date_range_str = f"{start_str}T{end_str}"
-                print(f"[presenter] using date range from oldest available data: {date_range_str}")
-            else:
-                print(f"[presenter] warning: could not fetch oldest timestamp for {symbol}, using current date")
-                # Fallback to a reasonable default (last 60 days)
-                date_range_str = date_range_to_string(days=60)
+            start_str = oldest_timestamp.strftime("%y-%m-%d.%H-%M")
+            end = datetime.now(pytz.UTC)
+            end_str = end.strftime("%y-%m-%d.%H-%M")
+            date_range_str = f"{start_str}T{end_str}"
+            print(f"[presenter] using date range from oldest available data: {date_range_str}")
 
         print(f"[presenter] === training {symbol} (run_key={run_key}) ===")
         run_training(

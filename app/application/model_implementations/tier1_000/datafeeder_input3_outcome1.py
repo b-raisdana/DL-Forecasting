@@ -53,8 +53,10 @@ from application.model_implementations.tier1_000.model import (
 from config import app_config
 from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from domain.price_action.CausalExtremum import TF_MINUTES, plus2tf, plus3tf
+from domain.schemas.common.OHLCV import OHLCV
+from domain.schemas.price_action.extremum_features import BranchExtremumOHLC
 from helper.data_preparation import single_timeframe
-from helper.importer import ta
+from helper.importer import ptd, ta
 
 # The 5 static (non-anchor-dependent) relative-candle/volume columns gathered directly per branch —
 # everything else in CANDLE_FEATURE_COLUMNS (relative_normal_close, the 8 higher_extremum_distance
@@ -95,7 +97,7 @@ class DatasetBundle:
         return len(self.anchor_index)
 
 
-def _branch_features(ohlc: pd.DataFrame, tf_name: str) -> pd.DataFrame:
+def _branch_features(ohlc: ptd[OHLCV], tf_name: str) -> ptd[BranchExtremumOHLC]:
     """Returns the FULL processed frame (not sliced to CANDLE_FEATURE_COLUMNS) — build_dataset() needs
     raw 'close'/'atr'/'high'/'low' alongside the 5 static ratio columns, both to compute
     relative_normal_close's anchor-relative formula (gap 1) and to feed CausalExtremum's Step A/B
@@ -122,8 +124,8 @@ def _last_closed_position(
     `anchor - shift + branch_tf == anchor + base_tf` — exactly the anchor's own close. shift=0 for the
     base (5min) branch itself, matching each anchor to itself (the "LAST" candle, already closed)."""
     shift = pd.Timedelta(minutes=branch_tf_minutes - base_tf_minutes)
-    shifted_anchors = pd.DataFrame({"date": anchor_index - shift}).sort_values("date")
-    branch_positions = pd.DataFrame({"date": branch_index, "position": np.arange(len(branch_index))})
+    shifted_anchors = ptd({"date": anchor_index - shift}).sort_values("date")
+    branch_positions = ptd({"date": branch_index, "position": np.arange(len(branch_index))})
     merged = pd.merge_asof(shifted_anchors, branch_positions, on="date", direction="backward")
     # restore original anchor order (sort_values above was needed for merge_asof's monotonic requirement)
     merged.index = shifted_anchors.index
@@ -181,7 +183,9 @@ def build_dataset(symbol: str, date_range_str: str) -> DatasetBundle:
     # so it's already aligned to the filtered anchor set — one fixed close value per training sample,
     # subtracted from every candle across every branch's window for that sample.
     anchor_base_close = base_ohlc.loc[anchor_index, "close"].to_numpy(dtype=np.float64)
-    anchor_time_ns = anchor_index.asi8
+    # .asi8 reflects the index's own storage unit, not always nanoseconds — pandas >=3 no longer
+    # always upcasts to 'ns', so force it before any _NS_PER_MINUTE-based arithmetic downstream.
+    anchor_time_ns = anchor_index.as_unit("ns").asi8
 
     # gap 3: Step A (full-hindsight causal-capped reach) runs once per branch's own native series —
     # reused both for that branch's own extremum_weight (Step C) and, when this branch is itself a
@@ -225,7 +229,7 @@ def build_dataset(symbol: str, date_range_str: str) -> DatasetBundle:
             relative_normal_close = (windowed_close - anchor_base_close[:, None]) / windowed_atr
         relative_normal_close = relative_normal_close.astype(np.float32)
 
-        windowed_time_ns = feat_df.index.asi8[gather_idx]
+        windowed_time_ns = feat_df.index.as_unit("ns").asi8[gather_idx]
 
         weight = compute_extremum_weight(
             branch_extremum_by_tf[tf_name], gather_idx, anchor_time_ns, tf_minutes[tf_name]
@@ -305,7 +309,10 @@ def split_bundle(bundle: DatasetBundle, val_fraction: float = 0.1) -> tuple[Data
     n_val = max(1, int(bundle.n_samples * val_fraction))
     split_at = bundle.n_samples - n_val
 
-    def _slice(sl: slice) -> DatasetBundle:
+    def _slice(sl: slice) -> DatasetBundle:  # type: ignore[explicit-any]
+        # shapes: branch_windows[tf]=(n_samples, window_len, feature_dim),
+        # auxiliary_features=(n_samples, AUX_FEATURE_DIM), mfe=(n_samples, 1),
+        # rer=(n_samples, 1), action=(n_samples, 3), anchor_index=(n_samples,)
         return DatasetBundle(
             branch_windows={tf_name: arr[sl] for tf_name, arr in bundle.branch_windows.items()},
             auxiliary_features=bundle.auxiliary_features[sl],

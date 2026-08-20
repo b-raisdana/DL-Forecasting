@@ -14,7 +14,8 @@ from pandera import typing as pt
 from scipy.spatial.distance import cosine, jensenshannon
 from scipy.stats import ks_2samp, wasserstein_distance
 
-from application.model_implementations.shared.base import master_x_shape, overlapped_quarters
+from application.model_implementations.shared.base import master_x_shape
+from archive_not_used_trash.application.model_implementations.shared.base import overlapped_quarters
 
 
 def compare_columns_similarity(X_df: pd.DataFrame) -> pd.DataFrame:

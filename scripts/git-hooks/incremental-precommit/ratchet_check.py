@@ -113,6 +113,8 @@ def staged_app_python_files() -> list[Path]:
     for line in stdout.splitlines():
         path = Path(line)
         if path.parts[:1] == (TARGET,) and path.suffix == ".py" and (ROOT / path).exists():
+            if "archive_not_used_trash" in path.parts:
+                continue
             paths.append(path)
     return sorted(set(paths))
 

@@ -37,7 +37,8 @@ from __future__ import annotations
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
+from domain.schemas.price_action.CausalExtremum import CausalExtremumOHLC, CausalExtremumResult
+from helper.importer import ptd
 
 # This codebase's lowercase-h timeframe convention (differs from the spec jsonc's "1H"/"4H", same
 # meaning). 1M/4M/1Y have no native cached series anywhere in this codebase (app_config.timeframes
@@ -122,7 +123,7 @@ def _reach_minutes(
     return reach
 
 
-def compute_true_extremum(ohlc: pd.DataFrame) -> pd.DataFrame:
+def compute_true_extremum(ohlc: ptd[CausalExtremumOHLC]) -> ptd[CausalExtremumResult]:
     """Step A: full-hindsight (anchor-independent) extremum reach for every candle in `ohlc` (a
     single-timeframe, single native-spacing series — one branch's own native series, not a
     multi-timeframe frame).
@@ -138,9 +139,21 @@ def compute_true_extremum(ohlc: pd.DataFrame) -> pd.DataFrame:
     - `true_extremum_tf_minutes`: floor_to_tf_ladder(max(true_peak_reach, true_valley_reach)) — the
       unsigned reach magnitude (whichever of peak/valley reach is larger), ladder-snapped.
     """
+    CausalExtremumOHLC.validate(ohlc, lazy=True)
+
     high = ohlc["high"].to_numpy(dtype=np.float64)
     low = ohlc["low"].to_numpy(dtype=np.float64)
-    times_ns = ohlc.index.asi8
+    # Normalize the index to nanosecond UTC before reading integer timestamps. pandas 3.x stores
+    # tz-aware datetimes at microsecond (or coarser) resolution, so `ohlc.index.asi8` can return
+    # *microseconds*; dividing those by `_NS_PER_MINUTE` (nanoseconds/minute) yields reach values
+    # ~1000x too small (e.g. 0.005 instead of 5.0) and makes `floor_to_tf_ladder(reach) == 0`, which
+    # wrongly collapses `extremum_sign` to 0. Localize naive indexes, convert aware ones to UTC, then
+    # force nanosecond precision so reach is always the real elapsed minutes between timestamps.
+    index = ohlc.index
+    if index.tz is None:
+        index = index.tz_localize("UTC")
+    index = index.astype("datetime64[ns, UTC]")
+    times_ns = index.asi8
 
     right_peak = _reach_minutes(high, times_ns, direction="right", sense="peak")
     left_peak = _reach_minutes(high, times_ns, direction="left", sense="peak")
@@ -157,26 +170,28 @@ def compute_true_extremum(ohlc: pd.DataFrame) -> pd.DataFrame:
     extremum_sign = np.where(peak_wins, 1, -1)
     extremum_sign = np.where(true_extremum_tf_minutes == 0, 0, extremum_sign)
 
-    return pd.DataFrame(
+    result = ptd(
         {
             "true_peak_reach_minutes": true_peak_reach,
             "true_valley_reach_minutes": true_valley_reach,
             "extremum_sign": extremum_sign.astype(np.int64),
             "true_extremum_tf_minutes": true_extremum_tf_minutes,
         },
-        index=ohlc.index,
+        index=index,
     )
+    CausalExtremumResult.validate(result, lazy=True)
+    return result
 
 
-def observed_extremum_tf_minutes(
-    true_extremum_tf_minutes: npt.NDArray[np.float64],
-    event_time_ns: npt.NDArray[np.int64],
-    anchor_time_ns: int | np.int64 | npt.NDArray[np.int64],
-) -> npt.NDArray[np.float64]:
-    """Step B closed form (see module docstring for the derivation): the causally-capped reach as of
-    `anchor_time_ns`, vectorized over events. `anchor_time_ns` may be a scalar (one anchor, many
-    events) or an array broadcastable against `event_time_ns` (e.g. already-windowed per-anchor
-    event times).
-    """
-    age_minutes = (np.asarray(anchor_time_ns) - np.asarray(event_time_ns)) / _NS_PER_MINUTE
-    return np.minimum(true_extremum_tf_minutes, floor_to_tf_ladder(age_minutes))
+# def observed_extremum_tf_minutes(
+# true_extremum_tf_minutes: npt.NDArray[np.float64],
+# event_time_ns: npt.NDArray[np.int64],
+# anchor_time_ns: int | np.int64 | npt.NDArray[np.int64],
+# ) -> npt.NDArray[np.float64]:
+# """Step B closed form (see module docstring for the derivation): the causally-capped reach as of
+# `anchor_time_ns`, vectorized over events. `anchor_time_ns` may be a scalar (one anchor, many
+# events) or an array broadcastable against `event_time_ns` (e.g. already-windowed per-anchor
+# event times).
+# """
+# age_minutes = (np.asarray(anchor_time_ns) - np.asarray(event_time_ns)) / _NS_PER_MINUTE
+# return np.minimum(true_extremum_tf_minutes, floor_to_tf_ladder(age_minutes))

@@ -19,15 +19,9 @@ from tensorflow import data as tf_data
 from tensorflow import keras as tf_keras
 from tensorflow.data import Dataset
 
-from application.model_implementations.shared.base import (
-    CustomEpochLogger,
-    build_model,
-    master_x_shape,
-    model_compile,
-    pre_train_model,
-    setup_gpu,
-    setup_tensorboard,
-)
+from application.model_implementations.shared.base import master_x_shape, setup_gpu
+from archive_not_used_trash.application.model_implementations.shared.base import model_compile
+from archive_not_used_trash.application.model_implementations.shared.base import CustomEpochLogger, build_model, pre_train_model, setup_tensorboard
 
 
 def train_cnn_lstm_attention_model(

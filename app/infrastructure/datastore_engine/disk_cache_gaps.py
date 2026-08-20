@@ -29,7 +29,7 @@ internals to answer "what's missing"/"what already overlaps", it never writes.
 def _window_present(data_frame_type: str, window_date_range_str: str, file_path: FilePathArg) -> bool:
     """A window counts as present if it has its own canonical file (parquet, or legacy feather/zip) or
     an existing legacy file fully contains it (same containment check
-    disk_cache._seed_window_from_legacy_file() uses to backfill from)."""
+    disk_cache_windowed._covering_parquet_path() uses to backfill from)."""
     if (
         _parquet_file_path(data_frame_type, window_date_range_str, file_path).exists()
         or _feather_file_path(data_frame_type, window_date_range_str, file_path).exists()

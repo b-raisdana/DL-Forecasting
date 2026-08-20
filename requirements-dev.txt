@@ -6,4 +6,5 @@
 #   wsl.exe -d Ubuntu-24.04 -- bash -lc \
 #     'source ~/miniconda3/etc/profile.d/conda.sh && conda activate tf && \
 #      pip install -r requirements-dev.txt'
+-r requirements.txt
 pre-commit

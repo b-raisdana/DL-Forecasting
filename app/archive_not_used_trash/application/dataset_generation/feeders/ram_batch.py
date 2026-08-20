@@ -20,7 +20,8 @@ from helper.functions import date_range_to_string
 from helper.logging.do_log import log_d, log_e, log_i
 from pandera import typing as pt
 
-from application.model_implementations.shared.base import master_x_shape, overlapped_quarters
+from application.model_implementations.shared.base import master_x_shape
+from archive_not_used_trash.application.model_implementations.shared.base import overlapped_quarters
 
 if TYPE_CHECKING:
     import tensorflow as tf

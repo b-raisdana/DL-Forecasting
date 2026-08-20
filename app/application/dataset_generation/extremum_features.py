@@ -17,6 +17,8 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from domain.price_action.CausalExtremum import compute_true_extremum, floor_to_tf_ladder
+from domain.schemas.price_action.extremum_features import BranchExtremumOHLC
+from helper.importer import ptd
 
 _NS_PER_MINUTE = 60_000_000_000
 
@@ -35,13 +37,16 @@ class BranchExtremum:
     true_extremum_tf_minutes: npt.NDArray[np.float64]
 
 
-def build_branch_extremum(ohlc: pd.DataFrame) -> BranchExtremum:
+def build_branch_extremum(ohlc: ptd[BranchExtremumOHLC]) -> BranchExtremum:
     """`ohlc` must already carry an 'atr' column (relative_candle.py's add_relative_candle_columns
     side effect, already computed upstream in datafeeder_input3_outcome1.py's _branch_features)."""
+    BranchExtremumOHLC.validate(ohlc, lazy=True)
     time_index = pd.DatetimeIndex(ohlc.index)
     extremum = compute_true_extremum(ohlc)
     return BranchExtremum(
-        time_ns=time_index.astype("int64").to_numpy(),
+        # .asi8/.astype("int64") reflect the index's own storage unit (pandas >=3 no longer always
+        # upcasts to 'ns') — force 'ns' first so it matches _NS_PER_MINUTE below.
+        time_ns=time_index.as_unit("ns").astype("int64").to_numpy(),
         time_index=time_index,
         high=ohlc["high"].to_numpy(dtype=np.float64),
         low=ohlc["low"].to_numpy(dtype=np.float64),
@@ -62,8 +67,8 @@ def align_source_atr(
     Direction='backward', no lookahead. NaN where no source candle has closed yet.
     """
     shift = pd.Timedelta(minutes=target_tf_minutes)
-    shifted = pd.DataFrame({"date": query_time_index - shift}).sort_values("date")
-    source_positions = pd.DataFrame({"date": source.time_index, "position": np.arange(len(source.time_index))})
+    shifted = ptd({"date": query_time_index - shift}).sort_values("date")
+    source_positions = ptd({"date": source.time_index, "position": np.arange(len(source.time_index))})
     merged = pd.merge_asof(shifted, source_positions, on="date", direction="backward")
     merged.index = shifted.index
     positions = merged["position"].reindex(range(len(query_time_index))).to_numpy()

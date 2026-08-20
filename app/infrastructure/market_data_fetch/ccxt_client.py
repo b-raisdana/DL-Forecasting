@@ -178,10 +178,11 @@ def fetch_oldest_available_timestamp(broker: str, symbol: str, timeframe: str = 
     left = minimum_timestamp
     right = current_time
     oldest_timestamp = None
+    ccxt_symbol = map_to_ccxt_symbol(symbol)
 
     try:
         # First, try to fetch the most recent single candle to confirm the symbol exists
-        recent_candles = exchange.fetch_ohlcv(symbol, ccxt_timeframe, current_time - 86400000, 1)
+        recent_candles = exchange.fetch_ohlcv(ccxt_symbol, ccxt_timeframe, current_time - 86400000, 1)
         if not recent_candles:
             return None
 
@@ -189,7 +190,7 @@ def fetch_oldest_available_timestamp(broker: str, symbol: str, timeframe: str = 
         while left <= right:
             mid = (left + right) // 2
             try:
-                candles = exchange.fetch_ohlcv(symbol, ccxt_timeframe, mid, 1)
+                candles = exchange.fetch_ohlcv(ccxt_symbol, ccxt_timeframe, mid, 1)
                 if candles:
                     oldest_timestamp = candles[0][0]
                     right = mid - 1  # Try to find an even older timestamp

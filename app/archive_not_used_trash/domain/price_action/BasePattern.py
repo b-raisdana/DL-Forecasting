@@ -2,15 +2,10 @@ from datetime import datetime
 from typing import Literal
 
 import pandas as pd
-from config import CandleSize, app_config
-from helper.data_preparation import (
-    anti_pattern_timeframe,
-    anti_trigger_timeframe,
-    concat,
-    single_timeframe,
-    to_timeframe,
-    trim_to_date_range,
-)
+from config import app_config
+from archive_not_used_trash.config.Config import CandleSize
+from helper.data_preparation import concat, single_timeframe, to_timeframe, trim_to_date_range
+from archive_not_used_trash.helper.data_preparation import anti_pattern_timeframe, anti_trigger_timeframe
 from helper.functions import date_range, date_range_to_string
 from helper.logging import profile_it
 from helper.schema_casting import cast_and_validate, empty_df
@@ -18,9 +13,9 @@ from infrastructure.datastore_engine.disk_cache import CachableDataset, cache_on
 from pandera import Timestamp
 from pandera import typing as pt
 
-from domain.ohlcv.ohlcva import get_multi_timeframe_ohlcva
-from domain.schemas.common.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
-from domain.schemas.market_structure.BasePattern import BasePattern, MultiTimeframeBasePattern
+from archive_not_used_trash.domain.ohlcv.ohlcva import get_multi_timeframe_ohlcva
+from archive_not_used_trash.domain.schemas.common.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
+from archive_not_used_trash.domain.schemas.market_structure.BasePattern import BasePattern, MultiTimeframeBasePattern
 
 MULTI_TIMEFRAME_BASE_PATTERN_DATASET = CachableDataset(dataset_folder_name="multi_timeframe_base_pattern")
 

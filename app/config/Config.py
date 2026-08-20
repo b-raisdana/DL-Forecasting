@@ -1,38 +1,34 @@
 import base64
 import hashlib
-from dataclasses import dataclass
 from datetime import datetime, timedelta
-from enum import Enum
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pytz
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# class CandleSize(Enum):
+# @dataclass
+# class MinMax:
+# min: float
+# max: float
 
-class CandleSize(Enum):
-    @dataclass
-    class MinMax:
-        min: float
-        max: float
-
-    Spinning = MinMax(min=0.0, max=0.80)
-    Standard = MinMax(min=0.80, max=1.20)
-    Long = MinMax(min=1.2, max=2.5)
-    Spike = MinMax(min=2.5, max=np.inf)
-
-
-class TREND(Enum):
-    BULLISH = "BULLISH_TREND"
-    BEARISH = "BEARISH_TREND"
-    SIDE = "SIDE_TREND"
+# Spinning = MinMax(min=0.0, max=0.80)
+# Standard = MinMax(min=0.80, max=1.20)
+# Long = MinMax(min=1.2, max=2.5)
+# Spike = MinMax(min=2.5, max=np.inf)
 
 
-class TopTYPE(Enum):
-    PEAK = "peak"
-    VALLEY = "valley"
+# class TREND(Enum):
+# BULLISH = "BULLISH_TREND"
+# BEARISH = "BEARISH_TREND"
+# SIDE = "SIDE_TREND"
+
+
+# class TopTYPE(Enum):
+# PEAK = "peak"
+# VALLEY = "valley"
 
 
 _ROOT_PATH = Path(__file__).resolve().parent.parent.parent
@@ -118,6 +114,9 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
         "multi_timeframe_ohlcv": "D",
         "multi_timeframe_ohlcva": "D",
     }
+    # infrastructure.datastore_engine.parquet_housekeeping compaction: target on-disk size (MB) when
+    # merging adjacent per-window Parquet files into one larger file.
+    parquet_target_chunk_size_mb: int = Field(default=100, gt=0)
     # Floor for default (no --date-range) OHLCV gap-fill backfill: how far back
     # presentation.market_data.fetch_ohlcv_cli walks before reporting "all up to date" and stopping.
     # Same single-timestamp format as one half of a date_range_str ("%y-%m-%d.%H-%M").

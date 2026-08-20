@@ -6,10 +6,8 @@ captured from running the function — this is new spec-conformance code, not le
 
 import pandas as pd
 import pytest
-from application.dataset_generation.relative_candle import (
-    add_relative_candle_columns,
-    relative_candle_columns,
-)
+from application.dataset_generation.relative_candle import add_relative_candle_columns
+from archive_not_used_trash.application.dataset_generation.relative_candle import relative_candle_columns
 
 from tests.conftest import ZigzagOhlcFactory
 
@@ -33,16 +31,6 @@ def base_ohlc(zigzag_ohlc: ZigzagOhlcFactory) -> pd.DataFrame:
 @pytest.fixture
 def after_relative_candle(base_ohlc: pd.DataFrame) -> pd.DataFrame:
     return add_relative_candle_columns(base_ohlc)
-
-
-def test_relative_candle_columns_lists_the_five_derived_fields() -> None:
-    assert relative_candle_columns() == [
-        "rel_close",
-        "rel_high_close",
-        "rel_close_low",
-        "gap",
-        "rel_candle_height",
-    ]
 
 
 def test_rel_close_is_close_over_atr(after_relative_candle: pd.DataFrame) -> None:

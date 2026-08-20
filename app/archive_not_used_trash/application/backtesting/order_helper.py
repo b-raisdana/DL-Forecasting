@@ -2,7 +2,7 @@ import backtrader as bt
 import pandas as pd
 import pytz
 from archive_not_used_trash.domain.order.SignalDf import SignalDf, SignalDFM
-from domain.order.Order import BracketOrderType
+from archive_not_used_trash.domain.order.Order import BracketOrderType
 from pandera import typing as pt
 
 

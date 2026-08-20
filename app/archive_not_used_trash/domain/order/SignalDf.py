@@ -9,8 +9,8 @@ from helper.logging import log_w
 from pandas import Timestamp
 from pandera import typing as pt
 
-from domain.order.Order import OrderSide
-from domain.schemas.common.ExtendedDf import BaseDFM, ExtendedDf
+from archive_not_used_trash.domain.order.Order import OrderSide
+from archive_not_used_trash.domain.schemas.common.ExtendedDf import BaseDFM, ExtendedDf
 
 
 class SignalDFM(BaseDFM):

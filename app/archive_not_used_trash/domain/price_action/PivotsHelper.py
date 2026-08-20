@@ -1,9 +1,10 @@
 import datetime
 
 import pandas as pd
-from config import TopTYPE, app_config
+from config import app_config
+from archive_not_used_trash.config.Config import TopTYPE
 
-from domain.price_action.PeakValley import peaks_only, valleys_only
+from archive_not_used_trash.domain.price_action.PeakValley import peaks_only, valleys_only
 
 
 # @measure_time

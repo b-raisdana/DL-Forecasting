@@ -1,14 +1,16 @@
 import pandas as pd
 import plotly.graph_objects as go
-from config import CandleSize, app_config
+from config import app_config
+from archive_not_used_trash.config.Config import CandleSize
 from domain.schemas.common.OHLCV import OHLCV
-from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
+from archive_not_used_trash.domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
 from helper.data_preparation import single_timeframe
 from helper.logging import log, profile_it
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 from plotly.subplots import make_subplots
-from presentation.shared.plotter import DEBUG, file_id, plot_multiple_figures, save_figure, update_figure_layout
+from presentation.shared.plotter import DEBUG
+from archive_not_used_trash.presentation.shared.plotter import file_id, plot_multiple_figures, save_figure, update_figure_layout
 
 price_columns = {
     "open": "gray",

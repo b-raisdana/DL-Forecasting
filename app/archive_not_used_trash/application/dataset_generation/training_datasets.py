@@ -7,18 +7,18 @@ import pandas as pd
 from archive_not_used_trash.application.dataset_generation.profit_loss.profit_loss_adder import add_long_n_short_profit
 from config import app_config
 from domain.schemas.common.MultiTimeframe import MultiTimeframe
-from domain.technical_analysis.classic_indicators import (
-    add_classic_indicators,
-    classic_indicator_columns,
-    scaleless_indicators,
-)
-from helper.data_preparation import pattern_timeframe, single_timeframe, trigger_timeframe
+from domain.technical_analysis.classic_indicators import classic_indicator_columns, scaleless_indicators
+from archive_not_used_trash.domain.technical_analysis.classic_indicators import add_classic_indicators
+from helper.data_preparation import single_timeframe
+from archive_not_used_trash.helper.data_preparation import pattern_timeframe, trigger_timeframe
 from helper.functions import date_range
 from helper.importer import pt
 from helper.logging.do_log import log_d
 
-from application.dataset_generation.relative_candle import add_relative_candle_columns, relative_candle_columns
-from application.dataset_generation.volume_feature import add_volume_feature_columns, volume_feature_columns
+from application.dataset_generation.relative_candle import add_relative_candle_columns
+from archive_not_used_trash.application.dataset_generation.relative_candle import relative_candle_columns
+from application.dataset_generation.volume_feature import add_volume_feature_columns
+from archive_not_used_trash.application.dataset_generation.volume_feature import volume_feature_columns
 
 Shape = tuple[int, ...] | list[object] | dict[str, object] | None
 

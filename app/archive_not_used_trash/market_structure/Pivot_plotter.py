@@ -2,16 +2,17 @@ from typing import Literal
 
 import pandas as pd
 from config import app_config
-from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
-from domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
-from domain.schemas.market_structure.Pivot2 import MultiTimeframePivot2DFM, Pivot2DFM
+from archive_not_used_trash.domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
+from archive_not_used_trash.domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
+from archive_not_used_trash.domain.schemas.market_structure.Pivot2 import MultiTimeframePivot2DFM, Pivot2DFM
 from helper.data_preparation import single_timeframe
 from infrastructure.ohlcv.ohlcva import read_multi_timeframe_ohlcva
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 from archive_not_used_trash.market_structure.BasePattern_plotter import draw_base
 from archive_not_used_trash.ohlcv.OHLVC_plotter import add_atr_scatter, plot_ohlcv
-from presentation.shared.plotter import show_and_save_plot, update_figure_layout
+from presentation.shared.plotter import show_and_save_plot
+from archive_not_used_trash.presentation.shared.plotter import update_figure_layout
 
 
 # @measure_time

@@ -1,16 +1,17 @@
 import pandas as pd
-from config import TREND, TopTYPE, app_config
+from config import app_config
+from archive_not_used_trash.config.Config import TREND, TopTYPE
 from domain.price_action import PeakValley
-from domain.price_action.BullBearSide import most_two_significant_tops
-from domain.price_action.PeakValley import major_timeframe, peaks_only, valleys_only
+from archive_not_used_trash.domain.price_action.BullBearSide import most_two_significant_tops
+from archive_not_used_trash.domain.price_action.PeakValley import major_timeframe, peaks_only, valleys_only
 from domain.schemas.common.OHLCV import OHLCV
-from domain.schemas.market_structure.BullBearSide import BullBearSide, bull_bear_side_repr
+from archive_not_used_trash.domain.schemas.market_structure.BullBearSide import BullBearSide, bull_bear_side_repr
 from helper.data_preparation import single_timeframe
 from helper.logging import log, log_w, profile_it
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 from archive_not_used_trash.market_structure.PeakValley_plotter import plot_peaks_n_valleys
-from presentation.shared.plotter import file_id, plot_multiple_figures, save_figure, update_figure_layout
+from archive_not_used_trash.presentation.shared.plotter import file_id, plot_multiple_figures, save_figure, update_figure_layout
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 

@@ -27,7 +27,8 @@ from helper.logging.do_log import log_e, log_i
 from tensorflow import config as tf_config
 from tensorflow import keras as tf_keras
 
-from application.model_implementations.shared.base import build_model, master_x_shape, pre_train_model, setup_gpu
+from application.model_implementations.shared.base import master_x_shape, setup_gpu
+from archive_not_used_trash.application.model_implementations.shared.base import build_model, pre_train_model
 
 BATCH_SIZE = 80
 Y_LEN = 2

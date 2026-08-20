@@ -1,16 +1,18 @@
+from __future__ import annotations
+
 import numpy as np
-import pandas as pd
 from config import app_config
-from helper.importer import ta
+from domain.schemas.common.OHLCV import OHLCV
+from helper.importer import ptd, ta
 
 __volume_feature_columns = ["volume_atr"]
 
 
-def volume_feature_columns() -> list[str]:
-    return __volume_feature_columns
+# def volume_feature_columns() -> list[str]:
+# return __volume_feature_columns
 
 
-def add_volume_feature_columns(ohlcv: pd.DataFrame) -> pd.DataFrame:
+def add_volume_feature_columns(ohlcv: ptd[OHLCV]) -> ptd[OHLCV]:
     """volume / ATR(volume) per docs/input-features.md § candle feature schema.
 
     Volume has no high/low/close to derive a true-range from, so "ATR(volume)" is Wilder's RMA
@@ -22,7 +24,7 @@ def add_volume_feature_columns(ohlcv: pd.DataFrame) -> pd.DataFrame:
     return ohlcv
 
 
-def add_log_sma_volume_feature_column(ohlcv: pd.DataFrame, length: int = 256) -> pd.DataFrame:
+def add_log_sma_volume_feature_column(ohlcv: ptd[OHLCV], length: int = 256) -> ptd[OHLCV]:
     """log((volume + eps) / (SMA_length(volume) + eps)) per .../atr_rel_ohlc_log_sma_v_extm_rel_6tf
     (handmade).input.jsonc's `V` definition. Additive sibling to add_volume_feature_columns (which
     stays unchanged for training_datasets.py's separate pipeline) — a different smoothing (plain SMA,
@@ -35,5 +37,5 @@ def add_log_sma_volume_feature_column(ohlcv: pd.DataFrame, length: int = 256) ->
     return ohlcv
 
 
-def log_sma_volume_feature_columns() -> list[str]:
-    return ["log_volume_sma_ratio"]
+# def log_sma_volume_feature_columns() -> list[str]:
+# return ["log_volume_sma_ratio"]

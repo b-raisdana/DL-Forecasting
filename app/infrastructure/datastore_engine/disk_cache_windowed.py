@@ -5,9 +5,10 @@ import pandas as pd
 import pytz
 from config import app_config
 from helper.data_preparation import trim_to_date_range
-from helper.functions import Pandera_DFM_Type, date_range, date_range_to_string
+from helper.functions import Pandera_DFM_Type, date_range
+from helper.importer import ptd
 from helper.logging.do_log import log_w
-from helper.schema_casting import empty_df
+from helper.schema_casting import apply_as_type, empty_df
 from infrastructure.datastore_engine.disk_cache import (
     DATASET_DB,
     FilePathArg,
@@ -21,8 +22,8 @@ from infrastructure.datastore_engine.disk_cache import (
     datarange_is_not_cachable,
     read_file,
     read_with_timeframe,
-    write_data_file,
 )
+from infrastructure.datastore_engine.disk_cache_layout import _window_date_range_strs as _window_date_range_strs
 from infrastructure.datastore_engine.duckdb_reader import read_parquet_files
 
 """
@@ -40,32 +41,13 @@ infrastructure.duckdb_reader instead of one pd.read_parquet() call per window.
 """
 
 
-def _window_date_range_strs(date_range_str: str, window_freq: str) -> list[str]:
-    """
-    Decompose date_range_str into the full-span, calendar-aligned window_freq periods it overlaps
-    (e.g. every whole calendar day/month it touches) — always whole windows, never clipped to
-    date_range_str's own start/end, so the same window file is reused verbatim across differently
-    bounded requests instead of writing a fragment. read_file_windowed() trims the merged result back
-    down to date_range_str afterwards. See README.md § windowing.
-    """
-    start, end = date_range(date_range_str)
-    periods = pd.period_range(start=start, end=end, freq=window_freq)
-    return [
-        date_range_to_string(
-            start=period.start_time.tz_localize(pytz.UTC),
-            end=period.end_time.floor("min").tz_localize(pytz.UTC),
-        )
-        for period in periods
-    ]
-
-
 def _find_covering_file(
     data_frame_type: str, window_start: datetime, window_end: datetime, file_path: FilePathArg
 ) -> tuple[str, str] | None:
     """
     Smallest on-disk (range, ext) for data_frame_type whose own date range fully contains
     [window_start, window_end], if any. "Smallest" minimizes the read cost of the reuse in
-    _seed_window_from_legacy_file() — a window is usually covered by many nested legacy ranges.
+    _covering_parquet_path() — a window is usually covered by many nested legacy ranges.
     """
     pattern = _legacy_file_pattern(data_frame_type)
     type_dir = _data_frame_type_dir(data_frame_type, file_path)
@@ -89,13 +71,27 @@ def _find_covering_file(
     return best[0], best[1]
 
 
-def _seed_window_from_legacy_file(data_frame_type: str, window_date_range_str: str, file_path: FilePathArg) -> None:
+def _covering_parquet_path(data_frame_type: str, window_date_range_str: str, file_path: FilePathArg) -> Path | None:
     """
-    Backward-compatibility path for the windowing migration (README.md § backward compatibility): if
-    window_date_range_str's own canonical file is missing but an existing (typically pre-windowing,
-    arbitrary-range) file for data_frame_type fully covers it, slice that file down to the window and
-    write it out as the window's canonical file — so the caller's read_file() call right after this
-    finds it and never calls generator(). Does not touch the legacy file itself; a separate,
+    If window_date_range_str's own canonical file is missing, look for an existing file that fully
+    covers it — either a parquet_housekeeping-compacted multi-window file, or a (typically
+    pre-windowing, arbitrary-range) legacy file in any format (README.md § backward compatibility). If
+    found, returns the covering file's own Parquet path (migrating a Feather/CSV-zip covering file to
+    Parquet first, as an on-touch side effect of read_with_timeframe() — same migration
+    _read_raw_data_file() already does on any whole-file read) — read_file_windowed()'s caller reads
+    straight from that path via DuckDB.
+
+    Deliberately never writes a separate, smaller per-window slice of the covering file (unlike this
+    function's earlier behavior): read_file_windowed() may resolve several windows to the very same
+    covering file within one call, and once an earlier window's own tile existed while a later window
+    still pointed at the (now-Parquet) covering file, the same rows got read twice — once from each
+    file — in the batched DuckDB query. Returning only the covering path, uniformly for every window
+    that resolves to it, keeps exactly one file backing that whole span. This also means a compacted
+    file is never silently re-fragmented back into small per-window tiles the first time each window in
+    it is read again, which would otherwise undo compaction.
+
+    Returns None if window_date_range_str already has its own canonical file, or if no covering file
+    exists at all. Never touches the covering file's own date range/identity either way — a separate,
     explicit cleanup_redundant_cache_files() pass removes files that become fully redundant.
     """
     if (
@@ -103,22 +99,22 @@ def _seed_window_from_legacy_file(data_frame_type: str, window_date_range_str: s
         or _feather_file_path(data_frame_type, window_date_range_str, file_path).exists()
         or _csv_zip_file_path(data_frame_type, window_date_range_str, file_path).exists()
     ):
-        return
+        return None
     window_start, window_end = date_range(window_date_range_str)
     covering = _find_covering_file(data_frame_type, window_start, window_end, file_path)
     if covering is None:
-        return
-    covering_range_str, _ext = covering
-    try:
-        covering_df = read_with_timeframe(data_frame_type, covering_range_str, file_path, n_rows=None, skip_rows=None)
-    except Exception as e:
-        log_w(
-            f"disk_cache: failed reading legacy cache file {data_frame_type}.{covering_range_str} to "
-            f"seed window {window_date_range_str}: {e}"
-        )
-        return
-    window_df = trim_to_date_range(window_date_range_str, covering_df)
-    write_data_file(window_df, data_frame_type, window_date_range_str, file_path)
+        return None
+    covering_range_str, ext = covering
+    if ext != "parquet":
+        try:
+            read_with_timeframe(data_frame_type, covering_range_str, file_path, n_rows=None, skip_rows=None)
+        except Exception as e:
+            log_w(
+                f"disk_cache: failed reading legacy cache file {data_frame_type}.{covering_range_str} to "
+                f"resolve window {window_date_range_str}: {e}"
+            )
+            return None
+    return _parquet_file_path(data_frame_type, covering_range_str, file_path)
 
 
 def read_file_windowed(
@@ -130,7 +126,7 @@ def read_file_windowed(
     zero_size_allowed: None | bool = None,
     generator_params: dict[str, object] | None = None,
     nan_allowed_columns: frozenset[str] | None = None,
-) -> pd.DataFrame:
+) -> ptd:
     """
     Windowed counterpart to read_file() — see README.md § windowing for the full design. Decomposes
     date_range_str into whole calendar windows (_window_date_range_strs(), sized per
@@ -141,14 +137,16 @@ def read_file_windowed(
 
     A window whose entire span is still in the future is never fetched (generator() would just
     fail/return nothing useful for it) — it contributes an empty frame instead. A window missing its
-    own canonical file but fully covered by an existing legacy file is seeded from that file first;
-    see _seed_window_from_legacy_file().
+    own canonical file but fully covered by an existing file is resolved via _covering_parquet_path()
+    first: whatever covers it (compacted or legacy, Parquet or Feather/CSV-zip on-touch-migrated to
+    Parquet) is read straight from where it sits — see that function's docstring for why it no longer
+    writes a separate per-window slice.
 
-    Windows whose canonical Parquet file is already on disk (the common case for repeated reads over
-    already-fully-cached historical data) are batched through infrastructure.duckdb_reader's single
-    multi-file query instead of one read_file() call each — see _read_cached_windows_via_duckdb().
-    Windows needing generation, legacy-seeding, or a future/not-yet-cachable span still go through
-    read_file() individually, unchanged.
+    Windows whose canonical Parquet file is already on disk, or that resolve to a covering file above,
+    are batched through infrastructure.duckdb_reader's single multi-file query instead of one
+    read_file() call each — see _read_cached_windows_via_duckdb(); a covering file shared by several
+    windows is only queried once, not once per window. Windows needing generation or a
+    future/not-yet-cachable span still go through read_file() individually, unchanged.
     """
     if generator_params is None:
         generator_params = {}
@@ -161,6 +159,7 @@ def read_file_windowed(
 
     window_dfs = []
     duckdb_batch_paths: list[Path] = []
+    duckdb_batch_paths_seen: set[Path] = set()
     duckdb_batch_ranges: list[str] = []
     for window_range in window_ranges:
         window_start, _window_end = date_range(window_range)
@@ -168,11 +167,17 @@ def read_file_windowed(
             window_dfs.append(empty_df(caster_model))
             continue
         cachable = not datarange_is_not_cachable(window_range)
+        batch_path: Path | None = None
         if cachable:
-            _seed_window_from_legacy_file(data_frame_type, window_range, resolved_file_path)
-        parquet_path = _parquet_file_path(data_frame_type, window_range, resolved_file_path)
-        if cachable and parquet_path.exists():
-            duckdb_batch_paths.append(parquet_path)
+            batch_path = _covering_parquet_path(data_frame_type, window_range, resolved_file_path)
+            if batch_path is None:
+                own_path = _parquet_file_path(data_frame_type, window_range, resolved_file_path)
+                if own_path.exists():
+                    batch_path = own_path
+        if batch_path is not None:
+            if batch_path not in duckdb_batch_paths_seen:
+                duckdb_batch_paths.append(batch_path)
+                duckdb_batch_paths_seen.add(batch_path)
             duckdb_batch_ranges.append(window_range)
             continue
         window_dfs.append(
@@ -216,7 +221,7 @@ def _read_cached_windows_via_duckdb(
     generator: _Generator,
     generator_params: dict[str, object],
     nan_allowed_columns: frozenset[str] | None,
-) -> list[pd.DataFrame]:
+) -> list[ptd]:
     """
     Batches `paths` (already-cached window files for the same data_frame_type) through
     duckdb_reader.read_parquet_files() in one query, validated once via caster_model — cheaper than
@@ -227,12 +232,20 @@ def _read_cached_windows_via_duckdb(
     On any failure (corrupted file, stale on-disk schema not matching caster_model — rare, since every
     file was itself validated at write time) falls back to the ordinary per-window read_file() path for
     just this batch, preserving read_file()'s existing self-healing-via-regeneration guarantee rather
-    than silently propagating a batch-wide error for one bad window.
+    than silently propagating a batch-wide error for one bad window. Not the detection point for the
+    date-as-index bug (see module docstring § 2's repair job) — verified DuckDB's own read_parquet()
+    returns `date` as a plain column regardless of a source file's pandas index metadata, so a batch
+    with that bug still reads fine here; disk_cache.read_by_date()'s pd.read_parquet() + index_by_date()
+    path is where it actually surfaces and gets flagged.
     """
     overall_start, _ = date_range(window_ranges[0])
     _, overall_end = date_range(window_ranges[-1])
     try:
         batched_df = read_parquet_files(paths, data_frame_type, overall_start, overall_end)
+        # apply_as_type() coerces dtype/index (esp. the `date` index — DuckDB's TIMESTAMPTZ export
+        # follows the connection's local session timezone, not always UTC, and pandas's own inferred
+        # resolution needn't match caster_model's 'ns') before validating.
+        batched_df = apply_as_type(batched_df, caster_model)
         batched_df = caster_model.validate(batched_df)
     except Exception as e:
         log_w(

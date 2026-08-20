@@ -9,7 +9,8 @@ import pandas as pd
 import pandera
 import pytz
 from config import app_config
-from helper.functions import Pandera_DFM_Type, date_range
+from helper.functions import Pandera_DFM_Type, date_range, date_range_to_string
+from helper.importer import ptd
 from helper.logging.do_log import log_i
 
 """
@@ -74,10 +75,10 @@ FilePathArg = str | DatasetDbSentinel
 # cache_on_disk() accept — genuinely arbitrary per artifact type (extra kwargs like
 # `base_timeframe`, `symbols`, ...), so a precise Protocol would reject real generators; the ignore
 # is for Callable's `...`, itself an explicit Any under disallow_any_explicit. Return type is
-# `object`, not `pd.DataFrame`: a generator's return annotation is legitimately either a
+# `object`, not `ptd`: a generator's return annotation is legitimately either a
 # pt.DataFrame[Model] or a bare Model class read only by disk_cache._resolve_caster_model() (see its
 # docstring), never actually returned as a Model instance — read_file()/read_file_windowed() cast
-# the real call result to pd.DataFrame themselves once generator() has run.
+# the real call result to ptd themselves once generator() has run.
 _Generator = Callable[..., object]  # type: ignore[explicit-any]
 
 
@@ -173,7 +174,7 @@ def _migrate_symbol_first_dir_into_dataset_db(
         log_i(f"disk_cache: moved {entry.resolve()} into dataset_db cache dir {type_dir.resolve()}")
 
 
-def index_by_date(df: pd.DataFrame) -> pd.DataFrame:
+def index_by_date(df: ptd) -> ptd:
     """Shared tail of disk_cache.read_by_date() and infrastructure.duckdb_reader's batched read: parse
     the on-disk `date` column (every cache file carries one — write_data_file() writes
     df.reset_index().to_parquet(...)), set it as the index, UTC-localize if naive. Kept here (not in
@@ -186,7 +187,7 @@ def index_by_date(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def add_timeframe_index(df: pd.DataFrame, data_frame_type: str) -> pd.DataFrame:
+def add_timeframe_index(df: ptd, data_frame_type: str) -> ptd:
     """Shared tail of disk_cache.read_with_timeframe() and duckdb_reader's batched read: for
     multi_timeframe_* types, promote the on-disk `timeframe` column to an outer index level alongside
     `date` (index_by_date() must already have run)."""
@@ -198,6 +199,29 @@ def add_timeframe_index(df: pd.DataFrame, data_frame_type: str) -> pd.DataFrame:
 
 def _window_freq(data_frame_type: str) -> str:
     return app_config.cache_window_freq_overrides.get(data_frame_type, app_config.default_cache_window_freq)
+
+
+def _window_date_range_strs(date_range_str: str, window_freq: str) -> list[str]:
+    """
+    Decompose date_range_str into the full-span, calendar-aligned window_freq periods it overlaps
+    (e.g. every whole calendar day/month it touches) — always whole windows, never clipped to
+    date_range_str's own start/end, so the same window file is reused verbatim across differently
+    bounded requests instead of writing a fragment. disk_cache_windowed.read_file_windowed() trims the
+    merged result back down to date_range_str afterwards. Moved here from disk_cache_windowed.py
+    (project-decisions skill § code layers, "Splitting an oversized file") so
+    infrastructure.datastore_engine.parquet_housekeeping's compaction pass can reuse it without a
+    disk_cache_windowed<->parquet_housekeeping cycle (parquet_housekeeping already sits underneath
+    disk_cache_windowed by way of disk_cache.py). See README.md § windowing for the full design.
+    """
+    start, end = date_range(date_range_str)
+    periods = pd.period_range(start=start, end=end, freq=window_freq)
+    return [
+        date_range_to_string(
+            start=period.start_time.tz_localize(pytz.UTC),
+            end=period.end_time.floor("min").tz_localize(pytz.UTC),
+        )
+        for period in periods
+    ]
 
 
 _DATE_RANGE_STR_RE = r"\d{2}-\d{2}-\d{2}\.\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{2}-\d{2}"
@@ -265,7 +289,7 @@ def _csv_zip_file_path(data_frame_type: str, date_range_str: str, file_path: Fil
     return _data_frame_type_dir(data_frame_type, file_path) / f"{data_frame_type}.{date_range_str}.zip"
 
 
-def _disallowed_nan_columns(df: pd.DataFrame, nan_allowed_columns: frozenset[str]) -> list[str]:
+def _disallowed_nan_columns(df: ptd, nan_allowed_columns: frozenset[str]) -> list[str]:
     return [col for col in df.columns if col not in nan_allowed_columns and df[col].isna().any()]
 
 

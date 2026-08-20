@@ -18,7 +18,8 @@ from helper.importer import pt
 from helper.logging import sync_br_lib_init
 from helper.logging.do_log import log_d
 
-from application.model_implementations.shared.base import dataset_folder, master_x_shape, overlapped_quarters
+from application.model_implementations.shared.base import master_x_shape
+from archive_not_used_trash.application.model_implementations.shared.base import dataset_folder, overlapped_quarters
 
 
 def batch_generator_zip_pkl(

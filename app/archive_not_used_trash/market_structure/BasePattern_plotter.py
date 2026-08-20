@@ -3,14 +3,15 @@ from datetime import datetime
 import pandas as pd
 import plotly.graph_objs
 from config import app_config
-from domain.order.Order import BracketOrderType, OrderSide
-from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
-from domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
+from archive_not_used_trash.domain.order.Order import BracketOrderType, OrderSide
+from archive_not_used_trash.domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
+from archive_not_used_trash.domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
 from helper.logging import profile_it
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 from archive_not_used_trash.ohlcv.OHLVC_plotter import plot_merged_timeframe_ohlcva
-from presentation.shared.plotter import file_id, show_and_save_plot
+from presentation.shared.plotter import show_and_save_plot
+from archive_not_used_trash.presentation.shared.plotter import file_id
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 

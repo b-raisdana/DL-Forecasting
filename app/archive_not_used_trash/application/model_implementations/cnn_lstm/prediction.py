@@ -24,7 +24,8 @@ from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from helper.functions import date_range_to_string
 from tensorflow import keras as tf_keras
 
-from application.model_implementations.shared.base import dataset_folder, master_x_shape, overlapped_quarters
+from application.model_implementations.shared.base import master_x_shape
+from archive_not_used_trash.application.model_implementations.shared.base import dataset_folder, overlapped_quarters
 
 
 def choose_dataset_files(x_shape: dict[str, tuple[int, int]]) -> tuple[str, str, str]:

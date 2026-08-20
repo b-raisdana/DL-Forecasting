@@ -1,16 +1,16 @@
 import pandas as pd
 from config import app_config
-from domain.price_action.PeakValley import major_timeframe
-from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
-from domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
-from domain.schemas.market_structure.BullBearSide import MultiTimeframeBullBearSide
-from domain.schemas.market_structure.PeakValley import MultiTimeframePeakValley
+from archive_not_used_trash.domain.price_action.PeakValley import major_timeframe
+from archive_not_used_trash.domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
+from archive_not_used_trash.domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
+from archive_not_used_trash.domain.schemas.market_structure.BullBearSide import MultiTimeframeBullBearSide
+from archive_not_used_trash.domain.schemas.market_structure.PeakValley import MultiTimeframePeakValley
 from helper.data_preparation import single_timeframe
 from helper.logging import profile_it
 from pandera import typing as pt
 from archive_not_used_trash.market_structure.BasePattern_plotter import draw_band_activators, draw_band_orders_df, draw_base
 from archive_not_used_trash.market_structure.BullBearSide_plotter import plot_single_timeframe_bull_bear_side_trends
-from presentation.shared.plotter import plot_multiple_figures
+from archive_not_used_trash.presentation.shared.plotter import plot_multiple_figures
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 

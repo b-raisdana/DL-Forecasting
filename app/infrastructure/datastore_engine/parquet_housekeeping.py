@@ -1,17 +1,27 @@
+import itertools
 import json
 from pathlib import Path
 from zipfile import BadZipFile
 
 import pandas as pd
 import pyarrow.parquet as pq
+from config import app_config
 from domain.datastore_engine.parquet_normalization import flatten_index_to_columns
+from helper.functions import date_range, date_range_to_string
+from helper.importer import ptd
 from helper.logging.do_log import log_i, log_w
-from infrastructure.datastore_engine.disk_cache_layout import dataset_db_root
+from infrastructure.datastore_engine.disk_cache_layout import (
+    _legacy_file_pattern,
+    _window_date_range_strs,
+    _window_freq,
+    dataset_db_root,
+)
 
 """
-CSV/ZIP- and Feather-to-Parquet conversion for dataset_db, plus repair of already-migrated Parquet
-files — the datastore_engine sub-service application.datastore_engine.parquet_housekeeping orchestrates.
-Two jobs, both format/shape-only (no data recomputation):
+CSV/ZIP- and Feather-to-Parquet conversion, repair of already-migrated Parquet files, and compaction of
+small per-window Parquet files into larger chunks for dataset_db — the datastore_engine sub-service
+application.datastore_engine.parquet_housekeeping orchestrates as 3 separate jobs, all format/shape-only
+(no data recomputation):
 
 1. Legacy conversion (`find_legacy_files`/`convert_legacy_file`): the same on-touch migration
    disk_cache.py's `_read_raw_data_file()` already runs lazily on a whole-file read (`_migrate_to_parquet()`,
@@ -30,7 +40,26 @@ Two jobs, both format/shape-only (no data recomputation):
    (`pd.read_parquet()` just restores the persisted index) but crashes
    disk_cache_layout.index_by_date()/read_by_date() with KeyError: 'date' the first time anything tries
    to read it. `_migrate_to_parquet(flatten=True)` below now flattens before writing, so this can't recur
-   going forward; `repair_parquet_file()` fixes files already on disk.
+   going forward; `repair_parquet_file()` fixes files already on disk. Since a full scan is expensive at
+   this repo's scale (17k+ files), the repair pass is trigger-gated rather than unconditional: a sentinel
+   file (`flag_repair_required()`/`repair_required()`/`clear_repair_flag()`) is set by the one place that
+   already detects the bug live — infrastructure.datastore_engine.disk_cache.read_by_date(), the instant
+   a fresh single-file `pd.read_parquet()` read hits the KeyError: 'date' this bug causes (DuckDB's own
+   read_parquet() is immune — verified it returns `date` as a plain column regardless of a file's pandas
+   index metadata, so the batched windowed-read path never sees this particular failure) — and the
+   application-layer repair job only runs its full scan when that flag (or an explicit `--force`) says to.
+
+3. Compaction (`find_merge_batches`/`merge_batch`): merges small, contiguous, single-calendar-window
+   Parquet files into larger ~`app_config.parquet_target_chunk_size_mb`-sized files, to cut the on-disk
+   file count. Only exact single-window files are merge candidates (never a file already spanning
+   multiple windows, whether a pre-windowing legacy range or a previous compaction's own output) and
+   only strictly contiguous runs (no gap between one file's end window and the next's start) — merging
+   across a gap would make the merged file's nominal span cover a period it doesn't actually hold data
+   for, which would make disk_cache_windowed._find_covering_file()'s containment check wrongly report
+   that gap as covered. disk_cache_windowed.py's read path was changed alongside this job so a merged
+   file is read straight from where it sits (via DuckDB) instead of being silently re-sliced back into
+   per-window tiles the first time each window in it is read again, which would otherwise undo the
+   compaction — see `_covering_parquet_path()`'s docstring there.
 """
 
 
@@ -53,7 +82,7 @@ def find_parquet_files(root: Path | None = None) -> list[Path]:
     return list(root.rglob("*.parquet"))
 
 
-def _migrate_to_parquet(df: pd.DataFrame, parquet_file_path: Path, source_file_path: Path, *, flatten: bool) -> None:
+def _migrate_to_parquet(df: ptd, parquet_file_path: Path, source_file_path: Path, *, flatten: bool) -> None:
     """Best-effort backup of a freshly-read whole legacy cache file (Feather/ZSTD or CSV-zip) to
     Parquet/ZSTD; the old file is only removed once the parquet write has succeeded. `flatten=True`
     (Feather) restores the standard flat/default-index shape first (see module docstring).
@@ -141,3 +170,156 @@ def repair_parquet_file(path: Path, dry_run: bool = False) -> bool:
     tmp_path.replace(path)
     log_i(f"parquet_housekeeping: repaired date-index Parquet file {path}")
     return True
+
+
+def _repair_required_sentinel(root: Path) -> Path:
+    return root / ".parquet_repair_required"
+
+
+def flag_repair_required(root: Path | None = None) -> None:
+    """Mark that a Parquet index-repair pass is needed (see module docstring § 2). Called by
+    infrastructure.datastore_engine.disk_cache's `read_by_date()` when a fresh single-file
+    `pd.read_parquet()` read hits the KeyError this bug causes — the one place that already detects it
+    live, on real reads, for free. A plain sentinel file (`Path.touch()`, atomic, no read-modify-write
+    race) rather than a per-file registry: once triggered, `repair_parquet_file()`'s own scan already
+    finds every affected file correctly, so there's nothing to gain from also tracking which exact file
+    caused the trigger."""
+    root = root if root is not None else dataset_db_root()
+    root.mkdir(parents=True, exist_ok=True)
+    _repair_required_sentinel(root).touch()
+
+
+def repair_required(root: Path | None = None) -> bool:
+    """Whether flag_repair_required() has been called since the last clear_repair_flag()."""
+    root = root if root is not None else dataset_db_root()
+    return _repair_required_sentinel(root).exists()
+
+
+def clear_repair_flag(root: Path | None = None) -> None:
+    root = root if root is not None else dataset_db_root()
+    _repair_required_sentinel(root).unlink(missing_ok=True)
+
+
+def _leaf_type_dirs(root: Path) -> dict[Path, str]:
+    """Every directory under root holding at least one Parquet file, mapped to its data_frame_type —
+    the root-relative path's first segment, per dataset_db's data_frame_type-first layout (see
+    disk_cache_layout.py module docstring)."""
+    dirs: dict[Path, str] = {}
+    if not root.is_dir():
+        return dirs
+    for entry in root.rglob("*.parquet"):
+        parent = entry.parent
+        if parent not in dirs:
+            dirs[parent] = parent.relative_to(root).parts[0]
+    return dirs
+
+
+def _split_run_by_size(
+    data_frame_type: str, run: list[str], range_to_path: dict[str, Path], target_bytes: int
+) -> list[tuple[str, list[Path]]]:
+    """Greedily accumulate one contiguous run of window range strings into batches whose summed on-disk
+    size crosses target_bytes, flushing each as soon as it does (on-disk ZSTD size of the sources is a
+    reasonable proxy for the merged file's size — same data, same compressor). A trailing batch of just
+    1 file is dropped — nothing to merge; likewise a single file already >= target_bytes on its own."""
+    batches: list[tuple[str, list[Path]]] = []
+    current: list[Path] = []
+    current_size = 0
+    for window_range in run:
+        path = range_to_path[window_range]
+        current.append(path)
+        current_size += path.stat().st_size
+        if current_size >= target_bytes:
+            if len(current) > 1:
+                batches.append((data_frame_type, current))
+            current, current_size = [], 0
+    if len(current) > 1:
+        batches.append((data_frame_type, current))
+    return batches
+
+
+def _contiguous_merge_batches(type_dir: Path, data_frame_type: str, target_bytes: int) -> list[tuple[str, list[Path]]]:
+    """Every merge-worthy batch within one (data_frame_type, market, trading_pair, exchange) directory —
+    see module docstring § 3 for what counts as a merge candidate."""
+    pattern = _legacy_file_pattern(data_frame_type)
+    range_to_path: dict[str, Path] = {}
+    for entry in type_dir.iterdir():
+        match = pattern.match(entry.name)
+        if match and match.group("ext") == "parquet":
+            range_to_path[match.group("range")] = entry
+    if not range_to_path:
+        return []
+
+    spans = {range_str: date_range(range_str) for range_str in range_to_path}
+    overall_start = min(start for start, _end in spans.values())
+    overall_end = max(end for _start, end in spans.values())
+    window_freq = _window_freq(data_frame_type)
+    window_ranges = _window_date_range_strs(date_range_to_string(start=overall_start, end=overall_end), window_freq)
+    own_file_indices = [i for i, window_range in enumerate(window_ranges) if window_range in range_to_path]
+
+    batches: list[tuple[str, list[Path]]] = []
+    for _, group in itertools.groupby(enumerate(own_file_indices), lambda pair: pair[1] - pair[0]):
+        run = [window_ranges[index] for _, index in group]
+        batches.extend(_split_run_by_size(data_frame_type, run, range_to_path, target_bytes))
+    return batches
+
+
+def find_merge_batches(root: Path | None = None) -> list[tuple[str, list[Path]]]:
+    """Every (data_frame_type, files) batch under dataset_db_root() (or `root`, for tests) worth merging
+    into one ~app_config.parquet_target_chunk_size_mb file — see module docstring § 3. "Contiguous" is
+    computed over the data_frame_type's own window index sequence (mirrors
+    disk_cache_gaps.find_cache_gaps()'s groupby-on-window-indices for missing windows, here grouping
+    present own-file windows instead), not by comparing raw start/end datetimes — a window's own end
+    (e.g. 23:59) and the next window's start (00:00 the next day) are never exactly equal, so raw
+    datetime adjacency would never match."""
+    root = root if root is not None else dataset_db_root()
+    target_bytes = app_config.parquet_target_chunk_size_mb * 1024 * 1024
+    batches: list[tuple[str, list[Path]]] = []
+    for type_dir, data_frame_type in _leaf_type_dirs(root).items():
+        batches.extend(_contiguous_merge_batches(type_dir, data_frame_type, target_bytes))
+    return batches
+
+
+def merge_batch(data_frame_type: str, files: list[Path]) -> Path | None:
+    """
+    Merge one contiguous batch of single-window Parquet files (from find_merge_batches(), already in
+    chronological order) into one new file spanning the whole batch. Verified — merged row count matches
+    the sum of inputs, and the merged file doesn't carry the index-as-column bug — before the small
+    source files are deleted, same "verify success before deleting source" pattern as
+    `_migrate_to_parquet()`/`repair_parquet_file()` above. Returns the merged file's path on success, or
+    None on any failure (logged, sources untouched, so one bad batch never aborts a run — see
+    application.datastore_engine.parquet_housekeeping.run_compaction()).
+    """
+    pattern = _legacy_file_pattern(data_frame_type)
+    first_match = pattern.match(files[0].name)
+    last_match = pattern.match(files[-1].name)
+    if first_match is None or last_match is None:
+        log_w(f"parquet_housekeeping: batch file name doesn't match {data_frame_type} pattern, skipping merge")
+        return None
+    start, _ = date_range(first_match.group("range"))
+    _, end = date_range(last_match.group("range"))
+    merged_path = files[0].with_name(f"{data_frame_type}.{date_range_to_string(start=start, end=end)}.parquet")
+    if merged_path.exists():
+        log_w(f"parquet_housekeeping: {merged_path} already exists, skipping merge of {len(files)} file(s)")
+        return None
+
+    try:
+        frames = [pd.read_parquet(path) for path in files]
+    except Exception as e:
+        log_w(f"parquet_housekeeping: failed reading batch to merge into {merged_path}: {e}")
+        return None
+    expected_rows = sum(len(frame) for frame in frames)
+    merged_df = flatten_index_to_columns(pd.concat(frames, ignore_index=True))
+    try:
+        merged_df.to_parquet(merged_path, compression="zstd")
+    except Exception as e:
+        log_w(f"parquet_housekeeping: failed writing merged file {merged_path}: {e}")
+        return None
+    if len(merged_df) != expected_rows or parquet_file_has_index_bug(merged_path):
+        merged_path.unlink(missing_ok=True)
+        log_w(f"parquet_housekeeping: merge of {len(files)} file(s) into {merged_path} failed verification")
+        return None
+
+    for path in files:
+        path.unlink()
+    log_i(f"parquet_housekeeping: merged {len(files)} file(s) into {merged_path.resolve()}")
+    return merged_path

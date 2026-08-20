@@ -7,8 +7,8 @@ from archive_not_used_trash.application.backtesting.ExtendedStrategy import Exte
 from archive_not_used_trash.domain.order.SignalDf import SignalDf, SignalDFM
 from archive_not_used_trash.domain.price_action.BasePattern import get_multi_timeframe_base_patterns
 from config import app_config
-from domain.order.Order import BracketOrderType, OrderSide
-from domain.schemas.market_structure.BasePattern import BasePattern, MultiTimeframeBasePattern
+from archive_not_used_trash.domain.order.Order import BracketOrderType, OrderSide
+from archive_not_used_trash.domain.schemas.market_structure.BasePattern import BasePattern, MultiTimeframeBasePattern
 from helper.logging import log_d, profile_it
 from infrastructure.ohlcv.ohlcv import get_base_timeframe_ohlcv
 from infrastructure.ohlcv.ohlcva import get_multi_timeframe_ohlcva

@@ -3,7 +3,8 @@ from datetime import timedelta
 import pandas as pd
 from archive_not_used_trash.domain.schemas.forecasting.MtRollingMeanStdOHLCV import MtRollingMeanStdOHLCV
 from domain.ohlcv.ohlcv import get_multi_timeframe_ohlcv
-from helper.data_preparation import expand_date_range, trim_to_date_range
+from helper.data_preparation import trim_to_date_range
+from archive_not_used_trash.helper.data_preparation import expand_date_range
 from helper.importer import pt, ta
 from helper.logging import profile_it
 from infrastructure.datastore_engine.disk_cache import CachableDataset, cache_on_disk

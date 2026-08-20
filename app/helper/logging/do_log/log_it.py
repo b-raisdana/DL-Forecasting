@@ -5,7 +5,6 @@ from pathlib import Path
 from types import FrameType
 
 from colorama import Fore
-from colorama import init as colorama_init
 from loguru import logger
 
 from .ray_id import get_ray_id
@@ -43,53 +42,53 @@ def _nearest_level_name(severity: int) -> str:
     return "DEBUG"
 
 
-def init_logger(
-    path_of_logs: str,
-    log_to_std_out_level: int,
-    log_to_file_level: int,
-    root_path: str,
-    file_log_rotation_size: str,
-    file_log_retention_duration: str,
-) -> None:
-    global \
-        __root_path, \
-        __severity_color_map, \
-        __root_path, \
-        __log_format, \
-        __log_to_std_out_level, \
-        __log_to_file_level, \
-        __min_log_level
+# def init_logger(
+# path_of_logs: str,
+# log_to_std_out_level: int,
+# log_to_file_level: int,
+# root_path: str,
+# file_log_rotation_size: str,
+# file_log_retention_duration: str,
+# ) -> None:
+# global \
+# __root_path, \
+# __severity_color_map, \
+# __root_path, \
+# __log_format, \
+# __log_to_std_out_level, \
+# __log_to_file_level, \
+# __min_log_level
 
-    __root_path = Path(root_path)
-    colorama_init(autoreset=True)
-    log_file_path = Path(path_of_logs) / "runtime.log"
-    __log_to_std_out_level = log_to_std_out_level
-    __log_to_file_level = log_to_file_level
-    __min_log_level = min(__log_to_std_out_level, __log_to_file_level)
-    logger.remove()  # Removes all default handlers
+# __root_path = Path(root_path)
+# colorama_init(autoreset=True)
+# log_file_path = Path(path_of_logs) / "runtime.log"
+# __log_to_std_out_level = log_to_std_out_level
+# __log_to_file_level = log_to_file_level
+# __min_log_level = min(__log_to_std_out_level, __log_to_file_level)
+# logger.remove()  # Removes all default handlers
 
-    # Console logger configuration
-    logger.add(
-        sys.stdout,
-        format=__log_format,
-        colorize=True,
-        level=__log_to_std_out_level,
-    )
+# # Console logger configuration
+# logger.add(
+# sys.stdout,
+# format=__log_format,
+# colorize=True,
+# level=__log_to_std_out_level,
+# )
 
-    # File logger configuration
-    logger.add(
-        log_file_path,
-        # Rotate the log file when it reaches 100 MB. Tested on rotation="1 KB"
-        rotation=file_log_rotation_size,
-        # Retain logs for 30 days. Tested on retention="1 minute"
-        retention=file_log_retention_duration,
-        # Ensures logging happens asynchronously
-        enqueue=True,
-        format=__log_format,
-        level=log_to_file_level,
-    )
+# # File logger configuration
+# logger.add(
+# log_file_path,
+# # Rotate the log file when it reaches 100 MB. Tested on rotation="1 KB"
+# rotation=file_log_rotation_size,
+# # Retain logs for 30 days. Tested on retention="1 minute"
+# retention=file_log_retention_duration,
+# # Ensures logging happens asynchronously
+# enqueue=True,
+# format=__log_format,
+# level=log_to_file_level,
+# )
 
-    _intercept_stdlib_logging()
+# _intercept_stdlib_logging()
 
 
 class InterceptHandler(logging.Handler):

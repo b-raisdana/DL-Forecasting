@@ -44,11 +44,11 @@ from tensorflow.keras import layers
 BRANCH_TIMEFRAMES: list[str] = ["5min", "15min", "1h", "4h", "1D", "1W"]
 BRANCH_WINDOW_LENGTHS: dict[str, int] = {  # input_set=3 (see module docstring)
     "5min": 256,
-    "15min": 256,
+    "15min": 128,
     "1h": 128,
     "4h": 128,
-    "1D": 64,
-    "1W": 64,
+    "1D": 128,
+    "1W": 128,
 }
 CANDLE_FEATURE_COLUMNS: list[str] = [
     "relative_normal_close",

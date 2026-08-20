@@ -1,19 +1,20 @@
 import pandas as pd
 from archive_not_used_trash.domain.schemas.market_structure.Pivot import PivotDFM
-from config import TopTYPE, app_config
+from config import app_config
+from archive_not_used_trash.config.Config import TopTYPE
 from helper.data_preparation import single_timeframe
 from pandera import typing as pt
 
-from domain.price_action.PeakValley import (
+from archive_not_used_trash.domain.price_action.PeakValley import (
     insert_crossing2,
     major_timeframe,
     peaks_only,
     valleys_only,
 )
-from domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
-from domain.schemas.market_structure.BullBearSide import BullBearSide
-from domain.schemas.market_structure.PeakValley import MultiTimeframePeakValley, PeakValley
-from domain.schemas.market_structure.Pivot2 import MultiTimeframePivot2DFM, Pivot2DFM
+from archive_not_used_trash.domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
+from archive_not_used_trash.domain.schemas.market_structure.BullBearSide import BullBearSide
+from archive_not_used_trash.domain.schemas.market_structure.PeakValley import MultiTimeframePeakValley, PeakValley
+from archive_not_used_trash.domain.schemas.market_structure.Pivot2 import MultiTimeframePivot2DFM, Pivot2DFM
 
 
 def merge_bbs_overlap(time_frame_bbs: pt.DataFrame[BullBearSide]):

@@ -11,7 +11,7 @@ from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from helper.functions import date_range_to_string
 from helper.logging.do_log import log_d
 
-from application.model_implementations.shared.base import overlapped_quarters
+from archive_not_used_trash.application.model_implementations.shared.base import overlapped_quarters
 
 
 def dataset_streamer(
