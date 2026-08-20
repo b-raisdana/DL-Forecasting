@@ -8,7 +8,7 @@ import json
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, cast
 
 import numpy as np
 import psutil
@@ -27,7 +27,7 @@ from tensorflow import keras as tf_keras
 
 class TrainingPresenter(Protocol):
     """Calling points a Presentation-layer caller (one per design set, e.g.
-    `presentation/model_implementations/tier1_000_training.py`) can hook into `run_training()` — keeps this
+    `presentation/ai_models/tier1_000_training.py`) can hook into `run_training()` — keeps this
     Application-layer module free of presentation concerns (print/plot/report formatting) itself, per
     the code-layers convention that presentation output belongs in the presentation layer, not
     application. `run_training()` accepts `presenter: TrainingPresenter | None`, defaulting to a no-op,
@@ -59,7 +59,7 @@ class _NullPresenter:
     def on_run_complete(self, report: dict[str, object]) -> None: ...
 
 
-class TimeBudgetCallback(tf_keras.callbacks.Callback):
+class TimeBudgetCallback(tf_keras.callbacks.Callback):  # type: ignore[misc]  # TensorFlow's Callback is untyped.
     """Stops training as soon as the wall-clock budget is spent — checked every batch (not just every
     epoch), since steps_per_epoch is small enough that several epoch boundaries occur within the
     budget, but the check must still be precise regardless of that choice."""
@@ -79,7 +79,7 @@ class TimeBudgetCallback(tf_keras.callbacks.Callback):
             self.model.stop_training = True
 
 
-class StepTimingCallback(tf_keras.callbacks.Callback):
+class StepTimingCallback(tf_keras.callbacks.Callback):  # type: ignore[misc]  # TensorFlow's Callback is untyped.
     """Per-step wall-clock timing — the input-pipeline-stall signal `ResourceSampler`'s fixed 2s poll
     can't resolve, since that poll isn't synced to step boundaries (see
     docs/ML_Forecasting_System_Design/06-ML-Ops.md § saturation & error signals). Excludes the first
@@ -106,7 +106,7 @@ class StepTimingCallback(tf_keras.callbacks.Callback):
         return {"step_time_mean_seconds": mean, "step_time_cv": float(steady_state.std() / mean) if mean > 0 else 0.0}
 
 
-class PeriodicCheckpointCallback(tf_keras.callbacks.Callback):
+class PeriodicCheckpointCallback(tf_keras.callbacks.Callback):  # type: ignore[misc]  # TensorFlow's Callback is untyped.
     """Saves model+optimizer state every `interval_seconds` of wall-clock training time — the resume
     mechanism this project's single-GPU, potentially hours-long runs need against an interrupted process
     (crash, manual stop, WSL2 restart) without losing already-trained progress. A final save also runs
@@ -141,7 +141,7 @@ class PeriodicCheckpointCallback(tf_keras.callbacks.Callback):
             self.presenter.on_checkpoint_saved(int(self.step_counter.numpy()), path)
 
 
-class PresenterEpochCallback(tf_keras.callbacks.Callback):
+class PresenterEpochCallback(tf_keras.callbacks.Callback):  # type: ignore[misc]  # TensorFlow's Callback is untyped.
     """Forwards Keras' own epoch-end signal (already carrying both `loss` and `val_loss` in `logs`,
     since `validation_data` is passed to `model.fit()`) to the presentation calling point — the
     Application layer stays print-free, per `TrainingPresenter`'s docstring."""
@@ -235,7 +235,7 @@ def run_training(
     )
 
     config = TIER1_000_CONFIG
-    batch_size = int(config["batch_size"])
+    batch_size = cast(int, config["batch_size"])
     train_ds = make_tf_dataset(train_bundle, batch_size, shuffle=True)
     val_ds = make_tf_dataset(val_bundle, batch_size, shuffle=False)
 

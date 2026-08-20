@@ -4,7 +4,7 @@ already-computed domain concept, the same pattern relative_candle.py/volume_feat
 establish in this directory (both pure transforms living in `application/dataset_generation`, not
 `domain/`). Purely additive: nothing here touches relative_candle.py's/volume_feature.py's own
 columns, and this module has no other consumer today besides
-model_implementations/tier1_000/datafeeder_input3_outcome1.py.
+ai_models/tier1_000/datafeeder_input3_outcome1.py.
 
 See CausalExtremum.py's module docstring for the causal-capping derivation this all builds on.
 """
@@ -38,10 +38,11 @@ class BranchExtremum:
 def build_branch_extremum(ohlc: pd.DataFrame) -> BranchExtremum:
     """`ohlc` must already carry an 'atr' column (relative_candle.py's add_relative_candle_columns
     side effect, already computed upstream in datafeeder_input3_outcome1.py's _branch_features)."""
+    time_index = pd.DatetimeIndex(ohlc.index)
     extremum = compute_true_extremum(ohlc)
     return BranchExtremum(
-        time_ns=ohlc.index.asi8,
-        time_index=ohlc.index,
+        time_ns=time_index.astype("int64").to_numpy(),
+        time_index=time_index,
         high=ohlc["high"].to_numpy(dtype=np.float64),
         low=ohlc["low"].to_numpy(dtype=np.float64),
         atr=ohlc["atr"].to_numpy(dtype=np.float64),

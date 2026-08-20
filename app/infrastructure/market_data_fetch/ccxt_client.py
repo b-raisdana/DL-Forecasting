@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
+from typing import cast
 
 import ccxt
 import pandas as pd
+import pytz
 from config import app_config
 from helper.data_preparation import map_symbol
 from helper.functions import date_range
@@ -63,10 +65,10 @@ def broker_exchange(broker: str) -> ccxt.Exchange:
 
 def fetch_ohlcv_by_range(
     broker: str,
-    date_range_str: str = None,
-    symbol: str = None,
-    base_timeframe=None,
-    limit_to_under_process_period: bool = None,
+    date_range_str: str | None = None,
+    symbol: str | None = None,
+    base_timeframe: str | None = None,
+    limit_to_under_process_period: bool | None = None,
 ) -> list[object]:
     if limit_to_under_process_period is None:
         limit_to_under_process_period = app_config.limit_to_under_process_period
@@ -98,7 +100,12 @@ def fetch_ohlcv_by_range(
 
 @profile_it
 def fetch_ohlcv(
-    broker: str, symbol, timeframe: str = None, start: datetime = None, number_of_ticks=None, params=None
+    broker: str,
+    symbol: str,
+    timeframe: str | None = None,
+    start: datetime | None = None,
+    number_of_ticks: int | None = None,
+    params: dict[str, object] | None = None,
 ) -> list[object]:
     if params is None:
         params = {}
@@ -140,4 +147,62 @@ def fetch_ohlcv(
         None,
     )
     log_i(f"fetch_ohlcv@{broker}@{start}#{number_of_ticks}>{len(response)}")
-    return response
+    return cast(list[object], response)
+
+
+def fetch_oldest_available_timestamp(broker: str, symbol: str, timeframe: str = "1d") -> datetime | None:
+    """
+    Fetch the oldest available timestamp for a trading pair from the broker.
+
+    Uses a binary search approach to find the earliest timestamp that returns data.
+    Returns None if no data is available or if there's an error.
+
+    Args:
+        broker: The broker name (e.g., "binance", "kucoin")
+        symbol: The trading pair symbol in CCXT format (e.g., "BTC/USDT")
+        timeframe: The timeframe to use for fetching (default: "1d" for daily candles)
+
+    Returns:
+        The oldest available timestamp as a timezone-aware UTC datetime, or None if unavailable.
+    """
+    exchange = broker_exchange(broker)
+
+    # Use daily timeframe for finding the oldest timestamp (more efficient)
+    ccxt_timeframe = pandas_to_ccxt_timeframes.get(timeframe, "1d")
+
+    # Minimum timestamp to search from (Bitcoin creation year)
+    minimum_timestamp = 1230768000000  # 2009-01-01
+    current_time = exchange.milliseconds()
+
+    # Binary search for the oldest available timestamp
+    left = minimum_timestamp
+    right = current_time
+    oldest_timestamp = None
+
+    try:
+        # First, try to fetch the most recent single candle to confirm the symbol exists
+        recent_candles = exchange.fetch_ohlcv(symbol, ccxt_timeframe, current_time - 86400000, 1)
+        if not recent_candles:
+            return None
+
+        # Binary search to find the oldest timestamp
+        while left <= right:
+            mid = (left + right) // 2
+            try:
+                candles = exchange.fetch_ohlcv(symbol, ccxt_timeframe, mid, 1)
+                if candles:
+                    oldest_timestamp = candles[0][0]
+                    right = mid - 1  # Try to find an even older timestamp
+                else:
+                    left = mid + 1  # No data at this time, try later
+            except Exception:
+                left = mid + 1  # Error at this time, try later
+
+        if oldest_timestamp:
+            return datetime.fromtimestamp(oldest_timestamp / 1000, tz=pytz.UTC)
+
+        return None
+
+    except Exception as e:
+        log_i(f"Error fetching oldest timestamp for {symbol}@{broker}: {e}")
+        return None

@@ -1,3 +1,10 @@
+# app/archive_not_used_trash/ holds unreachable-from-presentation code kept for reference only
+# (see app/archive_not_used_trash/README.md) - already excluded from mypy/ruff config directly,
+# but pre-commit-hooks' own hooks (trailing-whitespace, end-of-file-fixer, ...) and the local
+# pytest-fast/incremental-ratchet triggers have no such exclusion of their own, so it's excluded
+# globally here instead.
+exclude: ^app/archive_not_used_trash/
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

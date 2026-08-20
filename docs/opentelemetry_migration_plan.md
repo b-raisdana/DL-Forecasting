@@ -150,7 +150,7 @@ placeholders:
 | CCXT fetch (`infrastructure/market_data_fetch`) | fetch duration, rows fetched, gap-fill events, exchange API errors/rate-limit hits |
 | indicator/feature computation (`domain/price_action`) | computation duration per indicator set (via the `@counted`/`@timed_metric` decorator from phase 1) |
 | dataset generation (`train_data_of_mt_n_profit`, ram dataset producer) | duration, rows produced |
-| training (CNN-LSTM trainer, Optuna) — currently zero instrumentation in `model_implementations` | epoch duration, GPU utilization/memory (via GPU exporter, phase 4), Optuna trial duration, trial count |
+| training (CNN-LSTM trainer, Optuna) — currently zero instrumentation in `ai_models` | epoch duration, GPU utilization/memory (via GPU exporter, phase 4), Optuna trial duration, trial count |
 | backtesting/evaluation | run counts, `forecast_vs_actual_error`, `model_last_trained_timestamp`, `feature_drift_score` |
 | ClickHouse service | native metrics endpoint, scraped directly by Prometheus |
 

@@ -1,5 +1,5 @@
 """Unit/integration tests for the checkpoint-resume and step-timing additions in
-application/model_implementations/tier1_000/train.py — not the full training loop (see test_model.py
+application/ai_models/tier1_000/train.py — not the full training loop (see test_model.py
 for that layer), just the pieces that are cheaply testable in isolation: StepTimingCallback's CV math,
 and ModelArtifactRepository's save/restore round-trip.
 """
