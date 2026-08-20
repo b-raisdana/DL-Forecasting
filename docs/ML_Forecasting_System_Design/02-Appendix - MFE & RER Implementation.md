@@ -4,7 +4,7 @@ Actual pandas/numpy operations behind the `MFE`/`RER` labels specced in [02 § T
 
 ## Vectorization choice
 
-Fully vectorized with numpy sliding windows, not pandas `rolling().apply(lambda ...)`. The older `profit_loss_adder.py` (separate model, untouched) uses that `rolling().apply` pattern (e.g. `ohlc["high"].rolling(w).apply(lambda x: x.argmax(), raw=True)`) — it calls back into Python per window, which is slow and was flagged as imprecise in `docs/todos/02-training-data-labels.md`. This module avoids both issues by building the whole future-window tensor at once with `numpy.lib.stride_tricks.sliding_window_view` and reducing it with array ops (`argmax`/`argmin`/`max`/`min` along an axis, `np.where`, `np.maximum`, `np.select`, `np.clip`) instead of a Python-level callback.
+Fully vectorized with numpy sliding windows, not pandas `rolling().apply(lambda ...)`. The older `profit_loss_adder.py` (separate model, untouched) uses that `rolling().apply` pattern (e.g. `ohlc["high"].rolling(w).apply(lambda x: x.argmax(), raw=True)`) — it calls back into Python per window, which is slow and was flagged as imprecise in `docs/ML_Forecasting_System_Design/todo/02-training-data-labels.md`. This module avoids both issues by building the whole future-window tensor at once with `numpy.lib.stride_tricks.sliding_window_view` and reducing it with array ops (`argmax`/`argmin`/`max`/`min` along an axis, `np.where`, `np.maximum`, `np.select`, `np.clip`) instead of a Python-level callback.
 
 ## Pipeline
 

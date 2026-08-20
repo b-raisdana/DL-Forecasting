@@ -5,7 +5,7 @@ tests/archive_not_used_trash/unit/price_action/test_causal_extremum.py.
 
 Values are hand-derived from small, fully-controlled synthetic OHLC fixtures, not captured from
 running the function — new spec-conformance code, not legacy behavior to pin. See
-docs/todos/01-input-data-channels.md for why this causal-cap logic exists (the part of the schema
+docs/ML_Forecasting_System_Design/todo/01-input-data-channels.md for why this causal-cap logic exists (the part of the schema
 flagged as "most likely to silently leak future information if implemented naively").
 """
 

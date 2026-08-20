@@ -1,6 +1,6 @@
 ---
 name: optimization-review
-description: Use after finishing a functional change to one or more Python files under app/ (before moving to unrelated work), or when explicitly asked to audit a file/module for optimization debt. Reviews the file against a fixed set of optimization factors, logs weaknesses and concrete optimization opportunities to docs/code_optimization_todo.md with a priority, and gates any later hot-path edit behind a test/mutation-safety check. Review and logging only — the optimizations themselves are implemented later as separate, normally-reviewed changes.
+description: Use after finishing a functional change to one or more Python files under app/ (before moving to unrelated work), or when explicitly asked to audit a file/module for optimization debt. Reviews the file against a fixed set of optimization factors, logs weaknesses and concrete optimization opportunities to docs/todo_code_optimization.md with a priority, and gates any later hot-path edit behind a test/mutation-safety check. Review and logging only — the optimizations themselves are implemented later as separate, normally-reviewed changes.
 ---
 
 # Optimization review
@@ -50,7 +50,7 @@ Dead/duplicate code with zero external callers (confirmed by grep) doesn't fit t
 
 ## logging findings
 
-Append each finding to [docs/code_optimization_todo.md](../../../docs/code_optimization_todo.md) under the matching priority section, one line per finding:
+Append each finding to [docs/todo_code_optimization.md](../../../docs/todo_code_optimization.md) under the matching priority section, one line per finding:
 
 ```text
 - **[P0] `training_datasets.py:142` `train_data_of_mt_n_profit`** — weakness: recomputes `classic_indicators` on every call inside a ~100x/quarter loop. Optimization: hoist into the existing `_cached_training_frames()` memo. Factor: caching. Hot path: yes (dataset-generator producer loop). Coverage: characterization test at `app/tests/characterization/...`. Mutation-safety: pending.

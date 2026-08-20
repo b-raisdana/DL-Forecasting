@@ -4,7 +4,8 @@ Engineering.md § targeting bid price / risk factors / TP-MAE-OM labels / model 
 New, self-contained implementation — not a modification of profit_loss_adder.py (that module backs
 the separate cnn_lstm model's long_signal/short_signal targets and stays untouched). Fully vectorized
 via numpy sliding windows instead of pandas' rolling().apply(lambda...) (Python-level per-window calls,
-the pattern profit_loss_adder.py uses and docs/todos/02-training-data-labels.md flags as imprecise).
+the pattern profit_loss_adder.py uses and
+docs/ML_Forecasting_System_Design/todo/02-training-data-labels.md flags as imprecise).
 """
 
 import numpy as np

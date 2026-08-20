@@ -4,7 +4,7 @@ Two halves of one effort: instrument the codebase with OpenTelemetry (replacing 
 `profile_it` timing decorator), then stand up the backend that receives, stores, and visualizes what
 gets emitted (Prometheus for metrics, Jaeger for traces, Grafana on top). A different concern from
 experiment tracking (config/metrics/artifact-per-run comparison), which stays
-[MLflow](todos/03-infrastructure.md#todo) (todo item 1, still unresolved) — that answers "what config
+[MLflow](../ML_Forecasting_System_Design/todo/03-infrastructure.md#todo) (todo item 1, still unresolved) — that answers "what config
 produced this result," this stack answers "how is the system behaving and where did time go in one
 specific run."
 
@@ -215,6 +215,6 @@ native-ext4/gitignored convention as the existing `clickhouse` service
   against.
 - **Cross-process/service tracing**: no payoff until a live-trading service actually splits out of this
   single-process pipeline ([infrastructure.md § SOA](infrastructure.md#soa)) — revisit then.
-- **Revisiting the MLflow decision**: this plan doesn't replace [todos/03-infrastructure.md item
-  1](todos/03-infrastructure.md#todo) — lock that decision independently; it covers experiment/artifact
+- **Revisiting the MLflow decision**: this plan doesn't replace [../ML_Forecasting_System_Design/todo/03-infrastructure.md item
+  1](../ML_Forecasting_System_Design/todo/03-infrastructure.md#todo) — lock that decision independently; it covers experiment/artifact
   tracking, this plan covers operational observability.

@@ -3,8 +3,8 @@ docs/ML_Forecasting_System_Design/designsets/Tier-1_000.par_branch_mtcn_lstm_per
 resolved to its "1-base" hyperparameters (the `//` bound comments in that file are Optuna search bounds,
 not alternative values for a single run — see PROMPT.md's embedded-search-space convention).
 
-Known, documented deviations from the spec (see docs/todos/01-input-data-channels.md and
-docs/todos/02-training-data-labels.md for the upstream gaps driving these):
+Known, documented deviations from the spec (see docs/ML_Forecasting_System_Design/todo/01-input-data-channels.md and
+docs/ML_Forecasting_System_Design/todo/02-training-data-labels.md for the upstream gaps driving these):
 
 - `CANDLE_FEATURE_COLUMNS` is now the full 15-field `candle_dataset` (relative_OHLC's 5 + V + the 8
   `higher_extremum_distance` price/time-distance terms + `extremum_weight`), computed via

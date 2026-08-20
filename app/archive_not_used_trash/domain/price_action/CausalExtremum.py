@@ -4,7 +4,7 @@ docs/ML_Forecasting_System_Design/designsets/input-data-feature/
 Tier-1_000.atr_rel_ohlc_log_sma_v_extm_rel_6tf(handmade).input.jsonc), not a wrapper around
 `PeakValley.py`. `PeakValley.py`'s own tf-confirmation (`calculate_strength`/`top_timeframe`) bakes in
 unbounded *future* lookahead relative to any anchor candle that would consume it as a training feature
-(see docs/todos/01-input-data-channels.md's peak/valley reuse decision) — exactly the leak this module
+(see docs/ML_Forecasting_System_Design/todo/01-input-data-channels.md's peak/valley reuse decision) — exactly the leak this module
 exists to avoid. Only the geometric idea of "local extremum via neighbor comparison" is shared; the
 causal-capping machinery below is new.
 

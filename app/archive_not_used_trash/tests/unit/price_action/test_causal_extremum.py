@@ -66,7 +66,7 @@ def test_step_b_closed_form_matches_per_direction_causal_capping_reference() -> 
 
 
 def test_no_lookahead_perturbing_future_never_changes_observed_reach_at_or_before_anchor() -> None:
-    """The single most important property of this whole feature (see docs/todos/01-input-data-channels.md
+    """The single most important property of this whole feature (see docs/ML_Forecasting_System_Design/todo/01-input-data-channels.md
     § step 1): perturbing FUTURE-slice data (rows strictly after some cutoff) must never change
     observed_extremum_tf_minutes for any candle at or before that cutoff, for an anchor at the cutoff.
     """

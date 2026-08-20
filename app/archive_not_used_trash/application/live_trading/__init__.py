@@ -2,5 +2,5 @@
 
 Placeholder scaffold: the application-layer use case that will drive
 infrastructure/order_execution/ once real trading is built. See
-docs/todos/03-infrastructure.md.
+docs/ML_Forecasting_System_Design/todo/03-infrastructure.md.
 """

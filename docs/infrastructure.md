@@ -75,7 +75,7 @@ MVC doesn't fit (no request/response UI cycle) — layer by dependency direction
 Application (dataset generation, training, prediction, optimization, backtesting orchestration) →
 Infrastructure (exchange/data-fetch, model-artifact persistence, config, logging) → Presentation
 (plotting, entrypoints). Full layer-to-module mapping and placement rules: the `code-layers` skill;
-migration order/cleanup plan: [todos/infrastructure.md](todos/03-infrastructure.md#todo) item 12.
+migration order/cleanup plan: [todos/infrastructure.md](ML_Forecasting_System_Design/todo/03-infrastructure.md#todo) item 12.
 
 ### SOA
 
@@ -202,7 +202,7 @@ containerized runtime (`Dockerfile`, `docker-compose.yml`).
 
 ### ClickHouse
 
-Client-server OLAP database — evaluated as a target store for migrating `infrastructure.disk_cache`'s on-disk (feather/ZSTD) artifact cache off flat files, then parked: a single-process offline pipeline with no other concurrent consumer doesn't need a network-served store's daemon/port management (`infrastructure.md` § SOA). Kept wired up (not removed) for the scenario that would actually justify one: live/paper trading with multiple concurrent readers hitting one instance at once. See [data_pipeline_upgrade_plan.md](data_pipeline_upgrade_plan.md) for the full step-by-step history (Feather → Parquet, then dataset_db repartitioning + DuckDB).
+Client-server OLAP database — evaluated as a target store for migrating `infrastructure.disk_cache`'s on-disk (feather/ZSTD) artifact cache off flat files, then parked: a single-process offline pipeline with no other concurrent consumer doesn't need a network-served store's daemon/port management (`infrastructure.md` § SOA). Kept wired up (not removed) for the scenario that would actually justify one: live/paper trading with multiple concurrent readers hitting one instance at once. See [todos/todo_data_pipeline_upgrade_plan.md](todos/todo_data_pipeline_upgrade_plan.md) for the full step-by-step history (Feather → Parquet, then dataset_db repartitioning + DuckDB).
 
 - **Runtime**: `docker-compose.yml` `clickhouse` service (`clickhouse/clickhouse-server:24.8`), HTTP `:8123` + native TCP `:9000`, data/logs bind-mounted to `docker_volume/clickhouse/` (native ext4, already gitignored — same rationale as [environments](#environments)'s filesystem-location note: avoids the WSL2 9p/drvfs penalty).
 - **WSL access**: `localhost:8123` works from both WSL and Windows — WSL2's `localhostForwarding` (on by default) makes this transparent regardless of which Docker runtime backs it, no IP/hostname juggling needed.

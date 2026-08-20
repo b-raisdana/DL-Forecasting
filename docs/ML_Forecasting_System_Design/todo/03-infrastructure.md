@@ -157,7 +157,7 @@ are cross-cutting enablers other topics depend on rather than a pipeline stage o
 
     **2026-08-16 `loc` baseline bump, with an explicit payoff plan.** The todo step 12 directory-layer migration grew the four files above while moving/reformatting them (`profit_loss_adder.py` 657->765, `PeakValley.py` 694->776, `BullBearSide.py` 636->712, `ftc.py` 579->620) and pushed two more over the 500-line threshold for the first time (`training_datasets.py` at 633, `data_preparation.py` at 613) - a genuine +116 project-wide regression on the `loc` vector (1003->1119), not a rename artifact. Blocking the migration commit on an unrelated split effort wasn't worth it, so `scripts/git-hooks/incremental-precommit/baseline.json` was re-baselined to 1119 instead. Endpoint: this todo step's split plan (`data_preparation.py`'s clusters above, plus the same one-cluster-per-commit treatment for the other five files) is what pays this back down - the six files listed above are the full scope of what this bump covers, not a general license to keep growing them.
 14. **(decision) Data pipeline upgrade — Feather → Parquet migration.** Plan at
-    [data_pipeline_upgrade_plan.md](../data_pipeline_upgrade_plan.md): mirrors the existing
+    [data_pipeline_upgrade_plan.md](../../todos/todo_data_pipeline_upgrade_plan.md): mirrors the existing
     CSV-zip → Feather on-touch migration one format further, in `infrastructure/disk_cache.py`
     (`_feather_file_path`/`write_data_file`/`_read_raw_data_file`/`remove_data_file`) and
     `disk_cache_layout.py`'s `_legacy_file_pattern`. Scoped deliberately narrow — a broader review

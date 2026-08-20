@@ -46,7 +46,7 @@ Alt: Sharpe as primary — rejected, penalizes wanted upside vol. Calmar as prim
 ### terminology: "MAE" means two different things here
 
 - **Here (statistical):** Mean Absolute Error — a companion loss for price-level heads, alongside quantile/pinball loss.
-- **In [training-data.md](02-Data, Label & Feature Engineering.md#glossary) and [todos/training-data-labels.md](../todos/02-training-data-labels.md#what-drawdown-actually-measures-mae-not-peak-retracement) (trading):** Maximum Adverse Excursion — the worst adverse price move from entry before the best-case exit, used to derive SL/labels. Unrelated to the statistical metric above; always read from context.
+- **In [training-data.md](02-Data, Label & Feature Engineering.md#glossary) and [todos/training-data-labels.md](todo/02-training-data-labels.md#what-drawdown-actually-measures-mae-not-peak-retracement) (trading):** Maximum Adverse Excursion — the worst adverse price move from entry before the best-case exit, used to derive SL/labels. Unrelated to the statistical metric above; always read from context.
 
 ### glossary
 
