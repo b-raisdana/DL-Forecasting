@@ -8,8 +8,8 @@ from domain.schemas.market_structure.PeakValley import MultiTimeframePeakValley
 from helper.data_preparation import single_timeframe
 from helper.logging import profile_it
 from pandera import typing as pt
-from presentation.market_structure.BasePattern_plotter import draw_band_activators, draw_band_orders_df, draw_base
-from presentation.market_structure.BullBearSide_plotter import plot_single_timeframe_bull_bear_side_trends
+from archive_not_used_trash.market_structure.BasePattern_plotter import draw_band_activators, draw_band_orders_df, draw_base
+from archive_not_used_trash.market_structure.BullBearSide_plotter import plot_single_timeframe_bull_bear_side_trends
 from presentation.shared.plotter import plot_multiple_figures
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000

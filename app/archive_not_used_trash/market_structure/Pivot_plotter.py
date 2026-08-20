@@ -9,8 +9,8 @@ from helper.data_preparation import single_timeframe
 from infrastructure.ohlcv.ohlcva import read_multi_timeframe_ohlcva
 from pandera import typing as pt
 from plotly import graph_objects as plgo
-from presentation.market_structure.BasePattern_plotter import draw_base
-from presentation.ohlcv.OHLVC_plotter import add_atr_scatter, plot_ohlcv
+from archive_not_used_trash.market_structure.BasePattern_plotter import draw_base
+from archive_not_used_trash.ohlcv.OHLVC_plotter import add_atr_scatter, plot_ohlcv
 from presentation.shared.plotter import show_and_save_plot, update_figure_layout
 
 

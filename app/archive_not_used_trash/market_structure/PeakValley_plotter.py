@@ -7,7 +7,7 @@ from helper.logging import profile_it
 from infrastructure.ohlcv.ohlcva import read_multi_timeframe_ohlcva
 from pandera import typing as pt
 from plotly import graph_objects as plgo
-from presentation.ohlcv.OHLVC_plotter import plot_ohlcva
+from archive_not_used_trash.ohlcv.OHLVC_plotter import plot_ohlcva
 from presentation.shared.plotter import (
     file_id,
     plot_multiple_figures,
