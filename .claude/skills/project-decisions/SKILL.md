@@ -195,6 +195,12 @@ Rule: don't. Either the scenario is genuinely reachable — call the real guard 
 
 Fixed instance: `_migrate_to_parquet()` in `infrastructure/datastore_engine/convert_to_parquest.py` (then still split into `_migrate_feather_to_parquet()`/`_migrate_csv_zip_to_parquet()`, later merged — see [Merge duplicated logic](#merge-duplicated-logic-dry)) called `flatten_index_to_columns(df)` unconditionally on a frame from `pd.read_csv()`, which never sets a custom index — the call could never do anything on that path, so its caller now passes `flatten=False` to skip it outright rather than relying on the callee's own no-op branch.
 
+## Log on raise / exit / termination
+
+Trigger: any code path that raises, exits, or otherwise terminates — `raise`, `sys.exit()`, `return` from a no-recovery path, fatal log + abort.
+
+Rule: log the event with `log_e(...)` before every `raise`, `sys.exit()`, or equivalent termination. No silent exits. If a function has multiple early-exit branches, each must log its reason.
+
 ## brief comments
 
 proper naming is always the first choice
