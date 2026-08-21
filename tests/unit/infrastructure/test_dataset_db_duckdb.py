@@ -148,7 +148,7 @@ def test_read_file_windowed_falls_back_to_per_window_read_on_duckdb_batch_failur
     def broken_read_parquet_files(*_a, **_k):
         raise RuntimeError("simulated DuckDB failure")
 
-    monkeypatch.setattr(disk_cache_windowed, "read_parquet_files", broken_read_parquet_files)
+    monkeypatch.setattr(disk_cache_windowed, "read_duckdb", broken_read_parquet_files)
 
     fallback_calls = []
 

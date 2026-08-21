@@ -37,6 +37,7 @@ prophet==1.4.0
 
 # pytest
 pandera==0.32.1 # conda install -c conda-forge pandera
+optree>=0.14.0 # required by helper.pandera (optree.tree_map over nested DataFrame returns)
 # backtrader[plotting]
 ccxt==4.5.74
 # MetaTrader5

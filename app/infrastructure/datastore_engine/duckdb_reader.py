@@ -21,7 +21,7 @@ data/dataset_db/README.md and docs/infrastructure.md § DuckDB for the full desi
 
 
 @pandera_validate(allow_pandas_dataframe=True)
-def read_parquet_files(paths: list[Path], data_frame_type: str, start: datetime, end: datetime) -> pd.DataFrame:
+def read_duckdb(paths: list[Path], data_frame_type: str, start: datetime, end: datetime) -> pd.DataFrame:
     """
     Read and concatenate `paths` (already-validated Parquet/ZSTD cache files, all the same
     data_frame_type) in one DuckDB query, trimmed to [start, end] via a real filter on the `date`
@@ -33,7 +33,7 @@ def read_parquet_files(paths: list[Path], data_frame_type: str, start: datetime,
     an unrelated legacy-range file sitting in the same data_frame_type directory.
     """
     if not paths:
-        raise ValueError("read_parquet_files() requires at least one path")
+        raise ValueError("read_duckdb() requires at least one path")
     file_list = [str(p) for p in paths]
     con = duckdb.connect()
     try:

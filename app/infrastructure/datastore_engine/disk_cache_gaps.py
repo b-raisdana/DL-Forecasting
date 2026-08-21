@@ -54,7 +54,7 @@ def find_cache_gaps(
     date_range_str per run, so e.g. Aug 1/5/6/7/9 present yields two gaps: Aug 2-4 and Aug 8.
 
     `dataset` accepts either a CachableDataset (reusing the same object cache_on_disk() was declared
-    with) or a bare data_frame_type string.
+    with, now archived) or a bare data_frame_type string.
     """
     data_frame_type = _data_frame_type_of(dataset)
     resolved_file_path: FilePathArg = file_path if file_path is not None else DATASET_DB
@@ -88,7 +88,7 @@ def find_overlapping_cache_files(
     satisfies one window". Sorted by start.
 
     `dataset` accepts either a CachableDataset (reusing the same object cache_on_disk() was declared
-    with) or a bare data_frame_type string.
+    with, now archived) or a bare data_frame_type string.
     """
     data_frame_type = _data_frame_type_of(dataset)
     resolved_file_path: FilePathArg = file_path if file_path is not None else DATASET_DB

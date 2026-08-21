@@ -171,6 +171,12 @@ def check_file(path: Path) -> list[str]:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
 
+        # Private helpers (leading underscore) are internal implementation, not
+        # public DataFrame-transform entry points - the decorator boundary is
+        # enforced on the public API that calls them.
+        if node.name.startswith("_"):
+            continue
+
         if not _function_uses_dataframe_annotation(node):
             continue
 

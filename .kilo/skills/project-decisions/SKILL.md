@@ -84,6 +84,8 @@ these are codes we developed before and has good ideas to remeber for optimized 
 do not move them blindly. every thime get the idea and implement it in a better way and try to optimize.
 apply skulls defined project standard on the code.
 
+**Hard guard: never edit or create any file under `archive_not_used_trash/`.** It is read-only reference — kept for its ideas, excluded from lint/mypy/tests by design (see `.pre-commit-config.yaml` and `pyproject.toml` excludes). If you need logic that lives there, re-implement it properly in the active tree (`app/`), applying current project standards; do not patch the archived copy, do not move it into `app/`, and do not add new files inside it. Treat the entire directory as frozen.
+
 ## Helper imports
 
 Trigger: any module that needs a shared third-party alias or project-wide shortcut. Prefer `app/helper/importer.py` aliases over local `import X as Y` so the mapping is defined once and consumed everywhere.

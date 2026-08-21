@@ -32,7 +32,7 @@ Two distinct roots live under path_of_data:
   vault/orders/signals CSVs (ExtendedStrategy.py), plots (presentation/shared/plotter.py). Not
   touched by the dataset_db migration below; not managed by disk_cache's Parquet cache at all.
 - dataset_db_root() (data_frame_type/market/trading_pair/exchange) — every (data_frame_type,
-  date_range_str) artifact disk_cache.py's cache_on_disk/read_file/read_file_windowed family
+  date_range_str) artifact disk_cache.py's read_file/read_file_windowed family
   manages, data_frame_type-first so a single glob (e.g. dataset_db/multi_timeframe_ohlcv/**/*.parquet)
   scans one type across every symbol/market/exchange at once — the partitioning
   infrastructure/duckdb_reader.py's batched reads rely on. See data/dataset_db/README.md.
@@ -72,11 +72,12 @@ FilePathArg = str | DatasetDbSentinel
 
 
 # `generator(date_range_str, **kwargs) -> DataFrame` callables read_file()/read_file_windowed()/
-# cache_on_disk() accept — genuinely arbitrary per artifact type (extra kwargs like
+# (archived cache_on_disk()) accept — genuinely arbitrary per artifact type (extra kwargs like
 # `base_timeframe`, `symbols`, ...), so a precise Protocol would reject real generators; the ignore
 # is for Callable's `...`, itself an explicit Any under disallow_any_explicit. Return type is
 # `object`, not `pd.DataFrame`: a generator's return annotation is legitimately either a
-# pt.DataFrame[Model] or a bare Model class read only by disk_cache._resolve_caster_model() (see its
+# pt.DataFrame[Model] or a bare Model class read only by _resolve_caster_model() (archived, in
+# archive_not_used_trash.infrastructure.datastore_engine.disk_cache — see its
 # docstring), never actually returned as a Model instance — read_file()/read_file_windowed() cast
 # the real call result to pd.DataFrame themselves once generator() has run.
 _Generator = Callable[..., object]  # type: ignore[explicit-any]
@@ -85,25 +86,25 @@ _Generator = Callable[..., object]  # type: ignore[explicit-any]
 @dataclass(frozen=True)
 class CachableDataset:
     """
-    Everything disk_cache.py's cache_on_disk()/find_cache_gaps()/find_overlapping_cache_files()/
+    Everything disk_cache.py's find_cache_gaps()/find_overlapping_cache_files()/
     cleanup_redundant_cache_files() need to know about one (data_frame_type) cache artifact, bundled
     once at the artifact's definition site instead of repeating the same data_frame_type string (and,
-    at the cache_on_disk() decorator site, generator/caster_model/nan_allowed_columns/zero_size_allowed)
+    at the cache_on_disk() decorator site (archived), generator/caster_model/nan_allowed_columns/zero_size_allowed)
     at every call site — e.g. `application.market_data.fetch_market_data` reuses
     `domain.ohlcv.ohlcv.OHLCV_DATASET` instead of a bare "ohlcv" literal.
 
     generator/caster_model are optional: leave them unset when declaring the dataset for a
-    cache_on_disk() decorator site — the decorator fills generator in from the function it decorates
+    cache_on_disk() decorator site (archived) — the decorator fills generator in from the function it decorates
     and infers caster_model from that function's own return-type annotation (via
-    disk_cache._resolve_caster_model()) unless overridden here. nan_allowed_columns/zero_size_allowed
-    default to cache_on_disk()'s own defaults (no extra NaN allowance beyond the schema's nullable
+    _resolve_caster_model() (archived)) unless overridden here. nan_allowed_columns/zero_size_allowed
+    default to read_file()/write_data_file()'s own defaults (no extra NaN allowance beyond the schema's nullable
     columns; zero_size_allowed inferred per date_range_str).
     """
 
     dataset_folder_name: str
     generator: _Generator | None = None
     # type[pandera.DataFrameModel], not type[Pandera_DFM_Type]: that TypeVar is only meaningful bound
-    # to a generic function/class call (as disk_cache._resolve_caster_model()'s return type is), not as
+    # to a generic function/class call (as _resolve_caster_model()'s return type is, that helper now archived), not as
     # a plain dataclass field annotation — mypy flags it "unbound" there.
     caster_model: type[pandera.DataFrameModel] | None = None
     nan_allowed_columns: frozenset[str] = field(default_factory=frozenset)
@@ -325,7 +326,7 @@ def cleanup_redundant_cache_files(
     never deleted on the strength of its own span alone — every constituent window period must be
     backed by a DIFFERENT file, so a genuine window tile is never mistaken for redundant.
 
-    `dataset` accepts either a CachableDataset (reusing the same object cache_on_disk() was declared
+    `dataset` accepts either a CachableDataset (reusing the same object cache_on_disk() was declared (archived)
     with) or a bare data_frame_type string — see _data_frame_type_of().
 
     Returns the (path, size_in_bytes) pairs deleted (or, if dry_run, that would be deleted).

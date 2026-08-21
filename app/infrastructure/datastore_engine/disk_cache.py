@@ -1,13 +1,10 @@
 import contextlib
 from collections import OrderedDict
-from collections.abc import Callable
 from datetime import datetime, timedelta
-from functools import wraps
-from typing import TypedDict, cast, get_args, get_type_hints
+from typing import TypedDict, cast
 from zipfile import BadZipFile
 
 import pandas as pd
-import pandera
 import pytz
 from config import app_config
 from helper.data_preparation import after_under_process_date
@@ -40,22 +37,16 @@ from infrastructure.datastore_engine.parquet_housekeeping import flag_repair_req
 """
 Everything this repo needs to persist/read a (data_frame_type, date_range_str) artifact as a
 Parquet/ZSTD (or legacy Feather/ZSTD/CSV-zip) file and never recompute or re-fetch it twice within its
-validity scope — the disk-level half of the cache-or-generate skill. `cache_on_disk` is the primitive
-new artifact types should use; `read_file`/`write_data_file` are its building blocks for callers (like
-domain.schemas.common.ExtendedDf.read_file) that need a class-bound variant instead of a decorator.
+validity scope — the disk-level half of the cache-or-generate skill. `read_file`/`write_data_file`
+are the primitives for callers (like domain.schemas.common.ExtendedDf.read_file) that need a
+class-bound variant instead of a decorator; `cache_on_disk()` has been archived to
+archive_not_used_trash.infrastructure.datastore_engine.disk_cache (deprecated — no live callers).
 
-Calendar-windowed caching (`cache_on_disk(..., windowed=True)` / `read_file_windowed()`), the legacy-
-file reuse it does on a miss, and the disk-generation-rate monitor are documented in detail in
-infrastructure/ohlcv/README.md (its examples are OHLCV/OHLCVA-specific; this module itself is
-generic) — read that first if you're touching any of the `_window_*`/`*_cache_generation*`/
-`cleanup_redundant_cache_files` functions below.
+Calendar-windowed caching (`read_file_windowed()`), the legacy-file reuse it does on a miss, and the
+disk-generation-rate monitor are documented in detail in infrastructure/ohlcv/README.md (its examples
+are OHLCV/OHLCVA-specific; this module itself is generic) — read that first if you're touching any of
+the `_window_*`/`*_cache_generation*`/`cleanup_redundant_cache_files` functions below.
 """
-
-
-# What cache_on_disk()'s decorator hands back: unlike _Generator, this always returns a pd.DataFrame
-# at runtime (read_file()/read_file_windowed() do), so callers of a decorated `get_...` function get
-# an accurate type back instead of _Generator's deliberately-loose `object`.
-_Wrapper = Callable[..., pd.DataFrame]  # type: ignore[explicit-any]
 
 
 # @cache
@@ -140,8 +131,8 @@ def write_data_file(
 
     nan_allowed_columns, when given (not None), gates a write-time guard: any other column
     containing NaN raises rather than silently caching it. None (the default, used by callers outside
-    the cache_on_disk path — e.g. legacy-file seeding/migration) skips the guard entirely. The
-    cache_on_disk-driven generator path always passes a resolved set — see read_file().
+    the read_file/write_data_file path — e.g. legacy-file seeding/migration) skips the guard entirely.
+    The cache_on_disk()-driven generator path (archived) always passes a resolved set — see read_file().
     """
     if nan_allowed_columns is not None:
         offending = _disallowed_nan_columns(df, nan_allowed_columns)
@@ -149,7 +140,7 @@ def write_data_file(
             raise Exception(
                 f"Refusing to cache NaN in column(s) {offending} for '{data_frame_type}' {date_range_str} — "
                 f"declare them nullable in the pandera schema, or pass nan_allowed_columns=[...] to "
-                f"cache_on_disk(), if NaN is genuinely expected there."
+                f"read_file()/write_data_file(), if NaN is genuinely expected there."
             )
     parquet_file_path = _parquet_file_path(data_frame_type, date_range_str, file_path)
     df.reset_index().to_parquet(parquet_file_path, compression="zstd")
@@ -304,7 +295,7 @@ def read_file(
     A freshly-generated df is never cached with an unexpected NaN in it: the columns allowed to
     contain NaN are caster_model's own pandera nullable=True columns, unioned with
     nan_allowed_columns (extra columns to allow beyond what the schema already declares nullable —
-    see cache_on_disk(nan_allowed_columns=...)). Any other column containing NaN raises rather than
+    see write_data_file(nan_allowed_columns=...)). Any other column containing NaN raises rather than
     silently caching it.
 
     Parameters:
@@ -388,99 +379,3 @@ def read_file(
     elif cache_key is not None:
         _read_file_cache_put(cache_key, df)
     return df
-
-
-def _resolve_caster_model(generator: _Generator) -> type[Pandera_DFM_Type]:
-    """Pull the pandera model read_file() should validate/write against straight from generator's own
-    return-type annotation, so cache_on_disk() callers don't repeat it. Accepts either a bare model class
-    (`-> OHLCV`) or a pandera DataFrame-typed annotation (`-> pt.DataFrame[OHLCV]`), unwrapping the latter
-    via its type args."""
-    return_hint = get_type_hints(generator).get("return")
-    if return_hint is None:
-        raise Exception(
-            f"cache_on_disk() requires {generator.__name__}() to have a return type annotation "
-            f"(the pandera model to validate/write against) — none found."
-        )
-    type_args = get_args(return_hint)
-    return cast("type[Pandera_DFM_Type]", type_args[0] if type_args else return_hint)
-
-
-def cache_on_disk(
-    dataset: CachableDataset,
-    after_read: Callable[[pd.DataFrame], None] | None = None,
-    skip_rows: int | None = None,
-    n_rows: int | None = None,
-    windowed: bool = False,
-) -> Callable[[_Generator], _Wrapper]:
-    """
-    Decorate a `generator(date_range_str, file_path=None, **kwargs) -> DataFrame` function so calling it
-    directly *is* the read-or-generate-and-cache entry point for this artifact type — this repo no longer
-    needs a separate `read_multi_timeframe_X()` wrapper next to `generate_multi_timeframe_X()`; call the
-    decorated function itself (conventionally named `get_...`, see cache-or-generate skill).
-
-    `dataset` is a CachableDataset declared with just `dataset_folder_name` (plus, rarely,
-    `nan_allowed_columns`/`zero_size_allowed` — see CachableDataset's own docstring); its
-    `generator`/`caster_model` fields stay unset at the decorator site — `caster_model` is inferred
-    from `generator`'s own return-type annotation via `_resolve_caster_model()` unless the dataset
-    already sets one. Keep a reference to `dataset` (e.g. a module-level `OHLCV_DATASET`) so other
-    call sites (find_cache_gaps(), cleanup_redundant_cache_files(), ...) can reuse it instead of
-    repeating the data_frame_type string.
-
-    `after_read`, if given, runs on the result of every call — a disk/memo hit as well as a fresh
-    generation — for side effects that must reflect what was actually read, not just fresh generation
-    (e.g. `cache_times()` populating `app_config.GLOBAL_CACHE` for `to_timeframe()` validation).
-
-    `windowed=True` makes `generator` a per-window generator (see README.md § windowing): the decorated
-    function accepts an arbitrary `date_range_str`, decomposes it into whole calendar windows sized per
-    `app_config.cache_window_freq_overrides[dataset.dataset_folder_name]` (default
-    `app_config.default_cache_window_freq`), and calls `generator` once per window via
-    `read_file_windowed()` instead of once for the whole range. Not compatible with `skip_rows`/`n_rows`
-    (same restriction `read_file()` already has on a cache miss).
-    """
-
-    def decorator(generator: _Generator) -> _Wrapper:
-        caster_model: type[pandera.DataFrameModel] = dataset.caster_model or _resolve_caster_model(generator)
-
-        @pandera_validate
-        @wraps(generator)
-        def wrapper(
-            date_range_str: str | None = None, file_path: str | None = None, **generator_params: object
-        ) -> pd.DataFrame:
-            if windowed:
-                if skip_rows or n_rows is not None:
-                    raise Exception("cache_on_disk(windowed=True) does not support skip_rows/n_rows.")
-                # Deferred import: disk_cache_windowed.py imports read_file()/write_data_file()/etc.
-                # from this module at load time, so importing back here at module level would cycle —
-                # deferring to call-time (mirrors disk_cache_gaps.py's one-way dependency the other way).
-                from infrastructure.datastore_engine.disk_cache_windowed import read_file_windowed
-
-                result = read_file_windowed(
-                    date_range_str,
-                    dataset.dataset_folder_name,
-                    generator,
-                    caster_model,
-                    file_path=file_path,
-                    zero_size_allowed=dataset.zero_size_allowed,
-                    generator_params=generator_params,
-                    nan_allowed_columns=dataset.nan_allowed_columns,
-                )
-            else:
-                result = read_file(
-                    date_range_str,
-                    dataset.dataset_folder_name,
-                    generator,
-                    caster_model,
-                    skip_rows=skip_rows,
-                    n_rows=n_rows,
-                    file_path=file_path,
-                    zero_size_allowed=dataset.zero_size_allowed,
-                    generator_params=generator_params,
-                    nan_allowed_columns=dataset.nan_allowed_columns,
-                )
-            if after_read is not None:
-                after_read(result)
-            return result
-
-        return wrapper
-
-    return decorator

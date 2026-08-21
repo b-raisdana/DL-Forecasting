@@ -24,7 +24,7 @@ from infrastructure.datastore_engine.disk_cache import (
     read_with_timeframe,
 )
 from infrastructure.datastore_engine.disk_cache_layout import _window_date_range_strs as _window_date_range_strs
-from infrastructure.datastore_engine.duckdb_reader import read_parquet_files
+from infrastructure.datastore_engine.duckdb_reader import read_duckdb
 from pandera import typing as pt
 
 """
@@ -32,7 +32,8 @@ Calendar-windowed counterpart to disk_cache.read_file() — split out from disk_
 (project-decisions skill § code layers, "Splitting an oversized file") once it crossed the 500-line
 soft cap, mirroring disk_cache_gaps.py's/disk_cache_layout.py's earlier splits for the same reason.
 Depends on disk_cache.py (read_file, write_data_file, read_with_timeframe — the single-file
-primitives every window is built from); disk_cache.py's own cache_on_disk() wrapper imports
+primitives every window is built from). The (now-archived) cache_on_disk() wrapper in
+archive_not_used_trash.infrastructure.datastore_engine.disk_cache imports
 read_file_windowed back from here via a deferred (in-function) import to avoid a module-load-time
 cycle, the same shape disk_cache_gaps.py already has in the other direction.
 
@@ -209,7 +210,7 @@ def read_file_windowed(
         )
     df: pd.DataFrame = pd.concat(window_dfs)
     df = df.sort_index(level="date")
-    return trim_to_date_range(date_range_str, df)  # type: ignore[no-any-return]
+    return cast(pt.DataFrame[Pandera_DFM_Type], trim_to_date_range(date_range_str, df))
 
 
 def _read_cached_windows_via_duckdb(
@@ -225,7 +226,7 @@ def _read_cached_windows_via_duckdb(
 ) -> list[pt.DataFrame[Pandera_DFM_Type]]:
     """
     Batches `paths` (already-cached window files for the same data_frame_type) through
-    duckdb_reader.read_parquet_files() in one query, validated once via caster_model — cheaper than
+    duckdb_reader.read_duckdb() in one query, validated once via caster_model — cheaper than
     read_file_windowed()'s previous per-window read+validate loop, and skips this batch's individual
     windows' entries in disk_cache._read_file_cache (documented tradeoff: DuckDB reads straight from
     row-group-pruned Parquet, comparable cost to a memo hit; the memo is only 32 entries).
@@ -242,7 +243,7 @@ def _read_cached_windows_via_duckdb(
     overall_start, _ = date_range(window_ranges[0])
     _, overall_end = date_range(window_ranges[-1])
     try:
-        batched_df = read_parquet_files(paths, data_frame_type, overall_start, overall_end)
+        batched_df = read_duckdb(paths, data_frame_type, overall_start, overall_end)
         # apply_as_type() coerces dtype/index (esp. the `date` index — DuckDB's TIMESTAMPTZ export
         # follows the connection's local session timezone, not always UTC, and pandas's own inferred
         # resolution needn't match caster_model's 'ns') before validating.
@@ -254,15 +255,18 @@ def _read_cached_windows_via_duckdb(
             f"({e}); falling back to per-window reads."
         )
         return [
-            read_file(
-                window_range,
-                data_frame_type,
-                generator,
-                caster_model,
-                file_path=file_path,
-                zero_size_allowed=zero_size_allowed,
-                generator_params=generator_params,
-                nan_allowed_columns=nan_allowed_columns,
+            cast(
+                pt.DataFrame[Pandera_DFM_Type],
+                read_file(
+                    window_range,
+                    data_frame_type,
+                    generator,
+                    caster_model,
+                    file_path=file_path,
+                    zero_size_allowed=zero_size_allowed,
+                    generator_params=generator_params,
+                    nan_allowed_columns=nan_allowed_columns,
+                ),
             )
             for window_range in window_ranges
         ]

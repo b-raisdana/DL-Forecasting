@@ -14,8 +14,8 @@ from application.model_implementations.tier1_000.datafeeder_input3_outcome1 impo
     build_dataset,
 )
 from application.model_implementations.tier1_000.model import BRANCH_TIMEFRAMES
-from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from helper.data_preparation import single_timeframe
+from infrastructure.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 
 
 @dataclass

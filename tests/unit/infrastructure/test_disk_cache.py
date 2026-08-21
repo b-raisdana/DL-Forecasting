@@ -14,14 +14,6 @@ class _NullableColSchema(pandera.DataFrameModel):
     nullable_col: pt.Series[float] = pandera.Field(nullable=True)
 
 
-class _ExtraColSchema(pandera.DataFrameModel):
-    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
-    value: pt.Series[float]
-
-    class Config:
-        strict = False
-
-
 def _df(rows: int = 3, **columns: list) -> pd.DataFrame:
     frame = pd.DataFrame({"date": pd.date_range("2020-01-01", periods=rows, tz="UTC"), **columns})
     return frame.set_index("date")
@@ -102,18 +94,3 @@ def test_read_file_generator_write_raises_on_nan_in_non_nullable_column(tmp_path
         disk_cache.read_file(
             "20-01-01.00-00T20-01-03.00-00", "strict_read_type", generator, _NullableColSchema, file_path=str(tmp_path)
         )
-
-
-@pytest.mark.unit
-def test_cache_on_disk_nan_allowed_columns_permits_extra_nonschema_column_nan(tmp_path):
-    def generator(date_range_str, **kwargs) -> pt.DataFrame[_ExtraColSchema]:
-        return _df(value=[1.0, 2.0, 3.0], scratch_col=[float("nan"), 2.0, 3.0])
-
-    dataset = disk_cache.CachableDataset(
-        dataset_folder_name="extra_type", nan_allowed_columns=frozenset({"scratch_col"})
-    )
-    get_extra = disk_cache.cache_on_disk(dataset)(generator)
-
-    result = get_extra("20-01-01.00-00T20-01-03.00-00", file_path=str(tmp_path))
-
-    assert result["scratch_col"].isna().sum() == 1
