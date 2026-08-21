@@ -19,7 +19,9 @@ _WARMUP_15MIN_CANDLES = 2000  # far more than ATR_FLOOR_LENGTH=255, so the ATR f
 
 
 def _five_min_ohlc(close: np.ndarray, half_range: float = 1.0) -> pd.DataFrame:
-    idx = pd.date_range(pd.Timestamp("2024-01-11", tz="UTC"), periods=len(close), freq="5min")
+    idx = pd.date_range(pd.Timestamp("2024-01-11", tz="UTC"), periods=len(close), freq="5min").astype(
+        "datetime64[ns, UTC]"
+    )
     df = pd.DataFrame(
         {
             "open": close - half_range * 0.5,
@@ -35,7 +37,9 @@ def _five_min_ohlc(close: np.ndarray, half_range: float = 1.0) -> pd.DataFrame:
 
 @pytest.fixture
 def warm_fifteen_min_ohlc() -> pd.DataFrame:
-    idx = pd.date_range(pd.Timestamp("2024-01-01", tz="UTC"), periods=_WARMUP_15MIN_CANDLES, freq="15min")
+    idx = pd.date_range(pd.Timestamp("2024-01-01", tz="UTC"), periods=_WARMUP_15MIN_CANDLES, freq="15min").astype(
+        "datetime64[ns, UTC]"
+    )
     close = np.linspace(90, 200, _WARMUP_15MIN_CANDLES)
     df = pd.DataFrame({"open": close, "high": close + 1, "low": close - 1, "close": close}, index=idx)
     df.index.name = "date"

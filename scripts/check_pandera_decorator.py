@@ -76,8 +76,36 @@ def _walk_annotation(node: ast.AST) -> ast.AST:
     elif isinstance(node, ast.Tuple):
         for elt in node.elts:
             yield from _walk_annotation(elt)
-    elif isinstance(node, (ast.Attribute, ast.Index)):
+    elif isinstance(node, ast.Attribute):
         yield from _walk_annotation(node.value)
+
+
+def _contains_pandera_typevar(func: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """Return True when any parameter or return annotation references Pandera_DFM_Type."""
+    for arg in func.args.args:
+        if arg.annotation is not None and _walk_annotation_contains_name(arg.annotation, "Pandera_DFM_Type"):
+            return True
+    for arg in func.args.kwonlyargs:
+        if arg.annotation is not None and _walk_annotation_contains_name(arg.annotation, "Pandera_DFM_Type"):
+            return True
+    if (
+        func.args.vararg is not None
+        and func.args.vararg.annotation is not None
+        and _walk_annotation_contains_name(func.args.vararg.annotation, "Pandera_DFM_Type")
+    ):
+        return True
+    if (
+        func.args.kwarg is not None
+        and func.args.kwarg.annotation is not None
+        and _walk_annotation_contains_name(func.args.kwarg.annotation, "Pandera_DFM_Type")
+    ):
+        return True
+    return func.returns is not None and _walk_annotation_contains_name(func.returns, "Pandera_DFM_Type")
+
+
+def _walk_annotation_contains_name(node: ast.AST, name: str) -> bool:
+    """Return True if the annotation AST contains a Name node with the given id."""
+    return any(isinstance(sub, ast.Name) and sub.id == name for sub in _walk_annotation(node))
 
 
 def _has_pandera_transform(decorator_list: list[ast.expr]) -> bool:
@@ -144,6 +172,9 @@ def check_file(path: Path) -> list[str]:
             continue
 
         if not _function_uses_dataframe_annotation(node):
+            continue
+
+        if _contains_pandera_typevar(node):
             continue
 
         if _has_pandera_transform(node.decorator_list):

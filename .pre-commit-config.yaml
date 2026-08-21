@@ -59,7 +59,7 @@ repos:
         files: ^(app/.*\.py|pytest\.ini)$
 
       - id: check-pandera-decorator
-        name: check pandera_transform decorator
+        name: check pandera_validate decorator
         language: system
         entry: python scripts/check_pandera_decorator.py
         pass_filenames: true

@@ -2,6 +2,7 @@ import base64
 import hashlib
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Literal
 
 import pandas as pd
 import pytz

@@ -10,6 +10,8 @@ Use ``allow_pandas_dataframe=True`` to skip the warning and delegate
 directly to ``pa.check_types(lazy=True)`` — zero extra overhead.
 """
 
+# mypy: disallow_any_explicit=False
+
 from __future__ import annotations
 
 from functools import wraps
@@ -109,7 +111,9 @@ def pandera_validate(func: Any = None, *, allow_pandas_dataframe: bool = False) 
     - ``allow_pandas_dataframe=False`` (default): warns on bare ``pd.DataFrame``
       annotations, then applies ``pa.check_types(lazy=True)``.
     - ``allow_pandas_dataframe=True``: skips the warning and do
-      ``pa.check_types(lazy=True)(func)`` directly.
+      ``pa.check_types(lazy=True)`` directly.
+    - Bypasses validation entirely when ``app_config.environment`` is
+      ``"production"``.
     """
 
     def decorator(func: Any) -> Any:

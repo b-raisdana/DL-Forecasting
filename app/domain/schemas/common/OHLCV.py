@@ -1,17 +1,9 @@
-from typing import Annotated  # python 3.9+
-
-import pandas as pd
-import pandera
 from domain.schemas.common.MultiTimeframe import MultiTimeframe
+from domain.schemas.common.OHLC import OHLC
 from pandera import typing as pt
 
 
-class OHLCV(pandera.DataFrameModel):
-    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
-    open: pt.Series[float]
-    close: pt.Series[float]
-    high: pt.Series[float]
-    low: pt.Series[float]
+class OHLCV(OHLC):
     volume: pt.Series[float]
 
 

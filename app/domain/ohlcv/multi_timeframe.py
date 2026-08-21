@@ -2,9 +2,11 @@ import pandas as pd
 from config import app_config
 from domain.schemas.common.OHLCV import OHLCV, MultiTimeframeOHLCV
 from helper.data_preparation import concat, multi_timeframe_times_tester, trim_to_date_range
+from helper.pandera import pandera_validate
 from pandera import typing as pt
 
 
+@pandera_validate
 def aggregate_multi_timeframe_ohlcv(ohlcv: pt.DataFrame[OHLCV], date_range_str: str) -> MultiTimeframeOHLCV:
     """
     Resamples a base-timeframe OHLCV DataFrame into every configured higher timeframe
@@ -45,4 +47,4 @@ def aggregate_multi_timeframe_ohlcv(ohlcv: pt.DataFrame[OHLCV], date_range_str: 
     multi_timeframe_ohlcv = trim_to_date_range(date_range_str, multi_timeframe_ohlcv)
     multi_timeframe_ohlcv = multi_timeframe_ohlcv.sort_index(level="date")
     assert multi_timeframe_times_tester(multi_timeframe_ohlcv, date_range_str)
-    return multi_timeframe_ohlcv
+    return multi_timeframe_ohlcv  # type: ignore[no-any-return]

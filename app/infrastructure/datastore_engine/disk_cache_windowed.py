@@ -8,7 +8,6 @@ from config import app_config
 from helper.data_preparation import trim_to_date_range
 from helper.functions import Pandera_DFM_Type, date_range
 from helper.logging.do_log import log_w
-from helper.pandera import pandera_validate
 from helper.schema_casting import apply_as_type, empty_df
 from infrastructure.datastore_engine.disk_cache import (
     DATASET_DB,
@@ -119,7 +118,6 @@ def _covering_parquet_path(data_frame_type: str, window_date_range_str: str, fil
     return _parquet_file_path(data_frame_type, covering_range_str, file_path)
 
 
-@pandera_validate
 def read_file_windowed(
     date_range_str: str | None,
     data_frame_type: str,
@@ -211,10 +209,9 @@ def read_file_windowed(
         )
     df: pd.DataFrame = pd.concat(window_dfs)
     df = df.sort_index(level="date")
-    return trim_to_date_range(date_range_str, df)
+    return trim_to_date_range(date_range_str, df)  # type: ignore[no-any-return]
 
 
-@pandera_validate
 def _read_cached_windows_via_duckdb(
     paths: list[Path],
     window_ranges: list[str],

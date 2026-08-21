@@ -11,7 +11,10 @@ docs/ML_Forecasting_System_Design/todo/02-training-data-labels.md flags as impre
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from domain.schemas.common.OHLC import OHLC
 from helper.importer import ta
+from helper.pandera import pandera_validate
+from pandera import typing as pt
 
 HORIZON_BARS = 48  # 240 minutes / 5min
 ATR_FLOOR_LENGTH = 255  # ATR(255, 15min) per § risk factors
@@ -23,7 +26,10 @@ action_label_columns = ["action_long", "action_short", "action_none"]
 regression_label_columns = ["mfe", "rer"]
 
 
-def _atr_255_15min_floor(five_min_index: pd.DatetimeIndex, fifteen_min_ohlc: pd.DataFrame) -> npt.NDArray[np.float64]:
+@pandera_validate
+def _atr_255_15min_floor(
+    five_min_index: pd.DatetimeIndex, fifteen_min_ohlc: pt.DataFrame[OHLC]
+) -> npt.NDArray[np.float64]:
     """ATR(255, 15min), forward-filled onto five_min_index from the last *completed* 15min candle —
     merge_asof(direction='backward') so no anchor ever reads a still-forming or future 15min bar."""
     atr_series = ta.atr(
@@ -78,6 +84,7 @@ def _direction_excursions(
     return mfe, mae
 
 
+@pandera_validate(allow_pandas_dataframe=True)  # type: ignore[untyped-decorator]
 def add_mfe_mae_om_labels(five_min_ohlc: pd.DataFrame, fifteen_min_ohlc: pd.DataFrame) -> pd.DataFrame:
     """Per-anchor-candle Long/Short mfe/mae/om + the winning direction's action/mfe/rer.
 

@@ -60,7 +60,8 @@ def setup_gpu() -> None:
 # mem_info = tf_config.experimental.get_memory_info("GPU:0")
 # gpu = getGPUs()[0]
 # print(
-# f"\n<<<Ends@{datetime.now().strftime('%H%M%S')}:{app_config.under_process_symbol}:{app_config.processing_date_range}/TrainL:{training_loss}/ValidL:{validation_loss}"
+#     f"\n<<<Ends@{datetime.now().strftime('%H%M%S')}:{app_config.under_process_symbol}:"
+#     f"{app_config.processing_date_range}/TrainL:{training_loss}/ValidL:{validation_loss}"
 # )
 # current_mb = mem_info["current"] / (1024**2)
 # peak_mb = mem_info["peak"] / (1024**2)
