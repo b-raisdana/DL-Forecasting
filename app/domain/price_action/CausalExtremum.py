@@ -40,7 +40,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from domain.schemas.price_action.CausalExtremum import CausalExtremumOHLC, CausalExtremumResult
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from pandera import typing as pt
 
 # This codebase's lowercase-h timeframe convention (differs from the spec jsonc's "1H"/"4H", same
@@ -126,7 +126,7 @@ def _reach_minutes(
     return reach
 
 
-@pandera_transform
+@pandera_validate
 def compute_true_extremum(ohlc: pt.DataFrame[CausalExtremumOHLC]) -> pt.DataFrame[CausalExtremumResult]:
     """Step A: full-hindsight (anchor-independent) extremum reach for every candle in `ohlc` (a
     single-timeframe, single native-spacing series — one branch's own native series, not a

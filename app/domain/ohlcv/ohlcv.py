@@ -2,71 +2,21 @@ from typing import cast
 
 import pandas as pd
 from config import app_config
-from domain.ohlcv.multi_timeframe import aggregate_multi_timeframe_ohlcv
-from domain.schemas.common.OHLCV import OHLCV, MultiTimeframeOHLCV
-from helper.data_preparation import after_under_process_date, single_timeframe, times_tester
-from helper.logging import profile_it
+from domain.schemas.common.OHLCV import OHLCV
+from helper.data_preparation import after_under_process_date, times_tester
+from helper.pandera import pandera_validate
 from helper.schema_casting import cast_and_validate
-from infrastructure.datastore_engine.disk_cache import CachableDataset, cache_on_disk
-from infrastructure.market_data_fetch.ccxt_client import fetch_ohlcv_by_range
+from infrastructure.datastore_engine.disk_cache_layout import CachableDataset
 from pandera import typing as pt
 
-# Reused by application.market_data.fetch_market_data/presentation.market_data.fetch_ohlcv_cli
-# (find_cache_gaps()/find_overlapping_cache_files()/cleanup_redundant_cache_files()) instead of
-# repeating the "ohlcv"/"multi_timeframe_ohlcv" data_frame_type strings.
 OHLCV_DATASET = CachableDataset(dataset_folder_name="ohlcv")
 MULTI_TIMEFRAME_OHLCV_DATASET = CachableDataset(dataset_folder_name="multi_timeframe_ohlcv")
 
 
-def cache_times(result: pd.DataFrame) -> None:
-    for timeframe in app_config.timeframes:
-        # single_timeframe()'s own multi_timeframe_data param is typed via an unbound pandera
-        # TypeVar (helper.data_preparation.MultiTimeframe_Type) with no other parameter to bind it
-        # from, so mypy can't resolve it to anything but Never here — pre-existing, out of scope.
-        app_config.GLOBAL_CACHE[f"valid_times_{timeframe}"] = single_timeframe(result, timeframe).index  # type: ignore[arg-type]
-
-
-@profile_it
-@cache_on_disk(OHLCV_DATASET, windowed=True)
-def get_base_timeframe_ohlcv(
-    date_range_str: str | None = None, base_timeframe: str | None = None
-) -> pt.DataFrame[OHLCV]:
-    """
-    Generates exactly one cache window's worth of base-timeframe OHLCV (see
-    cache_on_disk(windowed=True) / infrastructure/ohlcv/README.md § windowing);
-    disk_cache.read_file_windowed() decomposes an arbitrary requested date_range_str into windows,
-    fetches/generates each through this function, and stitches the result back together.
-    """
-    if date_range_str is None:
-        date_range_str = app_config.processing_date_range
-    raw_ohlcv = fetch_ohlcv_by_range(
-        app_config.under_process_exchange.lower(), date_range_str, base_timeframe=base_timeframe
-    )
-    return build_base_timeframe_ohlcv(raw_ohlcv, date_range_str, base_timeframe)
-
-
-@profile_it
-@cache_on_disk(MULTI_TIMEFRAME_OHLCV_DATASET, after_read=cache_times, windowed=True)
-def get_multi_timeframe_ohlcv(date_range_str: str | None = None) -> MultiTimeframeOHLCV:
-    """One window's worth of multi-timeframe OHLCV, aggregated from get_base_timeframe_ohlcv() — see
-    get_base_timeframe_ohlcv()'s docstring for how windowing decomposes an arbitrary date_range_str."""
-    if date_range_str is None:
-        date_range_str = app_config.processing_date_range
-    ohlcv = cast(pt.DataFrame[OHLCV], get_base_timeframe_ohlcv(date_range_str))
-    return aggregate_multi_timeframe_ohlcv(ohlcv, date_range_str)
-
-
-read_multi_timeframe_ohlcv = get_multi_timeframe_ohlcv
-
-
+@pandera_validate
 def build_base_timeframe_ohlcv(
     raw_ohlcv: list[object], date_range_str: str, base_timeframe: str | None = None
 ) -> pt.DataFrame[OHLCV]:
-    """
-    Shapes a raw (timestamp, open, high, low, close, volume) row list — as returned by an exchange
-    fetch — into a validated, date-indexed OHLCV DataFrame. Pure transform, no I/O: the caller is
-    responsible for actually fetching `raw_ohlcv`.
-    """
     df = pd.DataFrame(raw_ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"])
     df["date"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
     df = df.set_index("date")

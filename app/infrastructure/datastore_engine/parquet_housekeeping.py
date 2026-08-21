@@ -9,7 +9,7 @@ from config import app_config
 from domain.datastore_engine.parquet_normalization import flatten_index_to_columns
 from helper.functions import date_range, date_range_to_string
 from helper.logging.do_log import log_i, log_w
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from infrastructure.datastore_engine.disk_cache_layout import (
     _legacy_file_pattern,
     _window_date_range_strs,
@@ -82,7 +82,7 @@ def find_parquet_files(root: Path | None = None) -> list[Path]:
     return list(root.rglob("*.parquet"))
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def _migrate_to_parquet(df: pd.DataFrame, parquet_file_path: Path, source_file_path: Path, *, flatten: bool) -> None:
     """Best-effort backup of a freshly-read whole legacy cache file (Feather/ZSTD or CSV-zip) to
     Parquet/ZSTD; the old file is only removed once the parquet write has succeeded. `flatten=True`

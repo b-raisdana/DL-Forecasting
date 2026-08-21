@@ -13,7 +13,7 @@ from config import app_config
 from helper.data_preparation import after_under_process_date
 from helper.functions import Pandera_DFM_Type, date_range, morning
 from helper.logging.do_log import log_i, log_w
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from helper.schema_casting import _coerce_index_to_ns_utc, apply_as_type, cast_and_validate
 from infrastructure.datastore_engine.disk_cache_layout import DATASET_DB as DATASET_DB
 from infrastructure.datastore_engine.disk_cache_layout import CachableDataset as CachableDataset
@@ -74,7 +74,7 @@ _ReadFileCacheKey = tuple[str, str, FilePathArg, int | None, int | None]
 _read_file_cache: "OrderedDict[_ReadFileCacheKey, pd.DataFrame]" = OrderedDict()
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def _read_file_cache_get(cache_key: _ReadFileCacheKey) -> pd.DataFrame | None:
     df = _read_file_cache.get(cache_key)
     if df is None:
@@ -83,7 +83,7 @@ def _read_file_cache_get(cache_key: _ReadFileCacheKey) -> pd.DataFrame | None:
     return df.copy()
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def _read_file_cache_put(cache_key: _ReadFileCacheKey, df: pd.DataFrame) -> None:
     _read_file_cache[cache_key] = df.copy()
     _read_file_cache.move_to_end(cache_key)
@@ -123,7 +123,7 @@ def _record_cache_generation(file_name_prefix: str, written_bytes: int) -> None:
     state["bytes"] = 0
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def write_data_file(
     df: pd.DataFrame,
     data_frame_type: str,
@@ -173,7 +173,7 @@ def remove_data_file(data_frame_type: str, date_range_str: str, file_path: FileP
             _csv_zip_file_path(data_frame_type, date_range_str, file_path).unlink()
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def _slice_rows(df: pd.DataFrame, n_rows: int | None, skip_rows: int | None) -> pd.DataFrame:
     if not skip_rows and n_rows is None:
         return df
@@ -182,7 +182,7 @@ def _slice_rows(df: pd.DataFrame, n_rows: int | None, skip_rows: int | None) -> 
     return df.iloc[start:end].reset_index(drop=True)
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def _read_raw_data_file(
     data_frame_type: str, date_range_str: str, file_path: FilePathArg, n_rows: int | None, skip_rows: int | None
 ) -> pd.DataFrame:
@@ -224,7 +224,7 @@ def _read_raw_data_file(
 # return _read_raw_data_file(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def read_by_date(
     data_frame_type: str, date_range_str: str, file_path: FilePathArg, n_rows: int | None, skip_rows: int | None
 ) -> pd.DataFrame:
@@ -241,7 +241,7 @@ def read_by_date(
         raise
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def read_with_timeframe(
     data_frame_type: str, date_range_str: str, file_path: FilePathArg, n_rows: int | None, skip_rows: int | None
 ) -> pd.DataFrame:
@@ -273,7 +273,7 @@ def read_with_timeframe(
     return add_timeframe_index(df, data_frame_type)
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def read_file(
     date_range_str: str | None,
     data_frame_type: str,
@@ -441,7 +441,7 @@ def cache_on_disk(
     def decorator(generator: _Generator) -> _Wrapper:
         caster_model: type[pandera.DataFrameModel] = dataset.caster_model or _resolve_caster_model(generator)
 
-        @pandera_transform
+        @pandera_validate
         @wraps(generator)
         def wrapper(
             date_range_str: str | None = None, file_path: str | None = None, **generator_params: object

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas_ta as ta
 from domain.schemas.common.OHLCV import OHLCV
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from pandera import typing as pt
 
 ATR_LENGTH = 256
@@ -20,7 +20,7 @@ __relative_candle_columns = [
 # return __relative_candle_columns
 
 
-@pandera_transform
+@pandera_validate
 def add_relative_candle_columns(ohlc: pt.DataFrame[OHLCV]) -> pt.DataFrame[OHLCV]:
     """relative-HLC block per docs/input-features.md § candle feature schema.
 

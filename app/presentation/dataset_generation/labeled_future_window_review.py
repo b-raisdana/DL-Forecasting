@@ -16,7 +16,7 @@ from application.model_implementations.tier1_000.model import (
 )
 from config import app_config
 from helper.functions import date_range_to_string
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -58,7 +58,7 @@ def _parse_cache_timestamp(value: str) -> pd.Timestamp:
     return pd.Timestamp(datetime.strptime(value, "%y-%m-%d.%H-%M"), tz="UTC")
 
 
-@pandera_transform
+@pandera_validate
 def _read_cached_frame(cache_file: CacheFile) -> pd.DataFrame:
     if cache_file.path.suffix == ".parquet":
         df = pd.read_parquet(cache_file.path)
@@ -71,7 +71,7 @@ def _read_cached_frame(cache_file: CacheFile) -> pd.DataFrame:
     return df
 
 
-@pandera_transform
+@pandera_validate
 def load_cached_multi_timeframe_ohlcv(symbol: str, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
     files = [item for item in cached_multi_timeframe_files(symbol) if item.end > start and item.start < end]
     if not files:

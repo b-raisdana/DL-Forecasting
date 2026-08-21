@@ -35,60 +35,23 @@ _NAMED_LEVEL_THRESHOLDS = (
 )
 
 
+_STANDARD_LEVEL_NAMES = {
+    logging.CRITICAL: "CRITICAL",
+    logging.ERROR: "ERROR",
+    logging.WARNING: "WARNING",
+    logging.INFO: "INFO",
+    logging.DEBUG: "DEBUG",
+}
+
+
 def _nearest_level_name(severity: int) -> str:
+    name = _STANDARD_LEVEL_NAMES.get(severity)
+    if name is not None:
+        return name
     for threshold, name in _NAMED_LEVEL_THRESHOLDS:
         if severity >= threshold:
             return name
     return "DEBUG"
-
-
-# def init_logger(
-# path_of_logs: str,
-# log_to_std_out_level: int,
-# log_to_file_level: int,
-# root_path: str,
-# file_log_rotation_size: str,
-# file_log_retention_duration: str,
-# ) -> None:
-# global \
-# __root_path, \
-# __severity_color_map, \
-# __root_path, \
-# __log_format, \
-# __log_to_std_out_level, \
-# __log_to_file_level, \
-# __min_log_level
-
-# __root_path = Path(root_path)
-# colorama_init(autoreset=True)
-# log_file_path = Path(path_of_logs) / "runtime.log"
-# __log_to_std_out_level = log_to_std_out_level
-# __log_to_file_level = log_to_file_level
-# __min_log_level = min(__log_to_std_out_level, __log_to_file_level)
-# logger.remove()  # Removes all default handlers
-
-# # Console logger configuration
-# logger.add(
-# sys.stdout,
-# format=__log_format,
-# colorize=True,
-# level=__log_to_std_out_level,
-# )
-
-# # File logger configuration
-# logger.add(
-# log_file_path,
-# # Rotate the log file when it reaches 100 MB. Tested on rotation="1 KB"
-# rotation=file_log_rotation_size,
-# # Retain logs for 30 days. Tested on retention="1 minute"
-# retention=file_log_retention_duration,
-# # Ensures logging happens asynchronously
-# enqueue=True,
-# format=__log_format,
-# level=log_to_file_level,
-# )
-
-# _intercept_stdlib_logging()
 
 
 class InterceptHandler(logging.Handler):
@@ -228,7 +191,9 @@ def log(message: str, severity: int, stack_limit: int = 0, stack_offset: int = 0
         # Generate stack trace if requested
         stack_trace = ""
         if stack_limit > 0:
-            stack = traceback.format_stack()[: -(stack_offset + 1)][-(stack_limit):]
+            # limit= bounds format_stack to the frames we can actually use (offset skip +
+            # kept frames), instead of formatting the entire call stack just to slice it down.
+            stack = traceback.format_stack(limit=stack_offset + stack_limit + 1)[: -(stack_offset + 1)][-(stack_limit):]
             stack_trace = "\n" + "".join(stack)
         # Apply color to the message based on severity
         color = __severity_color_map.get(severity, Fore.WHITE)

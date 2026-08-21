@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 from application.market_data import fetch_market_data
 from config import app_config
@@ -6,7 +7,10 @@ from config import app_config
 @pytest.mark.unit
 def test_fetch_and_cache_ohlcv_binds_broker_symbol_and_market_then_delegates(monkeypatch):
     captured = {}
-    expected = object()
+    expected = pd.DataFrame(
+        {"open": [], "close": [], "high": [], "low": [], "volume": []},
+        index=pd.DatetimeIndex([], tz="UTC").as_unit("ns"),
+    )
 
     def fake_get_base_timeframe_ohlcv(date_range_str, base_timeframe=None):
         captured["date_range_str"] = date_range_str
@@ -29,7 +33,7 @@ def test_fetch_and_cache_ohlcv_binds_broker_symbol_and_market_then_delegates(mon
         base_timeframe="1h",
     )
 
-    assert result is expected
+    assert result.equals(expected)
     assert captured == {
         "date_range_str": "24-01-01.00-00T24-01-31.23-59",
         "base_timeframe": "1h",

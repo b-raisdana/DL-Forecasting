@@ -2,7 +2,7 @@ from typing import Literal
 
 import pandas as pd
 from config import app_config
-from archive_not_used_trash.domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
+from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
 from archive_not_used_trash.domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
 from archive_not_used_trash.domain.schemas.market_structure.Pivot2 import MultiTimeframePivot2DFM, Pivot2DFM
 from helper.data_preparation import single_timeframe

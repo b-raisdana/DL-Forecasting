@@ -7,12 +7,12 @@ from config import app_config
 from domain.schemas.common.MultiTimeframe import MultiTimeframe, MultiTimeframe_Type
 from helper.functions import date_range
 from helper.logging.do_log import log_d, log_w
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from pandas import DatetimeIndex, Timestamp
 from pandera import typing as pt
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def single_timeframe(
     multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type],
     timeframe: str,
@@ -144,14 +144,14 @@ def check_time_in_cache(time: DatetimeIndex | pd.Series | datetime | Timestamp, 
 #                 f'Indexes:{data.index.values}')
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
     if "timeframe" in data.index.names:
         raise Exception(f"timeframe found in Data(indexes:{data.index.names}, columns:{data.columns.names}")
     return data
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def times_tester(
     df: pd.DataFrame,
     date_range_str: str,
@@ -203,7 +203,7 @@ def times_tester(
 # return result
 
 
-@pandera_transform
+@pandera_validate
 def multi_timeframe_times_tester(
     multi_timeframe_df: pt.DataFrame[MultiTimeframe],
     date_range_str: str,
@@ -297,7 +297,7 @@ def map_symbol(symbol: str, map_dictionary: dict[str, str]) -> str:
 
 
 # @cache
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def trim_to_date_range(date_range_str: str, df: pd.DataFrame, ignore_duplicate_index: bool = False) -> pd.DataFrame:
     start, end = date_range(date_range_str)
     date_indexes = df.index.get_level_values(level="date")
@@ -454,7 +454,7 @@ def times_in_date_range(
 # return df.loc[needles, "backward"].to_list()
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def concat(left: pd.DataFrame, right: pd.DataFrame) -> pd.DataFrame:
     if not left.empty and not left.isna().all().all():
         if not right.empty and not right.isna().all().all():

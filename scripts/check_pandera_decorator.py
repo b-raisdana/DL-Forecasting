@@ -2,9 +2,9 @@
 
 Policy:
   - If a function's input/output annotations contain ``pd.DataFrame`` or
-    ``pt.DataFrame[...]``, it must carry ``@pandera_transform``.
+    ``pt.DataFrame[...]``, it must carry ``@pandera_validate``.
   - Schema details and ``allow_pandas_dataframe`` are **not** inspected here
-    — runtime ``@pandera_transform`` is the authority for those.
+    — runtime ``@pandera_validate`` is the authority for those.
 
 The checker is dependency-light and deterministic: it only parses the AST
 and never imports application modules.
@@ -81,15 +81,15 @@ def _walk_annotation(node: ast.AST) -> ast.AST:
 
 
 def _has_pandera_transform(decorator_list: list[ast.expr]) -> bool:
-    """Return True if any decorator is ``pandera_transform`` (with any alias or arguments)."""
+    """Return True if any decorator is ``pandera_validate`` (with any alias or arguments)."""
     for decorator in decorator_list:
-        # @pandera_transform or @pandera_transform(...)
+        # @pandera_validate or @pandera_validate(...)
         if isinstance(decorator, ast.Call):
             decorator = decorator.func
-        if isinstance(decorator, ast.Name) and decorator.id == "pandera_transform":
+        if isinstance(decorator, ast.Name) and decorator.id == "pandera_validate":
             return True
-        # @module.pandera_transform or @module.pandera_transform(...)
-        if isinstance(decorator, ast.Attribute) and decorator.attr == "pandera_transform":
+        # @module.pandera_validate or @module.pandera_validate(...)
+        if isinstance(decorator, ast.Attribute) and decorator.attr == "pandera_validate":
             return True
     return False
 
@@ -151,7 +151,7 @@ def check_file(path: Path) -> list[str]:
 
         violations.append(
             f"{path}:{node.lineno}:{node.col_offset}: "
-            f"function '{node.name}' uses DataFrame annotations but lacks @pandera_transform"
+            f"function '{node.name}' uses DataFrame annotations but lacks @pandera_validate"
         )
 
     return violations

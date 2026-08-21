@@ -7,7 +7,7 @@ import pandas as pd
 import pandera
 from helper.functions import Pandera_DFM_Type
 from helper.logging.do_log import log_d, log_e
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from pandera import DataType
 
 
@@ -24,7 +24,7 @@ def all_annotations(cls: type, include_indexes: bool = False) -> dict[str, objec
     return annotations  # ChainMap(*(c.__annotations__ for c in cls.__mro__ if '__annotations__' in c.__dict__))
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def cast_and_validate(
     data: pd.DataFrame,
     model_class: type[Pandera_DFM_Type],
@@ -84,7 +84,7 @@ def _coerce_datetime_to_ns_utc(series: pd.Series) -> pd.Series:  # type: ignore[
     return series.astype("datetime64[ns, UTC]")
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def _coerce_index_to_ns_utc(data: pd.DataFrame) -> pd.DataFrame:
     """Coerce every DatetimeIndex level (e.g. the ``date`` index) to ``datetime64[ns, UTC]`` so the
     schema's ``DatetimeTZDtype("ns", "UTC")`` index passes validation regardless of the incoming
@@ -104,7 +104,7 @@ def _coerce_index_to_ns_utc(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def apply_as_type(data: pd.DataFrame, model_class: type[Pandera_DFM_Type]) -> pd.DataFrame:
     as_types: dict[str, str] = {}
     _all_annotations = all_annotations(model_class)

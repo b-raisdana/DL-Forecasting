@@ -4,7 +4,7 @@ import numpy as np
 from config import app_config
 from domain.schemas.common.OHLCV import OHLCV
 from helper.importer import ta
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from pandera import typing as pt
 
 __volume_feature_columns = ["volume_atr"]
@@ -14,7 +14,7 @@ __volume_feature_columns = ["volume_atr"]
 # return __volume_feature_columns
 
 
-@pandera_transform
+@pandera_validate
 def add_volume_feature_columns(ohlcv: pt.DataFrame[OHLCV]) -> pt.DataFrame[OHLCV]:
     """volume / ATR(volume) per docs/input-features.md § candle feature schema.
 
@@ -27,7 +27,7 @@ def add_volume_feature_columns(ohlcv: pt.DataFrame[OHLCV]) -> pt.DataFrame[OHLCV
     return ohlcv
 
 
-@pandera_transform
+@pandera_validate
 def add_log_sma_volume_feature_column(ohlcv: pt.DataFrame[OHLCV], length: int = 256) -> pt.DataFrame[OHLCV]:
     """log((volume + eps) / (SMA_length(volume) + eps)) per .../atr_rel_ohlc_log_sma_v_extm_rel_6tf
     (handmade).input.jsonc's `V` definition. Additive sibling to add_volume_feature_columns (which

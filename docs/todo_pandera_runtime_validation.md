@@ -38,27 +38,28 @@ Rules:
 
 ## Function signatures and automatic validation
 
-Every DataFrame-in/DataFrame-out function is decorated with `pandera_transform` (defined in `app/helper/pandera.py` — import it, never redefine it inline):
+Every DataFrame-in/DataFrame-out function is decorated with `pandera_validate` (defined in `app/helper/pandera.py` — import it, never redefine it inline):
 
 ```python
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from pandera import typing as pt
 
-@pandera_transform
+
+@pandera_validate
 def transform(ohlc: pt.DataFrame[MyInput]) -> pt.DataFrame[MyResult]:
     # ... compute ...
     return result
 ```
 
 - `pt.DataFrame[Schema]` is the *only* acceptable way to annotate DataFrame params/returns in application/domain code — the `pt.` prefix keeps pandera-validated DataFrames visually distinct from plain `pd.DataFrame`. Never annotate with bare `pd.DataFrame`.
-- `pandera_transform` validates every `pt.DataFrame[Schema]`-annotated input on call and the return value on return (`check_types(lazy=True)` under the hood) — no manual `Schema.validate(...)` calls needed in the body. `lazy=True` collects all schema errors into a single `SchemaErrors` exception instead of failing on the first.
+- `pandera_validate` validates every `pt.DataFrame[Schema]`-annotated input on call and the return value on return (`check_types(lazy=True)` under the hood) — no manual `Schema.validate(...)` calls needed in the body. `lazy=True` collects all schema errors into a single `SchemaErrors` exception instead of failing on the first.
 - The index-precision cast is **not** automatic: you must still call `.astype("datetime64[ns, UTC]")` explicitly before returning if your output schema requires ns-UTC precision.
 - Every function with a `pt.DataFrame[Schema]`-annotated parameter or return **must** carry `@pandera_transform`. An annotation without the decorator is silently unenforced — that's the one manual-placement step that can't be skipped.
 - Exception: generic helper/infra functions with no stable expected shape may use bare `pd.DataFrame` and skip the decorator — this is the exception, not the default. If a function's shape is stable, give it a schema and decorate it.
 - Already covered by `cast_and_validate()` (from `helper/schema_casting.py`)? Skip `@pandera_transform` for that same shape — but still decorate if the function produces a *new* intermediate shape no existing schema covers.
 - Using a bare `pd.DataFrame` annotation anywhere in a decorated function's signature logs a warning at import time (not a hard failure) — treat that warning as a signal to switch to `pt.DataFrame[Schema]`, not as noise to ignore.
 
-### `pandera_transform` source
+### `pandera_validate` source
 
 ```python
 from __future__ import annotations
@@ -191,10 +192,10 @@ def pandera_transform(func):
 ### Known limitations (accepted, not fixed)
 
 Note these in the docstring of the final code:
-- **No automatic datetime-index normalization.** `pandera_transform` does not cast returned `DatetimeIndex` values to `datetime64[ns, UTC]`. You must call `.astype("datetime64[ns, UTC]")` explicitly before returning if your output schema requires ns-UTC precision.
-- **No production bypass.** `pandera_transform` always runs `pa.check_types(lazy=True)`. There is no `app_config`-driven bypass — if you need to skip validation in production, remove the decorator rather than relying on a config flag.
+- **No automatic datetime-index normalization.** `pandera_validate` does not cast returned `DatetimeIndex` values to `datetime64[ns, UTC]`. You must call `.astype("datetime64[ns, UTC]")` explicitly before returning if your output schema requires ns-UTC precision.
+- **No production bypass.** `pandera_validate` always runs `pa.check_types(lazy=True)`. There is no `app_config`-driven bypass — if you need to skip validation in production, remove the decorator rather than relying on a config flag.
 - **Nested-container schema validation isn't independently confirmed.** `pa.check_types(lazy=True)` validates top-level `pt.DataFrame[Schema]` return values, but whether it enforces schemas nested inside `tuple`/`list`/`dict` containers hasn't been verified against this repo's pandera version. Prefer a single top-level `pt.DataFrame[Schema]` return where possible.
-- **A prod bug that only shows up under real data shapes fails loudly.** Unlike a bypassed validator, `pandera_transform` always raises `SchemaErrors` on violations — there is no silent prod bypass. This is the intended trade-off: correctness over raw perf in the hot path.
+- **A prod bug that only shows up under real data shapes fails loudly.** Unlike a bypassed validator, `pandera_validate` always raises `SchemaErrors` on violations — there is no silent prod bypass. This is the intended trade-off: correctness over raw perf in the hot path.
 
 ## What each direction catches
 
@@ -260,7 +261,7 @@ Rules:
 ```python
 import pandera
 from pandera import typing as pt
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from helper.importer import df
 ```
 

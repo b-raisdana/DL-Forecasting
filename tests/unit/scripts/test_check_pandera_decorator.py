@@ -67,15 +67,15 @@ class TestIsDataframeAnnotation:
 
 class TestHasPanderaTransform:
     def test_bare_decorator(self) -> None:
-        func = _func_with_annotations("@pandera_transform\ndef f(): pass")
+        func = _func_with_annotations("@pandera_validate\ndef f(): pass")
         assert _has_pandera_transform(func.decorator_list) is True
 
     def test_module_decorator(self) -> None:
-        func = _func_with_annotations("@helper.pandera_transform\ndef f(): pass")
+        func = _func_with_annotations("@helper.pandera_validate\ndef f(): pass")
         assert _has_pandera_transform(func.decorator_list) is True
 
     def test_decorator_with_args(self) -> None:
-        func = _func_with_annotations("@pandera_transform(allow_pandas_dataframe=True)\ndef f(): pass")
+        func = _func_with_annotations("@pandera_validate(allow_pandas_dataframe=True)\ndef f(): pass")
         assert _has_pandera_transform(func.decorator_list) is True
 
     def test_other_decorator(self) -> None:
@@ -112,13 +112,13 @@ class TestCheckFile:
 
     def test_decorator_present_cleans(self, tmp_path: Path) -> None:
         path = tmp_path / "f.py"
-        path.write_text("@pandera_transform\ndef f(x: pd.DataFrame): pass")
+        path.write_text("@pandera_validate\ndef f(x: pd.DataFrame): pass")
         violations = check_file(path)
         assert violations == []
 
     def test_decorator_with_args_cleans(self, tmp_path: Path) -> None:
         path = tmp_path / "f.py"
-        path.write_text("@pandera_transform(allow_pandas_dataframe=True)\ndef f(x: pd.DataFrame): pass")
+        path.write_text("@pandera_validate(allow_pandas_dataframe=True)\ndef f(x: pd.DataFrame): pass")
         violations = check_file(path)
         assert violations == []
 
@@ -163,7 +163,7 @@ class TestCheckFile:
 
     def test_allow_pandas_dataframe_does_not_bypass_precommit(self, tmp_path: Path) -> None:
         path = tmp_path / "f.py"
-        path.write_text("@pandera_transform(allow_pandas_dataframe=True)\ndef f(x: pd.DataFrame): pass")
+        path.write_text("@pandera_validate(allow_pandas_dataframe=True)\ndef f(x: pd.DataFrame): pass")
         violations = check_file(path)
         assert violations == []
 

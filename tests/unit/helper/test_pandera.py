@@ -5,7 +5,7 @@ import pandas as pd
 import pandera
 import pandera.typing as pt
 import pytest
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 
 pytestmark = pytest.mark.unit
 
@@ -24,7 +24,7 @@ def _warn_capture(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_default_warns_on_legacy_pd_dataframe_param() -> None:
-    @pandera_transform
+    @pandera_validate
     def f(df: pd.DataFrame) -> Any:
         return df
 
@@ -32,7 +32,7 @@ def test_default_warns_on_legacy_pd_dataframe_param() -> None:
 
 
 def test_default_warns_on_legacy_pd_dataframe_return() -> None:
-    @pandera_transform
+    @pandera_validate
     def f() -> pd.DataFrame:
         return pd.DataFrame({"close": [1.0]})
 
@@ -40,7 +40,7 @@ def test_default_warns_on_legacy_pd_dataframe_return() -> None:
 
 
 def test_allow_pandas_dataframe_suppresses_param_warning() -> None:
-    @pandera_transform(allow_pandas_dataframe=True)
+    @pandera_validate(allow_pandas_dataframe=True)
     def f(df: pd.DataFrame) -> Any:
         return df
 
@@ -48,7 +48,7 @@ def test_allow_pandas_dataframe_suppresses_param_warning() -> None:
 
 
 def test_allow_pandas_dataframe_suppresses_return_warning() -> None:
-    @pandera_transform(allow_pandas_dataframe=True)
+    @pandera_validate(allow_pandas_dataframe=True)
     def f() -> pd.DataFrame:
         return pd.DataFrame({"close": [1.0]})
 
@@ -56,7 +56,7 @@ def test_allow_pandas_dataframe_suppresses_return_warning() -> None:
 
 
 def test_validation_still_catches_bad_typed_dataframe() -> None:
-    @pandera_transform
+    @pandera_validate
     def f(df: pt.DataFrame[_SimpleSchema]) -> pt.DataFrame[_SimpleSchema]:
         return df
 
@@ -67,7 +67,7 @@ def test_validation_still_catches_bad_typed_dataframe() -> None:
 
 
 def test_allow_pandas_dataframe_does_not_disable_pt_validation() -> None:
-    @pandera_transform(allow_pandas_dataframe=True)
+    @pandera_validate(allow_pandas_dataframe=True)
     def f(df: pd.DataFrame, typed: pt.DataFrame[_SimpleSchema]) -> pt.DataFrame[_SimpleSchema]:
         return typed
 
@@ -78,7 +78,7 @@ def test_allow_pandas_dataframe_does_not_disable_pt_validation() -> None:
 
 
 def test_bare_decorator_usage() -> None:
-    @pandera_transform
+    @pandera_validate
     def f(df: pt.DataFrame[_SimpleSchema]) -> pt.DataFrame[_SimpleSchema]:
         return df
 

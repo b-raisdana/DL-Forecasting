@@ -26,7 +26,7 @@ from archive_not_used_trash.domain.price_action.PeakValley import (
     valleys_only,
 )
 from domain.schemas.common.OHLCV import OHLCV
-from archive_not_used_trash.domain.schemas.common.OHLCVA import OHLCVA
+from domain.schemas.common.OHLCVA import OHLCVA
 from archive_not_used_trash.domain.schemas.market_structure.PeakValley import MultiTimeframePeakValley, PeakValley
 
 

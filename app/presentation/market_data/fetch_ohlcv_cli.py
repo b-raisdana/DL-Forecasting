@@ -21,10 +21,10 @@ import argparse
 
 from application.market_data.fetch_market_data import fetch_and_cache_ohlcv, fill_ohlcv_gaps
 from config import app_config
-from domain.ohlcv.ohlcv import OHLCV_DATASET
 from helper.functions import date_range_to_string, today_morning
 from infrastructure.datastore_engine.disk_cache_gaps import find_cache_gaps, find_overlapping_cache_files
 from infrastructure.market_data_fetch.ccxt_client import SUPPORTED_BROKERS
+from infrastructure.ohlcv.ohlcv import OHLCV_DATASET
 
 
 def _parse_args() -> argparse.Namespace:

@@ -14,7 +14,7 @@ from pandera import Timestamp
 from pandera import typing as pt
 
 from archive_not_used_trash.domain.ohlcv.ohlcva import get_multi_timeframe_ohlcva
-from archive_not_used_trash.domain.schemas.common.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
+from domain.schemas.common.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
 from archive_not_used_trash.domain.schemas.market_structure.BasePattern import BasePattern, MultiTimeframeBasePattern
 
 MULTI_TIMEFRAME_BASE_PATTERN_DATASET = CachableDataset(dataset_folder_name="multi_timeframe_base_pattern")

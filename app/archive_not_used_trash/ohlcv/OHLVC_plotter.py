@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 from config import app_config
 from archive_not_used_trash.config.Config import CandleSize
 from domain.schemas.common.OHLCV import OHLCV
-from archive_not_used_trash.domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
+from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
 from helper.data_preparation import single_timeframe
 from helper.logging import log, profile_it
 from pandera import typing as pt

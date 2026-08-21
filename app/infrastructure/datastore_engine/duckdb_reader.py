@@ -3,7 +3,7 @@ from pathlib import Path
 
 import duckdb
 import pandas as pd
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from infrastructure.datastore_engine.disk_cache_layout import add_timeframe_index, index_by_date
 
 """
@@ -20,7 +20,7 @@ data/dataset_db/README.md and docs/infrastructure.md § DuckDB for the full desi
 """
 
 
-@pandera_transform
+@pandera_validate(allow_pandas_dataframe=True)
 def read_parquet_files(paths: list[Path], data_frame_type: str, start: datetime, end: datetime) -> pd.DataFrame:
     """
     Read and concatenate `paths` (already-validated Parquet/ZSTD cache files, all the same

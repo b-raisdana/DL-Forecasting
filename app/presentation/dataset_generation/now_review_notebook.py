@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pandera.typing as pt
 from application.model_implementations.tier1_000.datafeeder_input3_outcome1 import DatasetBundle, build_dataset
 from application.model_implementations.tier1_000.model import (
     BRANCH_TIMEFRAMES,
@@ -12,8 +13,9 @@ from application.model_implementations.tier1_000.model import (
     CANDLE_FEATURE_COLUMNS,
 )
 from config import app_config
+from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
 from helper.functions import date_range_to_string
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -47,7 +49,7 @@ def cached_multi_timeframe_files(symbol: str) -> list[CacheFile]:
     return sorted(files, key=lambda item: (item.start, item.end, item.path.name))
 
 
-@pandera_transform
+@pandera_validate
 def cache_summary(symbols: list[str] = SYMBOLS) -> pd.DataFrame:
     rows = []
     for symbol in symbols:
@@ -68,8 +70,10 @@ def cache_summary(symbols: list[str] = SYMBOLS) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-@pandera_transform
-def load_cached_multi_timeframe_ohlcv(symbol: str, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
+@pandera_validate
+def load_cached_multi_timeframe_ohlcv(
+    symbol: str, start: pd.Timestamp, end: pd.Timestamp
+) -> pd.DataFrame[MultiTimeframeOHLCVA]:
     """Stitches every locally cached daily file overlapping [start, end] together — the on-disk cache
     is one file per calendar day (see cache_summary()), so no single file ever covers a multi-day
     window on its own."""
@@ -191,7 +195,7 @@ def plot_random_period(symbol: str, start: pd.Timestamp, end: pd.Timestamp, char
     return fig
 
 
-@pandera_transform
+@pandera_validate
 def _add_candles(fig: go.Figure, df: pd.DataFrame, name: str, row: int | None = None, opacity: float = 1.0) -> None:
     trace = go.Candlestick(
         x=df.index,
@@ -208,8 +212,8 @@ def _add_candles(fig: go.Figure, df: pd.DataFrame, name: str, row: int | None = 
         fig.add_trace(trace, row=row, col=1)
 
 
-@pandera_transform
-def _read_cached_frame(cache_file: CacheFile) -> pd.DataFrame:
+@pandera_validate
+def _read_cached_frame(cache_file: CacheFile) -> pt.DataFrame[MultiTimeframeOHLCVA]:
     if cache_file.path.suffix == ".feather":
         df = pd.read_feather(cache_file.path)
     elif cache_file.path.suffix == ".zip":

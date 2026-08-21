@@ -19,9 +19,9 @@ import pytz
 from application.market_data.fetch_market_data import fill_ohlcv_gaps
 from application.model_implementations.tier1_000.datafeeder_input3_outcome1 import build_dataset
 from config import app_config
-from domain.ohlcv.ohlcv import MULTI_TIMEFRAME_OHLCV_DATASET, OHLCV_DATASET
 from helper.functions import date_range_to_string
 from infrastructure.datastore_engine.disk_cache_gaps import find_cache_gaps
+from infrastructure.ohlcv.ohlcv import MULTI_TIMEFRAME_OHLCV_DATASET, OHLCV_DATASET
 
 
 def _now_utc() -> datetime:
@@ -58,8 +58,8 @@ def force_fetch_gaps(
     mt_gaps = find_cache_gaps(MULTI_TIMEFRAME_OHLCV_DATASET, date_range_str)
     filled_mt: list[str] = []
     for gap in mt_gaps:
-        from domain.ohlcv.ohlcv import get_multi_timeframe_ohlcv
         from helper.functions import date_range
+        from infrastructure.ohlcv.ohlcv import get_multi_timeframe_ohlcv
 
         gap_start, gap_end = date_range(gap)
         if gap_end > _now_utc():

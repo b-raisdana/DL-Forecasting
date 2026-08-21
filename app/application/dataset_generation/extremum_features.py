@@ -20,7 +20,7 @@ import pandas as pd
 from domain.price_action.CausalExtremum import compute_true_extremum, floor_to_tf_ladder
 from domain.schemas.price_action.CausalExtremum import CausalExtremumOHLC
 from domain.schemas.price_action.extremum_features import BranchExtremumOHLC
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
 from pandera import typing as pt
 
 _NS_PER_MINUTE = 60_000_000_000
@@ -40,7 +40,7 @@ class BranchExtremum:
     true_extremum_tf_minutes: npt.NDArray[np.float64]
 
 
-@pandera_transform
+@pandera_validate
 def build_branch_extremum(ohlc: pt.DataFrame[BranchExtremumOHLC]) -> BranchExtremum:
     """`ohlc` must already carry an 'atr' column (relative_candle.py's add_relative_candle_columns
     side effect, already computed upstream in datafeeder_input3_outcome1.py's _branch_features)."""

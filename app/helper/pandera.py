@@ -1,6 +1,17 @@
+"""
+Drop-in replacement for ``@pa.check_types(lazy=True)`` that adds two
+behaviours pandera does not provide:
+
+1. Warns when legacy bare ``pd.DataFrame`` annotations are used.
+2. (Reserved) Recursive discovery of ``pt.DataFrame[Schema]`` inside nested
+   container annotations.
+
+Use ``allow_pandas_dataframe=True`` to skip the warning and delegate
+directly to ``pa.check_types(lazy=True)`` — zero extra overhead.
+"""
+
 from __future__ import annotations
 
-import logging
 from functools import wraps
 from typing import (
     Annotated,
@@ -12,10 +23,10 @@ from typing import (
 )
 
 import pandas as pd
-import pandera as pa
+import pandera.pandas as pa
+from config import app_config
+from helper.logging.do_log.log_it import log_w
 from pandera import typing as pt
-
-logger = logging.getLogger(__name__)
 
 
 def _dataframe_schema(annotation: object) -> type[pa.DataFrameModel] | None:
@@ -91,21 +102,23 @@ def _contains_legacy_pandas_dataframe(annotation: object) -> bool:
     return any(_contains_legacy_pandas_dataframe(arg) for arg in get_args(annotation) if arg is not type(None))
 
 
-def pandera_transform(func: Any = None, *, allow_pandas_dataframe: bool = False) -> Any:
+def pandera_validate(func: Any = None, *, allow_pandas_dataframe: bool = False) -> Any:
     """
     Runtime Pandera validation decorator.
 
-    - Wraps the function with ``pandera.check_types(lazy=True)`` so every
-      ``pt.DataFrame[Schema]``-annotated input/output is validated at runtime.
-    - Recursively inspects annotations and emits a warning whenever a bare
-      ``pandas.DataFrame`` / ``pd.DataFrame`` is found.
-    - Pass ``allow_pandas_dataframe=True`` to silence that legacy-DataFrame
-      warning for functions where no Pandera schema applies. This does **not**
-      disable validation of other ``pt.DataFrame[Schema]`` annotations in the
-      same signature.
+    - ``allow_pandas_dataframe=False`` (default): warns on bare ``pd.DataFrame``
+      annotations, then applies ``pa.check_types(lazy=True)``.
+    - ``allow_pandas_dataframe=True``: skips the warning and do
+      ``pa.check_types(lazy=True)(func)`` directly.
     """
 
     def decorator(func: Any) -> Any:
+        if app_config.environment == "production":
+            return func
+
+        if allow_pandas_dataframe:
+            return pa.check_types(lazy=True)(func)
+
         hints = get_type_hints(func, include_extras=True)
 
         input_annotations = {name: hints[name] for name in func.__annotations__ if name in hints}
@@ -113,21 +126,16 @@ def pandera_transform(func: Any = None, *, allow_pandas_dataframe: bool = False)
         output_annotation = hints.get("return")
 
         for name, annotation in input_annotations.items():
-            if not allow_pandas_dataframe and _contains_legacy_pandas_dataframe(annotation):
-                logger.warning(
-                    "%s: parameter %r uses pandas.DataFrame instead of pandera.typing.DataFrame",
-                    func.__qualname__,
-                    name,
+            if _contains_legacy_pandas_dataframe(annotation):
+                log_w(
+                    f"{func.__qualname__}: parameter {name} uses pandas.DataFrame instead of pandera.typing.DataFrame",
+                    stack_offset=2,
                 )
 
-        if (
-            output_annotation is not None
-            and not allow_pandas_dataframe
-            and _contains_legacy_pandas_dataframe(output_annotation)
-        ):
-            logger.warning(
-                "%s: return annotation uses pandas.DataFrame instead of pandera.typing.DataFrame",
-                func.__qualname__,
+        if output_annotation is not None and _contains_legacy_pandas_dataframe(output_annotation):
+            log_w(
+                f"{func.__qualname__}: return annotation uses pandas.DataFrame instead of pandera.typing.DataFrame",
+                stack_offset=2,
             )
 
         @pa.check_types(lazy=True)

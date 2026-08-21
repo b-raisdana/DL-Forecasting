@@ -160,6 +160,8 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
 
     check_assertions: bool = True
 
+    environment: Literal["development", "production"] = "development"
+
     id: str = ""
     GLOBAL_CACHE: dict[str, object] = Field(default_factory=dict)
 

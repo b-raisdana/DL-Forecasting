@@ -52,13 +52,13 @@ from application.model_implementations.tier1_000.model import (
     CANDLE_FEATURE_COLUMNS,
 )
 from config import app_config
-from domain.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from domain.price_action.CausalExtremum import TF_MINUTES, plus2tf, plus3tf
 from domain.schemas.common.OHLCV import OHLCV
 from domain.schemas.price_action.extremum_features import BranchExtremumOHLC
 from helper.data_preparation import single_timeframe
 from helper.importer import ta
-from helper.pandera import pandera_transform
+from helper.pandera import pandera_validate
+from infrastructure.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 from pandera import typing as pt
 
 # The 5 static (non-anchor-dependent) relative-candle/volume columns gathered directly per branch —
@@ -100,7 +100,7 @@ class DatasetBundle:
         return len(self.anchor_index)
 
 
-@pandera_transform
+@pandera_validate
 def _branch_features(ohlc: pt.DataFrame[OHLCV], tf_name: str) -> pt.DataFrame[BranchExtremumOHLC]:
     """Returns the FULL processed frame (not sliced to CANDLE_FEATURE_COLUMNS) — build_dataset() needs
     raw 'close'/'atr'/'high'/'low' alongside the 5 static ratio columns, both to compute

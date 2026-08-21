@@ -16,7 +16,7 @@ from PivotsHelper import level_ttl, pivot_margins
 
 from archive_not_used_trash.domain.price_action.PeakValley import insert_crossing2
 from domain.schemas.common.OHLCV import OHLCV
-from archive_not_used_trash.domain.schemas.common.OHLCVA import OHLCVA
+from domain.schemas.common.OHLCVA import OHLCVA
 from archive_not_used_trash.domain.schemas.market_structure.Pivot2 import Pivot2Df, Pivot2DFM
 
 

@@ -1,14 +1,13 @@
-from typing import cast
-
 from config import app_config
-from domain.ohlcv.ohlcv import OHLCV_DATASET, get_base_timeframe_ohlcv
 from domain.schemas.common.OHLCV import OHLCV
 from helper.functions import date_range
 from helper.logging.do_log import log_i
+from helper.pandera import pandera_validate
 from helper.schema_casting import empty_df
 from infrastructure.datastore_engine.disk_cache import DATASET_DB, cleanup_redundant_cache_files, write_data_file
 from infrastructure.datastore_engine.disk_cache_gaps import find_cache_gaps
 from infrastructure.market_data_fetch.ccxt_client import SUPPORTED_BROKERS, fetch_ohlcv_by_range
+from infrastructure.ohlcv.ohlcv import OHLCV_DATASET, get_base_timeframe_ohlcv
 from pandera import typing as pt
 
 """
@@ -27,6 +26,7 @@ def _bind_broker(broker: str, trading_pair: str, market: str) -> None:
     app_config.under_process_market = market
 
 
+@pandera_validate
 def fetch_and_cache_ohlcv(
     broker: str,
     trading_pair: str,
@@ -35,7 +35,7 @@ def fetch_and_cache_ohlcv(
     base_timeframe: str | None = None,
 ) -> pt.DataFrame[OHLCV]:
     _bind_broker(broker, trading_pair, market)
-    return cast("pt.DataFrame[OHLCV]", get_base_timeframe_ohlcv(date_range_str, base_timeframe=base_timeframe))
+    return get_base_timeframe_ohlcv(date_range_str, base_timeframe=base_timeframe)  # type: ignore[no-any-return]
 
 
 def fill_ohlcv_gaps(

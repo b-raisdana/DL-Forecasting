@@ -81,6 +81,8 @@ def _direction_excursions(
 def add_mfe_mae_om_labels(five_min_ohlc: pd.DataFrame, fifteen_min_ohlc: pd.DataFrame) -> pd.DataFrame:
     """Per-anchor-candle Long/Short mfe/mae/om + the winning direction's action/mfe/rer.
 
+
+
     Entry price E = the best price reachable in the 5min candle immediately following the anchor
     (§ targeting bid price) — the horizon's own first bar, so no separate E computation is needed.
     Anchors within HORIZON_BARS of the end of five_min_ohlc have no complete horizon and are dropped

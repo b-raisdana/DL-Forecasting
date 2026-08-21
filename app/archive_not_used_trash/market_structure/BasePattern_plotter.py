@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objs
 from config import app_config
 from archive_not_used_trash.domain.order.Order import BracketOrderType, OrderSide
-from archive_not_used_trash.domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
+from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
 from archive_not_used_trash.domain.schemas.market_structure.BasePattern import MultiTimeframeBasePattern
 from helper.logging import profile_it
 from pandera import typing as pt

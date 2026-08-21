@@ -3,7 +3,7 @@ from config import app_config
 from domain.ohlcv.ohlcv import cache_times, get_multi_timeframe_ohlcv
 from archive_not_used_trash.domain.ohlcv.volume import insert_volume_rma
 from domain.schemas.common.OHLCV import OHLCV
-from archive_not_used_trash.domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
+from domain.schemas.common.OHLCVA import MultiTimeframeOHLCVA
 from helper.data_preparation import concat, multi_timeframe_times_tester, single_timeframe, trim_to_date_range
 from archive_not_used_trash.helper.data_preparation import expand_date_range
 from helper.schema_casting import empty_df
