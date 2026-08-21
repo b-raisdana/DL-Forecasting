@@ -38,8 +38,10 @@ from __future__ import annotations
 
 import numpy as np
 import numpy.typing as npt
+import pandas as pd
 from domain.schemas.price_action.CausalExtremum import CausalExtremumOHLC, CausalExtremumResult
-from helper.importer import ptd
+from helper.pandera import pandera_transform
+from pandera import typing as pt
 
 # This codebase's lowercase-h timeframe convention (differs from the spec jsonc's "1H"/"4H", same
 # meaning). 1M/4M/1Y have no native cached series anywhere in this codebase (app_config.timeframes
@@ -124,7 +126,8 @@ def _reach_minutes(
     return reach
 
 
-def compute_true_extremum(ohlc: ptd[CausalExtremumOHLC]) -> ptd[CausalExtremumResult]:
+@pandera_transform
+def compute_true_extremum(ohlc: pt.DataFrame[CausalExtremumOHLC]) -> pt.DataFrame[CausalExtremumResult]:
     """Step A: full-hindsight (anchor-independent) extremum reach for every candle in `ohlc` (a
     single-timeframe, single native-spacing series — one branch's own native series, not a
     multi-timeframe frame).
@@ -153,8 +156,8 @@ def compute_true_extremum(ohlc: ptd[CausalExtremumOHLC]) -> ptd[CausalExtremumRe
     index = ohlc.index
     if index.tz is None:
         index = index.tz_localize("UTC")
-    index = index.astype("datetime64[ns, UTC]")
-    times_ns = index.asi8
+    index = pd.DatetimeIndex(index.astype("datetime64[ns, UTC]"))  # type: ignore[attr-defined,union-attr]
+    times_ns = index.asi8  # type: ignore[union-attr]
 
     right_peak = _reach_minutes(high, times_ns, direction="right", sense="peak")
     left_peak = _reach_minutes(high, times_ns, direction="left", sense="peak")
@@ -171,7 +174,7 @@ def compute_true_extremum(ohlc: ptd[CausalExtremumOHLC]) -> ptd[CausalExtremumRe
     extremum_sign = np.where(peak_wins, 1, -1)
     extremum_sign = np.where(true_extremum_tf_minutes == 0, 0, extremum_sign)
 
-    result = ptd(
+    result: pt.DataFrame[CausalExtremumResult] = pd.DataFrame(  # type: ignore[assignment]
         {
             "true_peak_reach_minutes": true_peak_reach,
             "true_valley_reach_minutes": true_valley_reach,

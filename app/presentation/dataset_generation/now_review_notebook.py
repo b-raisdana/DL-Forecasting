@@ -13,6 +13,7 @@ from application.model_implementations.tier1_000.model import (
 )
 from config import app_config
 from helper.functions import date_range_to_string
+from helper.pandera import pandera_transform
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -20,7 +21,7 @@ SYMBOLS = app_config.SYMBOLS
 RANGE_DAYS = 14
 _ACTION_LABELS = ["long", "short", "none"]
 _AUX_FEATURE_NAMES = [f"{tf_name}_{column}" for tf_name in BRANCH_TIMEFRAMES for column in CANDLE_FEATURE_COLUMNS]
-_CACHE_RE = re.compile(r"^(?P<kind>multi_timeframe_ohlcva?|ohlcva?)\.(?P<range>.+)\.(?:zip|feather)$")
+_CACHE_RE = re.compile(r"^(?P<kind>multi_timeframe_ohlcva?|ohlcva?)\.(?P<range>.+)\.(?:zip|feather|parquet)$")
 
 
 @dataclass(frozen=True)
@@ -33,7 +34,7 @@ class CacheFile:
 
 
 def cached_multi_timeframe_files(symbol: str) -> list[CacheFile]:
-    symbol_path = Path(app_config.path_of_data) / "Kucoin" / "Spot" / symbol
+    symbol_path = Path(app_config.path_of_data) / "dataset_db" / "multi_timeframe_ohlcv" / "Spot" / symbol / "Kucoin"
     if not symbol_path.exists():
         return []
     files: list[CacheFile] = []
@@ -46,6 +47,7 @@ def cached_multi_timeframe_files(symbol: str) -> list[CacheFile]:
     return sorted(files, key=lambda item: (item.start, item.end, item.path.name))
 
 
+@pandera_transform
 def cache_summary(symbols: list[str] = SYMBOLS) -> pd.DataFrame:
     rows = []
     for symbol in symbols:
@@ -66,6 +68,7 @@ def cache_summary(symbols: list[str] = SYMBOLS) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+@pandera_transform
 def load_cached_multi_timeframe_ohlcv(symbol: str, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
     """Stitches every locally cached daily file overlapping [start, end] together — the on-disk cache
     is one file per calendar day (see cache_summary()), so no single file ever covers a multi-day
@@ -188,6 +191,7 @@ def plot_random_period(symbol: str, start: pd.Timestamp, end: pd.Timestamp, char
     return fig
 
 
+@pandera_transform
 def _add_candles(fig: go.Figure, df: pd.DataFrame, name: str, row: int | None = None, opacity: float = 1.0) -> None:
     trace = go.Candlestick(
         x=df.index,
@@ -204,11 +208,14 @@ def _add_candles(fig: go.Figure, df: pd.DataFrame, name: str, row: int | None = 
         fig.add_trace(trace, row=row, col=1)
 
 
+@pandera_transform
 def _read_cached_frame(cache_file: CacheFile) -> pd.DataFrame:
     if cache_file.path.suffix == ".feather":
         df = pd.read_feather(cache_file.path)
-    else:
+    elif cache_file.path.suffix == ".zip":
         df = pd.read_csv(cache_file.path, compression="zip")
+    else:
+        df = pd.read_parquet(cache_file.path)
     df["date"] = pd.to_datetime(df["date"], utc=True)
     df = df.set_index(["timeframe", "date"]).sort_index()
     return df

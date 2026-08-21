@@ -1,174 +1,25 @@
 from datetime import datetime, timedelta
+from typing import cast
 
 import pandas as pd
 import pytz
 from config import app_config
 from domain.schemas.common.MultiTimeframe import MultiTimeframe, MultiTimeframe_Type
 from helper.functions import date_range
-from helper.importer import ptd
 from helper.logging.do_log import log_d, log_w
+from helper.pandera import pandera_transform
 from pandas import DatetimeIndex, Timestamp
 from pandera import typing as pt
 
-# def date_range_of_data(data: ptd) -> str:
-# """
-# Generate a formatted date range string based on the first and last timestamps in the DataFrame's index.
 
-# This function calculates and returns a formatted string representing the date range of the provided DataFrame.
-# The string format is 'yy-mm-dd.HH-MMTyy-mm-dd.HH-MM', where the first timestamp corresponds to the start of the
-# date range and the last timestamp corresponds to the end of the date range.
-
-# Parameters:
-# data (ptd): The DataFrame for which to generate the date range string.
-
-# Returns:
-# str: The formatted date range string.
-
-# Example:
-# # Assuming you have a DataFrame 'data' with an index containing timestamps
-# date_range = range_of_data(data)
-# log_d(date_range)  # Output: 'yy-mm-dd.HH-MMTyy-mm-dd.HH-MM'
-# """
-# return (
-# f"{data.index.get_level_values('date').min().strftime('%y-%m-%d.%H-%M')}T"
-# f"{data.index.get_level_values('date').max().strftime('%y-%m-%d.%H-%M')}"
-# )
-
-
-# def df_timedelta_to_str(input_time: str | Timedelta, hours=True, ignore_zero: bool = True) -> str:
-# """
-# Convert a pandas timedelta string or a pandas Timedelta object into a human-readable string representation.
-
-# This function takes a pandas timedelta string or a pandas Timedelta object and converts it into a string format
-# of hours and minutes. If the input is a string, it is converted to a Timedelta object. The resulting string
-# represents the number of hours and minutes in the input timedelta.
-
-# Parameters:
-# input_time (Union[str, Timedelta]): The input timedelta, which can be a pandas timedelta string or a
-# pandas Timedelta object.
-# hours (bool, optional): If True (default), includes hours in the output. If False, only includes minutes.
-# ignore_zero (bool, optional): If True (default), removes zero values from the output.
-
-# Returns:
-# str: A string representation of the input timedelta in the format "hours:minutes".
-
-# Raises:
-# ValueError: If the input is not a pandas timedelta string or a pandas Timedelta object.
-
-# Example:
-# # Convert a timedelta string to a human-readable string
-# time_str = "2 days 03:30:00"
-# result = df_timedelta_to_str(time_str)  # Result: "51:30"
-
-# # Convert a Timedelta object to a human-readable string
-# import pandas as pd
-# time_delta = pd.Timedelta(days=2, hours=3, minutes=30)
-# result = df_timedelta_to_str(time_delta)  # Result: "51:30"
-# """
-# if isinstance(input_time, str):
-# timedelta_obj = Timedelta(input_time)
-# elif (
-# isinstance(input_time, Timedelta)
-# or isinstance(input_time, np.timedelta64)
-# or isinstance(input_time, pt.Timedelta)
-# ):
-# timedelta_obj = input_time
-# elif isinstance(input_time, float):
-# timedelta_obj = timedelta(seconds=input_time)
-# else:
-# raise ValueError(
-# "Input should be either a pandas timedelta string, float(seconds) or a pandas Timedelta object."
-# )
-
-# total_minutes = timedelta_obj.total_seconds() // 60
-# _hours = 0
-# if hours:
-# _hours = int(total_minutes // 60)
-# _minutes = int(total_minutes % 60)
-
-# if ignore_zero:
-# _tuple = (_hours, _minutes)
-# _tuple = (v if v > 0 else "" for v in _tuple)
-# _hours, _minutes = _tuple
-
-# return f"{_hours}:{_minutes}"
-
-
-# def timedelta_to_str(
-# time_delta: timedelta,
-# hours: bool = True,
-# minutes: bool = True,
-# seconds: bool = False,
-# milliseconds: bool = False,
-# microseconds: bool = False,
-# ignore_zero: bool = True,
-# ) -> str:
-# """
-# Convert a pandas timedelta string or a pandas Timedelta object into a human-readable string representation.
-
-# This function takes a pandas timedelta string, a pandas Timedelta object, or a datetime.timedelta object
-# and converts it into a string format of hours, minutes, seconds, milliseconds, and/or microseconds.
-# If the input is a string, it is converted to a Timedelta object. The resulting string represents the time
-# components specified by the function parameters.
-
-# Parameters:
-# time_delta (timedelta): The input timedelta, which should be a timedelta.
-# hours (bool, optional): If True (default), includes hours in the output. If False, excludes hours.
-# minutes (bool, optional): If True (default), includes minutes in the output. If False, excludes minutes.
-# seconds (bool, optional): If True, includes seconds in the output. Default is False.
-# milliseconds (bool, optional): If True, includes milliseconds in the output. Default is False.
-# microseconds (bool, optional): If True, includes microseconds in the output. Default is False.
-# ignore_zero (bool, optional): If True (default), removes zero values from the output.
-
-# Returns:
-# str: A string representation of the input timedelta in the specified format "hours:minutes:seconds:milliseconds".
-
-# Raises:
-# ValueError: If the input is not a pandas timedelta string, a pandas Timedelta object, or a datetime.timedelta object.
-
-# Example:
-# # Convert a timedelta string to a human-readable string
-# time_str = "2 days 03:30:45.123456"
-# result = timedelta_to_str(time_str, hours=True, minutes=True, seconds=True, milliseconds=True, microseconds=True)
-# # Result: "51:30:45:123456"
-
-# # Convert a Timedelta object to a human-readable string
-# import pandas as pd
-# time_delta = pd.Timedelta(days=2, hours=3, minutes=30, seconds=45, milliseconds=123, microseconds=456)
-# result = timedelta_to_str(time_delta, hours=True, minutes=True, seconds=True, milliseconds=True, microseconds=True)
-# # Result: "51:30:45:123456"
-# """
-# _hours, _minutes, _seconds, _seconds_fraction = [""] * 4
-# remained_seconds = time_delta.total_seconds()
-# if hours:
-# _hours = int(remained_seconds // 60 * 60)
-# remained_seconds -= _hours * 60 * 60
-# if minutes:
-# _minutes = int(remained_seconds // 60)
-# remained_seconds -= _minutes * 60
-# if seconds:
-# _seconds = int(remained_seconds // 1)
-# remained_seconds -= _seconds
-# if microseconds:
-# _seconds_fraction = int(remained_seconds // 0.000001) * 0.000001
-# elif milliseconds:
-# _seconds_fraction = int(remained_seconds // 0.001) * 0.001
-# # remained_seconds -= _milliseconds
-# if ignore_zero:
-# _tuple = (_hours, _minutes, _seconds, _seconds_fraction)
-# _tuple = tuple([v if (v == "" or v > 0) else "" for v in _tuple])
-# _hours, _minutes, _seconds, _seconds_fraction = _tuple
-# result = f"{_hours}:{_minutes}:{_seconds}:{_seconds_fraction}"
-# return result
-
-
+@pandera_transform
 def single_timeframe(
     multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type],
     timeframe: str,
     keep_timeframe: bool = False,
     sort: bool = True,
     index_only: bool = False,
-) -> ptd | DatetimeIndex:
+) -> pd.DataFrame | DatetimeIndex:
     if "timeframe" not in multi_timeframe_data.index.names:
         raise Exception(
             f'multi_timeframe_data expected to have "timeframe" in indexes:[{multi_timeframe_data.index.names}]'
@@ -178,11 +29,11 @@ def single_timeframe(
     if multi_timeframe_data.index.names.index("timeframe") != 0:
         raise AssertionError("multi_timeframe_data.index.names.index('timeframe') != 0")
     if index_only:
-        return multi_timeframe_data.loc[pd.IndexSlice[timeframe, :]].index
+        return cast(DatetimeIndex, multi_timeframe_data.loc[pd.IndexSlice[timeframe, :]].index)
     try:
-        single_timeframe_data: ptd = multi_timeframe_data.loc[pd.IndexSlice[timeframe, :]]
+        single_timeframe_data: pd.DataFrame = cast(pd.DataFrame, multi_timeframe_data.loc[pd.IndexSlice[timeframe, :]])
     except KeyError:
-        return ptd()
+        return pd.DataFrame()
     # if 'timeframe' in single_timeframe_data.index.names:
     #     if keep_timeframe:
     #         out = (single_timeframe_data.reset_index(level='timeframe'))
@@ -276,7 +127,7 @@ def check_time_in_cache(time: DatetimeIndex | pd.Series | datetime | Timestamp, 
     cache_key = f"valid_times_{timeframe}"
     if cache_key not in app_config.GLOBAL_CACHE:
         raise Exception(f"{cache_key} not initialized in config.GLOBAL_CACHE")
-    cache_set = set(app_config.GLOBAL_CACHE[cache_key])
+    cache_set: set = set(app_config.GLOBAL_CACHE[cache_key])
     if isinstance(time, (DatetimeIndex, pd.Series)):
         if not time.isin(cache_set).all():
             raise Exception(f"Some times: {time} not found in config.GLOBAL_CACHE[valid_times_{timeframe}]!")
@@ -293,14 +144,16 @@ def check_time_in_cache(time: DatetimeIndex | pd.Series | datetime | Timestamp, 
 #                 f'Indexes:{data.index.values}')
 
 
-def validate_no_timeframe(data: ptd) -> ptd:
+@pandera_transform
+def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
     if "timeframe" in data.index.names:
         raise Exception(f"timeframe found in Data(indexes:{data.index.names}, columns:{data.columns.names}")
     return data
 
 
+@pandera_transform
 def times_tester(
-    df: ptd,
+    df: pd.DataFrame,
     date_range_str: str,
     timeframe: str,
     return_bool: bool = False,
@@ -350,6 +203,7 @@ def times_tester(
 # return result
 
 
+@pandera_transform
 def multi_timeframe_times_tester(
     multi_timeframe_df: pt.DataFrame[MultiTimeframe],
     date_range_str: str,
@@ -361,7 +215,12 @@ def multi_timeframe_times_tester(
     for timeframe in app_config.timeframes:
         _timeframe_df = single_timeframe(multi_timeframe_df, timeframe)
         _result = times_tester(
-            _timeframe_df, date_range_str, timeframe, return_bool, ignore_processing_date_range, processing_date_range
+            cast(pd.DataFrame, _timeframe_df),
+            date_range_str,
+            timeframe,
+            return_bool,
+            ignore_processing_date_range,
+            processing_date_range,
         )
         if _result is None:
             result = None
@@ -438,7 +297,8 @@ def map_symbol(symbol: str, map_dictionary: dict[str, str]) -> str:
 
 
 # @cache
-def trim_to_date_range(date_range_str: str, df: ptd, ignore_duplicate_index: bool = False) -> ptd:
+@pandera_transform
+def trim_to_date_range(date_range_str: str, df: pd.DataFrame, ignore_duplicate_index: bool = False) -> pd.DataFrame:
     start, end = date_range(date_range_str)
     date_indexes = df.index.get_level_values(level="date")
     df = df[(date_indexes >= start) & (date_indexes <= end)]
@@ -480,7 +340,7 @@ def trim_to_date_range(date_range_str: str, df: ptd, ignore_duplicate_index: boo
 def after_under_process_date(date_range_str: str) -> bool:
     start, _ = date_range(date_range_str)
     _, end = date_range(app_config.processing_date_range)
-    return start > end  # type: ignore[no-any-return]
+    return start > end
 
 
 def times_in_date_range(
@@ -594,7 +454,8 @@ def times_in_date_range(
 # return df.loc[needles, "backward"].to_list()
 
 
-def concat(left: ptd, right: ptd) -> ptd:
+@pandera_transform
+def concat(left: pd.DataFrame, right: pd.DataFrame) -> pd.DataFrame:
     if not left.empty and not left.isna().all().all():
         if not right.empty and not right.isna().all().all():
             if left.isna().all(axis=0).any():
@@ -615,5 +476,5 @@ def concat(left: ptd, right: ptd) -> ptd:
                 if column not in left.columns:
                     left[column] = pd.Series(dtype=d_type)
     else:
-        left = right.copy() if not right.empty and not right.isna().all().all() else ptd()
+        left = right.copy() if not right.empty and not right.isna().all().all() else pd.DataFrame()
     return left

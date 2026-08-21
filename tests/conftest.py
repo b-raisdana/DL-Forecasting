@@ -21,13 +21,16 @@ def zigzag_ohlc() -> ZigzagOhlcFactory:
         low = [95 + 3 * i - (3 if i % 2 else 0) for i in range(n)]
         open_ = [lo + (hi - lo) * 0.3 for hi, lo in zip(high, low, strict=True)]
         close = [lo + (hi - lo) * 0.7 for hi, lo in zip(high, low, strict=True)]
+        idx = pd.date_range("2024-01-01", periods=n, freq="5min", tz="UTC").astype("datetime64[ns, UTC]")
         ohlc = pd.DataFrame(
             {
                 "open": open_,
                 "high": [float(h) for h in high],
                 "low": [float(v) for v in low],
                 "close": close,
-            }
+                "volume": [100.0 + i * 10 for i in range(n)],
+            },
+            index=idx,
         )
         ohlc["atr"] = atr
         return ohlc

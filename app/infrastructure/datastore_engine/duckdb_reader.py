@@ -3,6 +3,7 @@ from pathlib import Path
 
 import duckdb
 import pandas as pd
+from helper.pandera import pandera_transform
 from infrastructure.datastore_engine.disk_cache_layout import add_timeframe_index, index_by_date
 
 """
@@ -19,6 +20,7 @@ data/dataset_db/README.md and docs/infrastructure.md § DuckDB for the full desi
 """
 
 
+@pandera_transform
 def read_parquet_files(paths: list[Path], data_frame_type: str, start: datetime, end: datetime) -> pd.DataFrame:
     """
     Read and concatenate `paths` (already-validated Parquet/ZSTD cache files, all the same
@@ -36,10 +38,14 @@ def read_parquet_files(paths: list[Path], data_frame_type: str, start: datetime,
     con = duckdb.connect()
     try:
         df = con.execute(
-            "SELECT * FROM read_parquet($files) WHERE date >= $start AND date <= $end",
+            "SELECT * FROM read_parquet($files) "
+            "WHERE CAST(date AS TIMESTAMP WITH TIME ZONE) >= $start "
+            "AND CAST(date AS TIMESTAMP WITH TIME ZONE) <= $end",
             {"files": file_list, "start": start, "end": end},
         ).fetch_df()
     finally:
         con.close()
+    if "date" in df.columns:
+        df["date"] = pd.to_datetime(df["date"], utc=True).astype("datetime64[ns, UTC]")
     df = index_by_date(df)
     return add_timeframe_index(df, data_frame_type)

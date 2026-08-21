@@ -12,8 +12,8 @@ import pytz
 from config import app_config
 from helper.data_preparation import after_under_process_date
 from helper.functions import Pandera_DFM_Type, date_range, morning
-from helper.importer import ptd
 from helper.logging.do_log import log_i, log_w
+from helper.pandera import pandera_transform
 from helper.schema_casting import _coerce_index_to_ns_utc, apply_as_type, cast_and_validate
 from infrastructure.datastore_engine.disk_cache_layout import DATASET_DB as DATASET_DB
 from infrastructure.datastore_engine.disk_cache_layout import CachableDataset as CachableDataset
@@ -52,10 +52,10 @@ generic) — read that first if you're touching any of the `_window_*`/`*_cache_
 """
 
 
-# What cache_on_disk()'s decorator hands back: unlike _Generator, this always returns a ptd
+# What cache_on_disk()'s decorator hands back: unlike _Generator, this always returns a pd.DataFrame
 # at runtime (read_file()/read_file_windowed() do), so callers of a decorated `get_...` function get
 # an accurate type back instead of _Generator's deliberately-loose `object`.
-_Wrapper = Callable[..., ptd]  # type: ignore[explicit-any]
+_Wrapper = Callable[..., pd.DataFrame]  # type: ignore[explicit-any]
 
 
 # @cache
@@ -71,10 +71,11 @@ def datarange_is_not_cachable(date_range_str: str) -> bool:
 # cache-or-generate skill.
 _READ_FILE_CACHE_MAX_ENTRIES = 32
 _ReadFileCacheKey = tuple[str, str, FilePathArg, int | None, int | None]
-_read_file_cache: "OrderedDict[_ReadFileCacheKey, ptd]" = OrderedDict()
+_read_file_cache: "OrderedDict[_ReadFileCacheKey, pd.DataFrame]" = OrderedDict()
 
 
-def _read_file_cache_get(cache_key: _ReadFileCacheKey) -> ptd | None:
+@pandera_transform
+def _read_file_cache_get(cache_key: _ReadFileCacheKey) -> pd.DataFrame | None:
     df = _read_file_cache.get(cache_key)
     if df is None:
         return None
@@ -82,7 +83,8 @@ def _read_file_cache_get(cache_key: _ReadFileCacheKey) -> ptd | None:
     return df.copy()
 
 
-def _read_file_cache_put(cache_key: _ReadFileCacheKey, df: ptd) -> None:
+@pandera_transform
+def _read_file_cache_put(cache_key: _ReadFileCacheKey, df: pd.DataFrame) -> None:
     _read_file_cache[cache_key] = df.copy()
     _read_file_cache.move_to_end(cache_key)
     while len(_read_file_cache) > _READ_FILE_CACHE_MAX_ENTRIES:
@@ -121,8 +123,9 @@ def _record_cache_generation(file_name_prefix: str, written_bytes: int) -> None:
     state["bytes"] = 0
 
 
+@pandera_transform
 def write_data_file(
-    df: ptd,
+    df: pd.DataFrame,
     data_frame_type: str,
     date_range_str: str,
     file_path: FilePathArg,
@@ -170,7 +173,8 @@ def remove_data_file(data_frame_type: str, date_range_str: str, file_path: FileP
             _csv_zip_file_path(data_frame_type, date_range_str, file_path).unlink()
 
 
-def _slice_rows(df: ptd, n_rows: int | None, skip_rows: int | None) -> ptd:
+@pandera_transform
+def _slice_rows(df: pd.DataFrame, n_rows: int | None, skip_rows: int | None) -> pd.DataFrame:
     if not skip_rows and n_rows is None:
         return df
     start = skip_rows or 0
@@ -178,9 +182,10 @@ def _slice_rows(df: ptd, n_rows: int | None, skip_rows: int | None) -> ptd:
     return df.iloc[start:end].reset_index(drop=True)
 
 
+@pandera_transform
 def _read_raw_data_file(
     data_frame_type: str, date_range_str: str, file_path: FilePathArg, n_rows: int | None, skip_rows: int | None
-) -> ptd:
+) -> pd.DataFrame:
     """
     Read the flat (index not yet set) data file for (data_frame_type, date_range_str). Parquet/ZSTD is
     the primary on-disk format; the legacy Feather/ZSTD and CSV-zip formats are still readable for
@@ -219,9 +224,10 @@ def _read_raw_data_file(
 # return _read_raw_data_file(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
 
 
+@pandera_transform
 def read_by_date(
     data_frame_type: str, date_range_str: str, file_path: FilePathArg, n_rows: int | None, skip_rows: int | None
-) -> ptd:
+) -> pd.DataFrame:
     df = _read_raw_data_file(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
     try:
         return index_by_date(df)
@@ -235,9 +241,10 @@ def read_by_date(
         raise
 
 
+@pandera_transform
 def read_with_timeframe(
     data_frame_type: str, date_range_str: str, file_path: FilePathArg, n_rows: int | None, skip_rows: int | None
-) -> ptd:
+) -> pd.DataFrame:
     """
     Read data from a compressed CSV file, adjusting the index based on the data frame type.
 
@@ -254,7 +261,7 @@ def read_with_timeframe(
         skip_rows (int): The number of rows to skip at the beginning of the CSV file.
 
     Returns:
-        ptd: The DataFrame containing the read data with adjusted index.
+        pd.DataFrame: The DataFrame containing the read data with adjusted index.
 
     Example:
         # Read OHLC data with adjusted index
@@ -266,6 +273,7 @@ def read_with_timeframe(
     return add_timeframe_index(df, data_frame_type)
 
 
+@pandera_transform
 def read_file(
     date_range_str: str | None,
     data_frame_type: str,
@@ -277,7 +285,7 @@ def read_file(
     zero_size_allowed: None | bool = None,
     generator_params: dict[str, object] | None = None,
     nan_allowed_columns: frozenset[str] | None = None,
-) -> ptd:
+) -> pd.DataFrame:
     """
     Read data from a file and return a DataFrame. If the file does not exist or the DataFrame does not
     match the expected columns, the generator function is used to build and persist the DataFrame.
@@ -308,7 +316,7 @@ def read_file(
         file_path (str, optional): The path to the directory containing the data files.
 
     Returns:
-        ptd: The DataFrame read from the file or generated by the generator function.
+        pd.DataFrame: The DataFrame read from the file or generated by the generator function.
 
     Raises:
         Exception: If the expected columns are not defined in the configuration or if the generated DataFrame
@@ -361,7 +369,7 @@ def read_file(
                 "read_file() cannot generate on a cache miss when skip_rows/n_rows is set; "
                 "pre-populate the cache with a full read first."
             )
-        df = cast(ptd, generator(date_range_str, **generator_params))
+        df = cast(pd.DataFrame, generator(date_range_str, **generator_params))
         write_data_file(
             df,
             data_frame_type,
@@ -399,7 +407,7 @@ def _resolve_caster_model(generator: _Generator) -> type[Pandera_DFM_Type]:
 
 def cache_on_disk(
     dataset: CachableDataset,
-    after_read: Callable[[ptd], None] | None = None,
+    after_read: Callable[[pd.DataFrame], None] | None = None,
     skip_rows: int | None = None,
     n_rows: int | None = None,
     windowed: bool = False,
@@ -433,8 +441,11 @@ def cache_on_disk(
     def decorator(generator: _Generator) -> _Wrapper:
         caster_model: type[pandera.DataFrameModel] = dataset.caster_model or _resolve_caster_model(generator)
 
+        @pandera_transform
         @wraps(generator)
-        def wrapper(date_range_str: str | None = None, file_path: str | None = None, **generator_params: object) -> ptd:
+        def wrapper(
+            date_range_str: str | None = None, file_path: str | None = None, **generator_params: object
+        ) -> pd.DataFrame:
             if windowed:
                 if skip_rows or n_rows is not None:
                     raise Exception("cache_on_disk(windowed=True) does not support skip_rows/n_rows.")

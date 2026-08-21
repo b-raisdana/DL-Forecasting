@@ -29,6 +29,7 @@ features). See `_last_closed_position` for the exact shifted-merge_asof this enf
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 import numpy.typing as npt
@@ -56,7 +57,9 @@ from domain.price_action.CausalExtremum import TF_MINUTES, plus2tf, plus3tf
 from domain.schemas.common.OHLCV import OHLCV
 from domain.schemas.price_action.extremum_features import BranchExtremumOHLC
 from helper.data_preparation import single_timeframe
-from helper.importer import ptd, ta
+from helper.importer import ta
+from helper.pandera import pandera_transform
+from pandera import typing as pt
 
 # The 5 static (non-anchor-dependent) relative-candle/volume columns gathered directly per branch —
 # everything else in CANDLE_FEATURE_COLUMNS (relative_normal_close, the 8 higher_extremum_distance
@@ -97,7 +100,8 @@ class DatasetBundle:
         return len(self.anchor_index)
 
 
-def _branch_features(ohlc: ptd[OHLCV], tf_name: str) -> ptd[BranchExtremumOHLC]:
+@pandera_transform
+def _branch_features(ohlc: pt.DataFrame[OHLCV], tf_name: str) -> pt.DataFrame[BranchExtremumOHLC]:
     """Returns the FULL processed frame (not sliced to CANDLE_FEATURE_COLUMNS) — build_dataset() needs
     raw 'close'/'atr'/'high'/'low' alongside the 5 static ratio columns, both to compute
     relative_normal_close's anchor-relative formula (gap 1) and to feed CausalExtremum's Step A/B
@@ -113,7 +117,7 @@ def _branch_features(ohlc: ptd[OHLCV], tf_name: str) -> ptd[BranchExtremumOHLC]:
     # the 1W branch's ATR (pandas_ta.sma, like pandas_ta.atr, returns None outright rather than a NaN
     # series when length > len(series) — reusing the same override avoids that crash).
     ohlc = add_log_sma_volume_feature_column(ohlc, length=_ATR_LENGTH_OVERRIDE.get(tf_name, 256))
-    return ohlc
+    return cast(pt.DataFrame[BranchExtremumOHLC], ohlc)
 
 
 def _last_closed_position(
@@ -124,8 +128,8 @@ def _last_closed_position(
     `anchor - shift + branch_tf == anchor + base_tf` — exactly the anchor's own close. shift=0 for the
     base (5min) branch itself, matching each anchor to itself (the "LAST" candle, already closed)."""
     shift = pd.Timedelta(minutes=branch_tf_minutes - base_tf_minutes)
-    shifted_anchors = ptd({"date": anchor_index - shift}).sort_values("date")
-    branch_positions = ptd({"date": branch_index, "position": np.arange(len(branch_index))})
+    shifted_anchors = pd.DataFrame({"date": anchor_index - shift}).sort_values("date")
+    branch_positions = pd.DataFrame({"date": branch_index, "position": np.arange(len(branch_index))})
     merged = pd.merge_asof(shifted_anchors, branch_positions, on="date", direction="backward")
     # restore original anchor order (sort_values above was needed for merge_asof's monotonic requirement)
     merged.index = shifted_anchors.index
@@ -156,13 +160,13 @@ def build_dataset(symbol: str, date_range_str: str) -> DatasetBundle:
     app_config.under_process_symbol = symbol
     mt_ohlcv = read_multi_timeframe_ohlcv(date_range_str)
 
-    base_ohlc = single_timeframe(mt_ohlcv, "5min")
-    fifteen_min_ohlc = single_timeframe(mt_ohlcv, "15min")
+    base_ohlc: pd.DataFrame = cast(pd.DataFrame, single_timeframe(mt_ohlcv, "5min"))
+    fifteen_min_ohlc: pd.DataFrame = cast(pd.DataFrame, single_timeframe(mt_ohlcv, "15min"))
     labels = add_mfe_mae_om_labels(base_ohlc, fifteen_min_ohlc)  # drops the last HORIZON_BARS rows
 
-    features_by_tf = {
-        tf_name: _branch_features(single_timeframe(mt_ohlcv, tf_name), tf_name) for tf_name in BRANCH_TIMEFRAMES
-    }
+    features_by_tf = {}
+    for tf_name in BRANCH_TIMEFRAMES:
+        features_by_tf[tf_name] = _branch_features(cast(pd.DataFrame, single_timeframe(mt_ohlcv, tf_name)), tf_name)
     base_tf_minutes = 5.0
     tf_minutes = {"5min": 5.0, "15min": 15.0, "1h": 60.0, "4h": 240.0, "1D": 1440.0, "1W": 10080.0}
 
@@ -171,7 +175,7 @@ def build_dataset(symbol: str, date_range_str: str) -> DatasetBundle:
     valid = np.ones(len(anchor_index), dtype=bool)
     for tf_name in BRANCH_TIMEFRAMES:
         positions = _last_closed_position(
-            anchor_index, features_by_tf[tf_name].index, tf_minutes[tf_name], base_tf_minutes
+            anchor_index, cast(pd.DatetimeIndex, features_by_tf[tf_name].index), tf_minutes[tf_name], base_tf_minutes
         )
         positions_by_tf[tf_name] = positions
         valid &= positions >= (BRANCH_WINDOW_LENGTHS[tf_name] - 1)
@@ -185,7 +189,7 @@ def build_dataset(symbol: str, date_range_str: str) -> DatasetBundle:
     anchor_base_close = base_ohlc.loc[anchor_index, "close"].to_numpy(dtype=np.float64)
     # .asi8 reflects the index's own storage unit, not always nanoseconds — pandas >=3 no longer
     # always upcasts to 'ns', so force it before any _NS_PER_MINUTE-based arithmetic downstream.
-    anchor_time_ns = anchor_index.as_unit("ns").asi8
+    anchor_time_ns = anchor_index.as_unit("ns").asi8  # type: ignore[union-attr]
 
     # gap 3: Step A (full-hindsight causal-capped reach) runs once per branch's own native series —
     # reused both for that branch's own extremum_weight (Step C) and, when this branch is itself a
@@ -231,7 +235,7 @@ def build_dataset(symbol: str, date_range_str: str) -> DatasetBundle:
             relative_normal_close = (windowed_close - anchor_base_close[:, None]) / windowed_atr
         relative_normal_close = relative_normal_close.astype(np.float32)
 
-        windowed_time_ns = feat_df.index.as_unit("ns").asi8[gather_idx]
+        windowed_time_ns = cast(pd.DatetimeIndex, feat_df.index).as_unit("ns").asi8[gather_idx]
 
         weight = compute_extremum_weight(
             branch_extremum_by_tf[tf_name], gather_idx, anchor_time_ns, tf_minutes[tf_name]
@@ -244,8 +248,16 @@ def build_dataset(symbol: str, date_range_str: str) -> DatasetBundle:
         # Alignment is purely a function of "which branch-X candle" (its own timestamp), independent
         # of anchor — computed once over the branch's FULL native index, then windowed with the same
         # gather_idx as every other per-branch channel (not recomputed per anchor).
-        plus2_atr_full = align_source_atr(feat_df.index, plus2_source, _source_native_minutes(plus2_tf))
-        plus3_atr_full = align_source_atr(feat_df.index, plus3_source, _source_native_minutes(plus3_tf))
+        plus2_atr_full = align_source_atr(
+            cast(pd.DatetimeIndex, feat_df.index),
+            plus2_source,
+            _source_native_minutes(plus2_tf),
+        )
+        plus3_atr_full = align_source_atr(
+            cast(pd.DatetimeIndex, feat_df.index),
+            plus3_source,
+            _source_native_minutes(plus3_tf),
+        )
         plus2_atr_windowed = plus2_atr_full[gather_idx]
         plus3_atr_windowed = plus3_atr_full[gather_idx]
 
@@ -301,7 +313,7 @@ def build_dataset(symbol: str, date_range_str: str) -> DatasetBundle:
         mfe=labels[["mfe"]].to_numpy(dtype=np.float32)[clean],
         rer=labels[["rer"]].to_numpy(dtype=np.float32)[clean],
         action=labels[["action_long", "action_short", "action_none"]].to_numpy(dtype=np.float32)[clean],
-        anchor_index=anchor_index[clean],
+        anchor_index=cast(pd.DatetimeIndex, anchor_index[clean]),
     )
 
 

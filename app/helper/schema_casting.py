@@ -1,13 +1,13 @@
 import logging
 import string
 from collections.abc import Hashable, Sequence
-from typing import TypeVar, cast
+from typing import cast
 
 import pandas as pd
 import pandera
 from helper.functions import Pandera_DFM_Type
-from helper.importer import ptd
 from helper.logging.do_log import log_d, log_e
+from helper.pandera import pandera_transform
 from pandera import DataType
 
 
@@ -24,13 +24,14 @@ def all_annotations(cls: type, include_indexes: bool = False) -> dict[str, objec
     return annotations  # ChainMap(*(c.__annotations__ for c in cls.__mro__ if '__annotations__' in c.__dict__))
 
 
+@pandera_transform
 def cast_and_validate(
-    data: ptd,
+    data: pd.DataFrame,
     model_class: type[Pandera_DFM_Type],
     return_bool: bool = False,
     zero_size_allowed: bool = False,
     unique_index: bool = False,
-) -> ptd | bool:
+) -> pd.DataFrame | bool:
     if len(data) == 0:
         if not zero_size_allowed:
             raise Exception("Zero size data!")
@@ -38,7 +39,7 @@ def cast_and_validate(
             if return_bool:
                 return True
             else:
-                return empty_df(model_class)
+                return cast(pd.DataFrame, empty_df(model_class))
     if unique_index and not data.index.is_unique:
         log_e("Not tested")
         raise Exception(f"Expected to be unique but found duplicates:{data.index[data.index.duplicated()]}")
@@ -83,7 +84,8 @@ def _coerce_datetime_to_ns_utc(series: pd.Series) -> pd.Series:  # type: ignore[
     return series.astype("datetime64[ns, UTC]")
 
 
-def _coerce_index_to_ns_utc(data: ptd) -> ptd:
+@pandera_transform
+def _coerce_index_to_ns_utc(data: pd.DataFrame) -> pd.DataFrame:
     """Coerce every DatetimeIndex level (e.g. the ``date`` index) to ``datetime64[ns, UTC]`` so the
     schema's ``DatetimeTZDtype("ns", "UTC")`` index passes validation regardless of the incoming
     resolution or timezone."""
@@ -102,7 +104,8 @@ def _coerce_index_to_ns_utc(data: ptd) -> ptd:
     return data
 
 
-def apply_as_type(data: ptd, model_class: type[Pandera_DFM_Type]) -> ptd:
+@pandera_transform
+def apply_as_type(data: pd.DataFrame, model_class: type[Pandera_DFM_Type]) -> pd.DataFrame:
     as_types: dict[str, str] = {}
     _all_annotations = all_annotations(model_class)
     for attr_name, attr_type in _all_annotations.items():
@@ -116,14 +119,20 @@ def apply_as_type(data: ptd, model_class: type[Pandera_DFM_Type]) -> ptd:
         if col_dtype is not None and (
             isinstance(col_dtype, pd.DatetimeTZDtype) or str(col_dtype).startswith("datetime64")
         ):
-            # Coerce unconditionally: incoming data may be us-precision or a non-UTC tz, both of which
-            # fail a strict ``datetime64[ns, UTC]`` schema check. Only touch columns the schema actually
-            # declares as datetime-like to avoid clobbering unrelated fields.
             if is_datetime_annotation and not str(col_dtype).lower().startswith("datetime64[ns, utc"):
                 as_types[attr_name] = "datetime64[ns, UTC]"
+        elif col_dtype is None and attr_name in data.index.names and is_datetime_annotation:
+            idx = data.index.get_level_values(attr_name)
+            if isinstance(idx, pd.DatetimeIndex) and not str(idx.dtype).startswith("datetime64[ns, utc"):
+                data.index = data.index.set_levels(
+                    cast(
+                        pd.DatetimeIndex,
+                        pd.DatetimeIndex(data.index.get_level_values(attr_name).astype("datetime64[ns, UTC]")),
+                    ),
+                    level=attr_name,
+                )
         elif "timedelta" in attr_type_str and col_dtype is not None and "timedelta" not in str(col_dtype).lower():
             as_types[attr_name] = "timedelta64[s]"
-            # as_types[attr_name] = pandera.typing.Timedelta
         elif "pandera.typing.pandas.Series" in str(attr_type):
             astype = str(attr_type).replace("pandera.typing.pandas.Series[", "").replace("]", "")
             trans_table = str.maketrans("", "", string.digits)
@@ -242,14 +251,11 @@ def index_fields(model_class: type[Pandera_DFM_Type]) -> dict[str, DataType | st
 
 
 def column_fields(model_class: type[Pandera_DFM_Type]) -> dict[str, DataType]:
-    return model_class.to_schema().dtypes  # type: ignore[no-any-return]
+    return model_class.to_schema().dtypes
     # return list(model_class.to_schema().columns.keys())
 
 
-T = TypeVar("T", bound=Pandera_DFM_Type)
-
-
-def empty_df(model_class: type[T]) -> T:
+def empty_df[T: Pandera_DFM_Type](model_class: type[T]) -> T:  # type: ignore[valid-type]
     as_types: dict[str, str] = {}
     for name, dtype in column_fields(model_class).items():
         as_types[name] = str(dtype.type.name)
@@ -260,11 +266,11 @@ def empty_df(model_class: type[T]) -> T:
             as_types[name] = str(idx_dtype)
     # Create an empty DataFrame with Pandas-compatible data types
     empty_data: dict[str, list[object]] = {column: [] for column in as_types}
-    _empty_df = ptd(empty_data)
+    _empty_df = pd.DataFrame(empty_data)
     _empty_df = _empty_df.astype(as_types)
     index_names = list(index_fields(model_class).keys())
 
     if index_names:
         _empty_df = _empty_df.set_index(index_names)
-    validated: T = model_class(_empty_df)
+    validated: T = cast(T, model_class(_empty_df))
     return validated

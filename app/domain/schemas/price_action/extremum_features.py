@@ -11,4 +11,4 @@ class BranchExtremumOHLC(pandera.DataFrameModel):
     low: pt.Series[float]
     close: pt.Series[float]
     volume: pt.Series[float]
-    atr: pt.Series[float]
+    atr: pt.Series[float] = pandera.Field(nullable=True)

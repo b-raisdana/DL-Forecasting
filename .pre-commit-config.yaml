@@ -58,6 +58,13 @@ repos:
         pass_filenames: false
         files: ^(app/.*\.py|pytest\.ini)$
 
+      - id: check-pandera-decorator
+        name: check pandera_transform decorator
+        language: system
+        entry: python scripts/check_pandera_decorator.py
+        pass_filenames: true
+        files: ^app/.*\.py$
+
       - id: sync-skill-files
         name: sync mirrored skill files (claude/codex/devin/qoder/copilot/kiro/kilo bidirectional mirrors)
         language: system

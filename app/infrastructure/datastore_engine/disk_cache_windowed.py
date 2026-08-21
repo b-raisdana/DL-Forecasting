@@ -1,13 +1,14 @@
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 import pytz
 from config import app_config
 from helper.data_preparation import trim_to_date_range
 from helper.functions import Pandera_DFM_Type, date_range
-from helper.importer import ptd
 from helper.logging.do_log import log_w
+from helper.pandera import pandera_transform
 from helper.schema_casting import apply_as_type, empty_df
 from infrastructure.datastore_engine.disk_cache import (
     DATASET_DB,
@@ -117,6 +118,7 @@ def _covering_parquet_path(data_frame_type: str, window_date_range_str: str, fil
     return _parquet_file_path(data_frame_type, covering_range_str, file_path)
 
 
+@pandera_transform
 def read_file_windowed(
     date_range_str: str | None,
     data_frame_type: str,
@@ -126,7 +128,7 @@ def read_file_windowed(
     zero_size_allowed: None | bool = None,
     generator_params: dict[str, object] | None = None,
     nan_allowed_columns: frozenset[str] | None = None,
-) -> ptd:
+) -> pd.DataFrame:
     """
     Windowed counterpart to read_file() — see README.md § windowing for the full design. Decomposes
     date_range_str into whole calendar windows (_window_date_range_strs(), sized per
@@ -157,14 +159,14 @@ def read_file_windowed(
     window_ranges = _window_date_range_strs(date_range_str, window_freq)
     now = datetime.now(pytz.UTC)
 
-    window_dfs = []
+    window_dfs: list[pd.DataFrame] = []
     duckdb_batch_paths: list[Path] = []
     duckdb_batch_paths_seen: set[Path] = set()
     duckdb_batch_ranges: list[str] = []
     for window_range in window_ranges:
         window_start, _window_end = date_range(window_range)
         if window_start > now:
-            window_dfs.append(empty_df(caster_model))
+            window_dfs.append(cast(pd.DataFrame, empty_df(caster_model)))
             continue
         cachable = not datarange_is_not_cachable(window_range)
         batch_path: Path | None = None
@@ -206,11 +208,12 @@ def read_file_windowed(
                 nan_allowed_columns=nan_allowed_columns,
             )
         )
-    df = pd.concat(window_dfs)
+    df: pd.DataFrame = pd.concat(window_dfs)
     df = df.sort_index(level="date")
     return trim_to_date_range(date_range_str, df)
 
 
+@pandera_transform
 def _read_cached_windows_via_duckdb(
     paths: list[Path],
     window_ranges: list[str],
@@ -221,7 +224,7 @@ def _read_cached_windows_via_duckdb(
     generator: _Generator,
     generator_params: dict[str, object],
     nan_allowed_columns: frozenset[str] | None,
-) -> list[ptd]:
+) -> list[pd.DataFrame]:
     """
     Batches `paths` (already-cached window files for the same data_frame_type) through
     duckdb_reader.read_parquet_files() in one query, validated once via caster_model — cheaper than

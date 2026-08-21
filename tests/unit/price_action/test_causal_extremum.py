@@ -5,8 +5,8 @@ tests/archive_not_used_trash/unit/price_action/test_causal_extremum.py.
 
 Values are hand-derived from small, fully-controlled synthetic OHLC fixtures, not captured from
 running the function — new spec-conformance code, not legacy behavior to pin. See
-docs/ML_Forecasting_System_Design/todo/01-input-data-channels.md for why this causal-cap logic exists (the part of the schema
-flagged as "most likely to silently leak future information if implemented naively").
+docs/ML_Forecasting_System_Design/todo/01-input-data-channels.md for why this causal-cap logic exists
+(the part of the schema flagged as "most likely to silently leak future information if implemented naively").
 """
 
 import numpy as np
@@ -21,14 +21,13 @@ from domain.price_action.CausalExtremum import (
     plus3tf,
 )
 from domain.schemas.price_action.CausalExtremum import CausalExtremumResult
-from helper.importer import ptd
 
 pytestmark = pytest.mark.unit
 
 
-def _make_ohlc(high: list[float], low: list[float], freq: str = "5min") -> ptd:
+def _make_ohlc(high: list[float], low: list[float], freq: str = "5min") -> pd.DataFrame:
     idx = pd.date_range("2024-01-01", periods=len(high), freq=freq, tz="UTC")
-    return ptd({"high": high, "low": low}, index=idx)
+    return pd.DataFrame({"high": high, "low": low}, index=idx)
 
 
 # --- floor_to_tf_ladder / plus2tf / plus3tf -----------------------------------------------------
@@ -112,7 +111,7 @@ def test_reach_uses_real_elapsed_minutes_not_a_fixed_step_assumption() -> None:
         ["2024-01-01 00:00", "2024-01-01 00:05", "2024-01-01 01:05"],
         tz="UTC",  # 60min gap before the 3rd candle
     )
-    ohlc = ptd({"high": [5.0, 20.0, 5.0], "low": [1.0, 1.0, 1.0]}, index=idx)
+    ohlc = pd.DataFrame({"high": [5.0, 20.0, 5.0], "low": [1.0, 1.0, 1.0]}, index=idx)
 
     result = compute_true_extremum(ohlc)
 
@@ -126,7 +125,7 @@ def test_reach_uses_real_elapsed_minutes_not_a_fixed_step_assumption() -> None:
 def test_missing_high_column_raises_schema_errors() -> None:
     """If the input is missing the required 'high' column, compute_true_extremum must raise
     pandera.errors.SchemaErrors — never silently produce garbage."""
-    ohlc = ptd({"low": [1.0, 2.0, 3.0]}, index=pd.date_range("2024-01-01", periods=3, freq="5min", tz="UTC"))
+    ohlc = pd.DataFrame({"low": [1.0, 2.0, 3.0]}, index=pd.date_range("2024-01-01", periods=3, freq="5min", tz="UTC"))
 
     with pytest.raises(pandera.errors.SchemaErrors):
         compute_true_extremum(ohlc)
@@ -135,7 +134,7 @@ def test_missing_high_column_raises_schema_errors() -> None:
 def test_missing_low_column_raises_schema_errors() -> None:
     """If the input is missing the required 'low' column, compute_true_extremum must raise
     pandera.errors.SchemaErrors — never silently produce garbage."""
-    ohlc = ptd({"high": [1.0, 2.0, 3.0]}, index=pd.date_range("2024-01-01", periods=3, freq="5min", tz="UTC"))
+    ohlc = pd.DataFrame({"high": [1.0, 2.0, 3.0]}, index=pd.date_range("2024-01-01", periods=3, freq="5min", tz="UTC"))
 
     with pytest.raises(pandera.errors.SchemaErrors):
         compute_true_extremum(ohlc)
@@ -143,7 +142,7 @@ def test_missing_low_column_raises_schema_errors() -> None:
 
 def test_wrong_dtype_high_raises_schema_errors() -> None:
     """If 'high' is string instead of float, compute_true_extremum must raise SchemaErrors."""
-    ohlc = ptd(
+    ohlc = pd.DataFrame(
         {"high": ["a", "b", "c"], "low": [1.0, 2.0, 3.0]},
         index=pd.date_range("2024-01-01", periods=3, freq="5min", tz="UTC"),
     )
@@ -154,7 +153,7 @@ def test_wrong_dtype_high_raises_schema_errors() -> None:
 
 def test_wrong_dtype_low_raises_schema_errors() -> None:
     """If 'low' is string instead of float, compute_true_extremum must raise SchemaErrors."""
-    ohlc = ptd(
+    ohlc = pd.DataFrame(
         {"high": [1.0, 2.0, 3.0], "low": ["a", "b", "c"]},
         index=pd.date_range("2024-01-01", periods=3, freq="5min", tz="UTC"),
     )

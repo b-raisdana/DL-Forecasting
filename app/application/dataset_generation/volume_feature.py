@@ -3,7 +3,9 @@ from __future__ import annotations
 import numpy as np
 from config import app_config
 from domain.schemas.common.OHLCV import OHLCV
-from helper.importer import ptd, ta
+from helper.importer import ta
+from helper.pandera import pandera_transform
+from pandera import typing as pt
 
 __volume_feature_columns = ["volume_atr"]
 
@@ -12,7 +14,8 @@ __volume_feature_columns = ["volume_atr"]
 # return __volume_feature_columns
 
 
-def add_volume_feature_columns(ohlcv: ptd[OHLCV]) -> ptd[OHLCV]:
+@pandera_transform
+def add_volume_feature_columns(ohlcv: pt.DataFrame[OHLCV]) -> pt.DataFrame[OHLCV]:
     """volume / ATR(volume) per docs/input-features.md § candle feature schema.
 
     Volume has no high/low/close to derive a true-range from, so "ATR(volume)" is Wilder's RMA
@@ -24,7 +27,8 @@ def add_volume_feature_columns(ohlcv: ptd[OHLCV]) -> ptd[OHLCV]:
     return ohlcv
 
 
-def add_log_sma_volume_feature_column(ohlcv: ptd[OHLCV], length: int = 256) -> ptd[OHLCV]:
+@pandera_transform
+def add_log_sma_volume_feature_column(ohlcv: pt.DataFrame[OHLCV], length: int = 256) -> pt.DataFrame[OHLCV]:
     """log((volume + eps) / (SMA_length(volume) + eps)) per .../atr_rel_ohlc_log_sma_v_extm_rel_6tf
     (handmade).input.jsonc's `V` definition. Additive sibling to add_volume_feature_columns (which
     stays unchanged for training_datasets.py's separate pipeline) — a different smoothing (plain SMA,

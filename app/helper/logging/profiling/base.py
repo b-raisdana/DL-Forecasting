@@ -3,8 +3,8 @@ from collections.abc import Callable
 from functools import wraps
 
 import numpy as np
+import pandas as pd
 from colorama import Fore
-from helper.importer import ptd
 
 from ..do_log.log_it import log_d
 
@@ -112,7 +112,7 @@ __global_profile_to_db = False
 
 def parameters_to_str(args: tuple[object, ...], kwargs: dict[str, object]) -> str:
     def process_item(item: object) -> str:
-        if isinstance(item, ptd):
+        if isinstance(item, pd.DataFrame):
             return f"{len(item)}*{item.columns}"
         elif isinstance(item, list):
             # return f'list{np.array(item).shape}'
@@ -140,7 +140,7 @@ def parameters_to_str(args: tuple[object, ...], kwargs: dict[str, object]) -> st
                     raise e
                 except Exception as e:
                     raise e
-            elif isinstance(value, ptd):
+            elif isinstance(value, pd.DataFrame):
                 t_parameters.append(f"{key}: {len(value)}*{value.columns}")
             elif isinstance(value, np.ndarray):
                 t_parameters.append(f"{key}: ndarray{value.shape}")

@@ -12,13 +12,16 @@ See CausalExtremum.py's module docstring for the causal-capping derivation this 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from domain.price_action.CausalExtremum import compute_true_extremum, floor_to_tf_ladder
+from domain.schemas.price_action.CausalExtremum import CausalExtremumOHLC
 from domain.schemas.price_action.extremum_features import BranchExtremumOHLC
-from helper.importer import ptd
+from helper.pandera import pandera_transform
+from pandera import typing as pt
 
 _NS_PER_MINUTE = 60_000_000_000
 
@@ -37,12 +40,13 @@ class BranchExtremum:
     true_extremum_tf_minutes: npt.NDArray[np.float64]
 
 
-def build_branch_extremum(ohlc: ptd[BranchExtremumOHLC]) -> BranchExtremum:
+@pandera_transform
+def build_branch_extremum(ohlc: pt.DataFrame[BranchExtremumOHLC]) -> BranchExtremum:
     """`ohlc` must already carry an 'atr' column (relative_candle.py's add_relative_candle_columns
     side effect, already computed upstream in datafeeder_input3_outcome1.py's _branch_features)."""
     BranchExtremumOHLC.validate(ohlc, lazy=True)
     time_index = pd.DatetimeIndex(ohlc.index)
-    extremum = compute_true_extremum(ohlc)
+    extremum = compute_true_extremum(cast(pt.DataFrame[CausalExtremumOHLC], ohlc))
     return BranchExtremum(
         # .asi8/.astype("int64") reflect the index's own storage unit (pandas >=3 no longer always
         # upcasts to 'ns') — force 'ns' first so it matches _NS_PER_MINUTE below.
@@ -67,8 +71,8 @@ def align_source_atr(
     Direction='backward', no lookahead. NaN where no source candle has closed yet.
     """
     shift = pd.Timedelta(minutes=target_tf_minutes)
-    shifted = ptd({"date": query_time_index - shift}).sort_values("date")
-    source_positions = ptd({"date": source.time_index, "position": np.arange(len(source.time_index))})
+    shifted = pd.DataFrame({"date": query_time_index - shift}).sort_values("date")
+    source_positions = pd.DataFrame({"date": source.time_index, "position": np.arange(len(source.time_index))})
     merged = pd.merge_asof(shifted, source_positions, on="date", direction="backward")
     merged.index = shifted.index
     positions = merged["position"].reindex(range(len(query_time_index))).to_numpy()
@@ -141,9 +145,9 @@ def _nearest_and_last(
         zeros = np.zeros(window_len, dtype=np.float64)
         return zeros, zeros
 
-    pt = pool_time[:end]
+    pool_time_trunc = pool_time[:end]
     pp = pool_price[:end]
-    mask = pt[None, :] < t_i[:, None]  # (window_len, K): strictly-before-t_i, per position
+    mask = pool_time_trunc[None, :] < t_i[:, None]  # (window_len, K): strictly-before-t_i, per position
     any_eligible = mask.any(axis=1)
 
     diff = close_i[:, None] - pp[None, :]
@@ -151,9 +155,9 @@ def _nearest_and_last(
     nearest_idx = np.argmin(abs_diff_masked, axis=1)
     raw_price_diff = np.where(any_eligible, diff[np.arange(window_len), nearest_idx], 0.0)
 
-    time_masked = np.where(mask, pt[None, :], np.iinfo(np.int64).min)
+    time_masked = np.where(mask, pool_time_trunc[None, :], np.iinfo(np.int64).min)
     last_idx = np.argmax(time_masked, axis=1)
-    last_event_time = pt[last_idx]
+    last_event_time = pool_time_trunc[last_idx]
     raw_elapsed_minutes = np.where(any_eligible, (t_i - last_event_time) / _NS_PER_MINUTE, 0.0)
 
     return raw_price_diff, raw_elapsed_minutes
