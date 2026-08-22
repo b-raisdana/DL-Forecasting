@@ -15,7 +15,7 @@ import pandas as pd
 from application.model_implementations.tier1_000.model import BRANCH_TIMEFRAMES, DatasetBundle
 from config import app_config
 from helper.data_preparation import single_timeframe
-from helper.functions import date_range_to_string
+from helper.date_utils import date_range_to_string
 from infrastructure.ohlcv.ohlcv import read_multi_timeframe_ohlcv
 
 

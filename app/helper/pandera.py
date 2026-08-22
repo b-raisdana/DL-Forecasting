@@ -1,26 +1,5 @@
-"""
-Drop-in replacement for ``@pa.check_types(lazy=True)`` that adds:
-
-1. Warns when legacy bare ``pd.DataFrame`` annotations are used.
-2. Call-time ``n_return`` enforcement: the caller declares how many VALID
-   (non-NaN) rows it expects back; the wrapper drops NaN rows, checks the
-   resulting length against ``n_return``, and raises on insufficient data
-   instead of silently returning short/NaN output.
-3. Static NaN-fill detection: at decoration time, the wrapped function's
-   source is AST-scanned for calls that fill/impute NaNs (``fillna``,
-   ``bfill``, ``ffill``, ``interpolate``, ``SimpleImputer``, ...). Per
-   project policy, NaNs should be *prevented* (sufficient warmup/lookback)
-   rather than filled, so any hit is either logged or, with
-   ``forbid_nan_fill=True``, raised as a hard decoration-time error.
-
-Use ``allow_pandas_dataframe=True`` to skip the legacy-annotation warning.
-Use the call-time kwarg ``allow_return_nan=True`` to skip NaN/length
-enforcement for a specific call (edge cases: exploratory calls, functions
-whose output is intentionally raw).
-Use the call-time kwarg ``discard_n_return=True`` to prevent ``n_return``
-from being forwarded to the wrapped function itself (for functions that
-don't accept it as a parameter).
-"""
+"""Runtime Pandera validation decorator with n_return/NaN enforcement and
+static NaN-fill detection. See app/helper/README.md for full docs."""
 
 from __future__ import annotations
 
@@ -31,13 +10,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from functools import wraps
 from types import FunctionType
-from typing import cast, get_args, get_origin, get_type_hints, overload
+from typing import TypeVar, cast, get_args, get_origin, get_type_hints, overload
 
 import optree
 import pandas as pd
+import pandera
 import pandera.pandas as pa
 from config import app_config
 from helper.logging.do_log.log_it import log_w
+
+Pandera_DFM_Type = TypeVar("Pandera_DFM_Type", bound=pandera.DataFrameModel)
 
 
 def _contains_legacy_pandas_dataframe(annotation: object) -> bool:
@@ -73,9 +55,7 @@ DEFAULT_NAN_FILL_NAMES = frozenset(
 
 
 class NanFillDetectedError(ValueError):
-    """Raised at decoration time when ``forbid_nan_fill=True`` and a
-    NaN-fill call is found in the wrapped function's source (or, with
-    ``deep_nan_fill_scan=True``, in a locally-resolvable helper it calls)."""
+    """NaN-fill call found at decoration time with ``forbid_nan_fill=True``."""
 
 
 @dataclass(frozen=True)
@@ -171,7 +151,7 @@ def _deep_scan_call(
         nan_fill_names=nan_fill_names,
         deep=deep,
         max_depth=max_depth,
-        _chain=_chain + (fn.__qualname__,),
+        _chain=(*_chain, fn.__qualname__),
         _visited=visited,
     )
 
@@ -193,8 +173,7 @@ def _report_nan_fills(func: FunctionType, hits: list[NanFillHit], *, forbid: boo
 
 
 class InsufficientDataError(ValueError):
-    """Raised when a wrapped function returns fewer valid rows than the
-    caller declared it needed via ``n_return``."""
+    """Fewer valid rows than ``n_return`` after NaN-row drop."""
 
 
 def _enforce_dataframe(df: pd.DataFrame, *, n_return: int, trim_to_n_return: bool, qualname: str) -> pd.DataFrame:
@@ -212,10 +191,8 @@ def _enforce_dataframe(df: pd.DataFrame, *, n_return: int, trim_to_n_return: boo
 
 
 def _enforce_output[T](result: T, *, n_return: int, trim_to_n_return: bool, qualname: str) -> T:
-    """Walk any nested DataFrame / tuple / list / dict return shape via optree,
-    enforcing NaN-drop + n_return sufficiency on every DataFrame leaf found.
-    optree preserves the outer container shape/type, so the cast documents
-    (rather than discards) that `result: _T` comes back out as `_T`."""
+    """Walk nested DataFrame / tuple / list / dict via optree, enforcing
+    NaN-drop + n_return on every DataFrame leaf."""
 
     def _leaf(x: object) -> object:
         if isinstance(x, pd.DataFrame):
@@ -265,51 +242,8 @@ def pandera_validate[**P, R](
     extra_nan_fill_names: frozenset[str] = frozenset(),
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """
-    Runtime Pandera validation decorator with n_return/NaN enforcement and
-    static NaN-fill detection.
-
-    Decorator-level options:
-    - ``allow_pandas_dataframe``: skip the legacy bare-``pd.DataFrame``
-      warning (schema check itself still applies unless production).
-    - ``trim_to_n_return``: when True (default), the cleaned output is
-      trimmed to exactly the last ``n_return`` valid rows once the
-      sufficiency check passes, so callers get a deterministic shape rather
-      than "at least n_return".
-    - ``warn_on_nan_fill``: log (via ``log_w``) any NaN-fill call found by
-      the static scan. Runs once at decoration time, in every environment
-      including production, since it costs nothing per-call.
-    - ``forbid_nan_fill``: raise ``NanFillDetectedError`` at decoration time
-      instead of warning — fails the import outright rather than letting a
-      NaN-fill call ship.
-    - ``deep_nan_fill_scan``: also follow plain-name calls (not
-      attribute/method calls, which can't be statically resolved) to
-      helper functions defined in the same module, up to
-      ``nan_fill_scan_depth`` levels, best-effort.
-    - ``extra_nan_fill_names``: additional call names to treat as NaN-fills,
-      on top of ``DEFAULT_NAN_FILL_NAMES``.
-
-    Bypasses the *runtime* schema check AND n_return/NaN enforcement
-    entirely when ``app_config.environment`` is ``"production"`` — same
-    all-or-nothing bypass as before. The static NaN-fill scan and the
-    legacy-annotation warning are decoration-time-only checks and always
-    run, regardless of environment.
-
-    Call-time reserved kwargs (popped before reaching the wrapped function):
-    - ``n_return: int`` (required unless ``allow_return_nan=True``): number
-      of valid rows the caller expects back.
-    - ``allow_return_nan: bool = False``: skip NaN-drop + length enforcement
-      entirely for this call; raw output (including NaNs) is returned as-is.
-    - ``discard_n_return: bool = False``: if True, ``n_return`` is NOT
-      forwarded to the wrapped function's own call (for functions that
-      don't accept it as a parameter). If False, it is forwarded so the
-      function can use it internally (e.g. to slice ``df.tail(n_return +
-      warmup)`` itself before returning).
-
-    Note: ``func`` is required to be an ordinary Python function (not a
-    bound method, lambda-behind-partial, or arbitrary callable object) —
-    the decorator relies on ``__qualname__``, ``__globals__`` and
-    ``__annotations__`` for schema checking and NaN-fill scanning, which
-    only genuine ``types.FunctionType`` objects expose.
+    Runtime Pandera validation decorator. See app/helper/README.md for full docs
+    (decorator options, call-time kwargs, production bypass, exceptions).
     """
 
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
@@ -410,10 +344,10 @@ if __name__ == "__main__":
     class _FakeConfig:
         environment = "development"
 
-    app_config = _FakeConfig()  # type: ignore[assignment]  # noqa: F811 (shadow for standalone smoke test)
+    app_config = _FakeConfig()  # type: ignore[assignment]
 
-    def log_w(message: str, stack_limit: int = 10, stack_offset: int = 2) -> None:  # noqa: F811
-        print(f"[warn] {message}")
+    def log_w(message: str, stack_limit: int = 10, stack_offset: int = 2) -> None:
+        pass
 
     @pandera_validate(allow_pandas_dataframe=True)
     def make_series(length: int, n_return: int | None = None) -> pd.DataFrame:
@@ -424,15 +358,14 @@ if __name__ == "__main__":
 
     # 1) sufficient data -> trimmed to exactly n_return valid rows
     out = make_series(50, n_return=30)
-    print("case 1 (sufficient):", len(out), "rows, starts at", out["atr"].iloc[0])
     assert len(out) == 30
 
     # 2) insufficient data -> raises
     try:
         make_series(15, n_return=30)
         raise AssertionError("expected InsufficientDataError")
-    except InsufficientDataError as e:
-        print("case 2 (insufficient) raised as expected:", e)
+    except InsufficientDataError:
+        pass
 
     # 3) allow_return_nan bypass -> raw output, NaNs included
     # `allow_return_nan`/`discard_n_return` are wrapper-injected kwargs, not
@@ -440,15 +373,14 @@ if __name__ == "__main__":
     # correctly can't see them in `_P` — see the decorator's docstring note
     # on the ParamSpec/kwarg-rewriting seam. Silenced here, not upstream.
     out3 = make_series(15, n_return=30, allow_return_nan=True)  # type: ignore[call-arg]
-    print("case 3 (allow_return_nan):", len(out3), "rows, nan count:", out3["atr"].isna().sum())
     assert len(out3) == 15
 
     # 4) missing n_return without allow_return_nan -> raises
     try:
         make_series(50)
         raise AssertionError("expected TypeError")
-    except TypeError as e:
-        print("case 4 (missing n_return) raised as expected:", e)
+    except TypeError:
+        pass
 
     # 5) nested dict/tuple of DataFrames -> each leaf enforced independently
     @pandera_validate(allow_pandas_dataframe=True)
@@ -461,7 +393,6 @@ if __name__ == "__main__":
     nested: dict[str, object] = make_nested(50, n_return=30)
     main: pd.DataFrame = nested["main"]  # type: ignore[assignment]
     aux: tuple[pd.DataFrame, ...] = nested["aux"]  # type: ignore[assignment]
-    print("case 5 (nested):", len(main), len(aux[0]))
     assert len(main) == 30 and len(aux[0]) == 30
 
     # 6) NaN-fill detected -> warns by default (doesn't block the call)
@@ -470,7 +401,6 @@ if __name__ == "__main__":
         return df.fillna(0)
 
     bad_fill(pd.DataFrame({"x": [1.0, None]}), n_return=1, allow_return_nan=True)  # type: ignore[call-arg]
-    print("case 6 (warn on fillna): see [warn] line above")
 
     # 7) forbid_nan_fill=True -> raises at decoration time, before any call
     try:
@@ -480,8 +410,8 @@ if __name__ == "__main__":
             return df.bfill()
 
         raise AssertionError("expected NanFillDetectedError")
-    except NanFillDetectedError as e:
-        print("case 7 (forbid_nan_fill) raised as expected:", e)
+    except NanFillDetectedError:
+        pass
 
     # 8) deep scan follows a plain-name helper call in the same module
     def _impute_helper(df: pd.DataFrame) -> pd.DataFrame:
@@ -494,7 +424,5 @@ if __name__ == "__main__":
             return _impute_helper(df)
 
         raise AssertionError("expected NanFillDetectedError via deep scan")
-    except NanFillDetectedError as e:
-        print("case 8 (deep scan through helper) raised as expected:", e)
-
-    print("all self-tests passed")
+    except NanFillDetectedError:
+        pass

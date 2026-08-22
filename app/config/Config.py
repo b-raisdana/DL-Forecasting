@@ -222,8 +222,6 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
     @computed_field  # type: ignore[prop-decorator]
     @property
     def ohlcv_oldest_fetch_datetime(self) -> datetime:
-        """`ohlcv_oldest_fetch_date` parsed the same way `helper.functions.date_range()` parses each
-        half of a date_range_str."""
         return datetime.strptime(self.ohlcv_oldest_fetch_date, "%y-%m-%d.%H-%M").replace(tzinfo=pytz.UTC)
 
 
@@ -240,9 +238,10 @@ config_digest = str.translate(
     },
 )
 
-app_config.path_of_logs.mkdir(parents=True, exist_ok=True)
+config_log_dir = app_config.path_of_logs / "config"
+config_log_dir.mkdir(parents=True, exist_ok=True)
 
-dump_filename = app_config.path_of_logs / f"Config.{config_digest}.json"
+dump_filename = config_log_dir / f"Config.{config_digest}.json"
 
 if not dump_filename.exists():
     dump_filename.write_text(config_as_json, encoding="utf-8")

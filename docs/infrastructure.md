@@ -133,6 +133,9 @@ setup per clone is `bash scripts/git-hooks/install.sh`.
 - `pytest -m "unit or characterization or regression or smoke"` — fast gate, see the `pytest` skill.
 - Bypassable with `git commit --no-verify` — pre-commit is a local convenience gate, not a substitute for
   CI (none exists yet).
+- The actual git hook (`scripts/git-hooks/pre-commit`) doesn't invoke `pre-commit run` directly - it
+  delegates to `scripts/git-hooks/precommit_wrapper.py` for failure-snapshotting, logging, and a
+  non-blocking commented-out-code warning - see [scripts/git-hooks/README.md](../scripts/git-hooks/README.md).
 
 ### incremental ratchet (mypy/ruff/xenon scope)
 

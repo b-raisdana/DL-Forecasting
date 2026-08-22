@@ -1,6 +1,6 @@
 from config import app_config
 from domain.schemas.common.OHLCV import OHLCV
-from helper.functions import date_range
+from helper.date_utils import date_range
 from helper.logging.do_log import log_i
 from helper.pandera import pandera_validate
 from helper.schema_casting import empty_df

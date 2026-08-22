@@ -4,7 +4,6 @@ the concrete "run training for N minutes and report resource usage" entrypoint.
 
 from __future__ import annotations
 
-import json
 import threading
 import time
 from dataclasses import dataclass, field
@@ -223,16 +222,10 @@ def run_training(
     setup_gpu()
     presenter = presenter or _NullPresenter()
 
-    print(f"[data] building dataset for {symbol} {date_range_str} ...")
     t0 = time.time()
     bundle = build_dataset(symbol, date_range_str)
     data_build_seconds = time.time() - t0
     train_bundle, val_bundle = split_bundle(bundle, val_fraction=0.1)
-    print(
-        f"[data] built in {data_build_seconds:.1f}s: {bundle.n_samples} samples "
-        f"({train_bundle.n_samples} train / {val_bundle.n_samples} val), "
-        f"anchors {bundle.anchor_index.min()} .. {bundle.anchor_index.max()}"
-    )
 
     config = TIER1_000_CONFIG
     batch_size = cast(int, config["batch_size"])
@@ -240,7 +233,6 @@ def run_training(
     val_ds = make_tf_dataset(val_bundle, batch_size, shuffle=False)
 
     model = build_tier1000_model(config)
-    print(f"[model] compiled, batch_size={batch_size} (param count available only after the first call/step)")
 
     # tf.train.Checkpoint, not model.save()/load_model() — the subclassed layers here have no
     # get_config()/from_config(), so only the object-based checkpoint API round-trips reliably (see
@@ -252,11 +244,8 @@ def run_training(
     resumed = not reset_params and repository.restore_latest(checkpoint)
     if resumed:
         presenter.on_resume(int(global_step.numpy()))
-        print(f"[checkpoint] resumed from step {int(global_step.numpy())} ({repository.checkpoint_dir})")
     else:
         presenter.on_fresh_start()
-        reason = "reset_params=True" if reset_params else "no checkpoint found"
-        print(f"[checkpoint] starting from freshly-initialized parameters ({reason})")
 
     time_budget_cb = TimeBudgetCallback(budget_seconds)
     checkpoint_cb = PeriodicCheckpointCallback(
@@ -309,8 +298,6 @@ def run_training(
         **sampler.summary(),
         **step_timing_cb.summary(),
     }
-    print("\n=== resource usage report ===")
-    print(json.dumps(report, indent=2))
     presenter.on_run_complete(report)
     return report
 

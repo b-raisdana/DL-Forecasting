@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from helper.functions import date_range_to_string
+from helper.date_utils import date_range_to_string
 from infrastructure.datastore_engine import disk_cache, disk_cache_windowed
 from infrastructure.datastore_engine.disk_cache_gaps import find_cache_gaps, find_overlapping_cache_files
 

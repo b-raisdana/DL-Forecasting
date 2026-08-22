@@ -21,7 +21,7 @@ __log_to_std_out_level = logging.DEBUG
 __log_to_file_level = 0
 __min_log_level = __log_to_std_out_level
 
-__all__ = ["log_e", "log_w", "log_i", "log_d"]
+__all__ = ["log_d", "log_e", "log_i", "log_w"]
 
 # Standard levels only (excludes loguru-specific TRACE/SUCCESS): highest threshold <= a given
 # numeric severity wins, so an ad-hoc int (e.g. a raw stdlib level not exactly 10/20/30/40/50)
@@ -92,8 +92,8 @@ def root_path(root_distance: int = 5) -> Path:
                 __root_path = __root_path.parent
         # raise RuntimeError("root_path is not defined! call init_logger first.")
         except (NameError, FileNotFoundError):
-            print(
-                f"[WARNING] Unable to find parent for {__root_path}. "
+            logger.warning(
+                f"Unable to find parent for {__root_path}. "
                 f"Calling init_logger will enable extended "
                 f"features and resolve this warning."
             )
@@ -102,10 +102,12 @@ def root_path(root_distance: int = 5) -> Path:
 
 def _init_default_logger() -> None:
     """The default logger for when init_logger was not called: stdout plus a daily-rotated
-    file under <root>/logs, so runs that never call init_logger still leave a log on disk, and
+    file under <root>/logs/runtime, so runs that never call init_logger still leave a log on disk, and
     stdlib `logging` calls are captured into the same sinks."""
     log_dir = root_path() / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
+    runtime_log_dir = log_dir / "runtime"
+    runtime_log_dir.mkdir(parents=True, exist_ok=True)
     logger.remove()
     logger.add(
         sys.stdout,
@@ -114,7 +116,7 @@ def _init_default_logger() -> None:
         level=__log_to_std_out_level,
     )
     logger.add(
-        log_dir / "runtime.log",
+        runtime_log_dir / "runtime.log",
         format=__log_format,
         level=__log_to_file_level,
         rotation="00:00",
@@ -204,4 +206,4 @@ def log(message: str, severity: int, stack_limit: int = 0, stack_offset: int = 0
             _nearest_level_name(severity), f"{color}{message}{stack_trace} (ray:{id_of_ray})"
         )
     except Exception as e:
-        logger.exception(f"Failed to log message: {message} | Error: {str(e)}")
+        logger.exception(f"Failed to log message: {message} | Error: {e!s}")

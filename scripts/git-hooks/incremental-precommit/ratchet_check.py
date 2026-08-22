@@ -1,17 +1,5 @@
-"""Incremental pre-commit ratchet - see README.md in this folder for the full design.
-
-Blocks a commit only when a vector's project-wide problem count goes UP past its
-recorded baseline (a real regression). Never requires fixing a touched file's
-pre-existing debt just to commit - that's the "chain reaction" this replaces: mypy/
-radon analyze whole files, so a strict per-file gate turns a one-line edit into a
-forced cleanup of every unrelated legacy violation in that file.
-
-As debt gets fixed (by anyone, in any commit), once a vector's improvement reaches
-3% of its recorded baseline, the baseline ratchets down to the new, lower count
-and baseline.json is rewritten + staged - locking the improvement in so it can't
-silently regress later without tripping the check above.
-"""
-
+# print is the intended user-facing output for this pre-commit hook script
+# See README.md: "design" for the module-level overview.
 from __future__ import annotations
 
 import json
@@ -47,13 +35,7 @@ def run_output(*args: str, cwd: Path = ROOT) -> str:
 
 
 def mypy_count() -> int:
-    # cwd=app (not ROOT, target "app") deliberately: this repo's modules import each other
-    # bare (`from ai_modelling.base import ...`, matching pytest.ini's pythonpath=app - see
-    # the pytest skill's "Repo config" section), so mypy needs app/ itself as its implicit
-    # search-path root. Running
-    # from ROOT with target="app" made every file resolve under two conflicting module names
-    # (via explicit_package_bases finding repo-root vs app/ as the package base, since
-    # app/__init__.py exists) and mypy aborted after 1 file ("found twice").
+    # See README.md: "mypy_count cwd choice"
     stdout = run("mypy", "--config-file", str(ROOT / "pyproject.toml"), ".", cwd=ROOT / TARGET)
     match = re.search(r"Found (\d+) error", stdout)
     return int(match.group(1)) if match else 0
@@ -73,11 +55,7 @@ def _exclude_tests(paths: list[Path]) -> list[Path]:
 
 
 def xenon_count(max_absolute: str = "B") -> int:
-    # Cyclomatic complexity isn't a meaningful signal for test code (parametrized/assert-heavy
-    # loops are idiomatic there, not a design smell), so app/tests/ is excluded entirely - see
-    # docs/infrastructure.md#incremental-ratchet-mypyruffxenon-scope. archive_not_used_trash/ is
-    # unreachable-from-presentation code kept for reference, not linted - see
-    # app/archive_not_used_trash/README.md.
+    # See README.md: "xenon excludes tests and archive"
     stdout = run("radon", "cc", TARGET, "-j", "-i", "tests,archive_not_used_trash")
     try:
         data = json.loads(stdout or "{}")

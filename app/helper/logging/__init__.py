@@ -15,6 +15,6 @@ __all__ = [
     "log_e",
     "log_i",
     "log_w",
-    "set_ray_id",
     "profile_it",
+    "set_ray_id",
 ]

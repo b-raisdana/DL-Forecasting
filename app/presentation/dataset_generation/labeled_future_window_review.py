@@ -15,7 +15,7 @@ from application.model_implementations.tier1_000.model import (
     CANDLE_FEATURE_COLUMNS,
 )
 from config import app_config
-from helper.functions import date_range_to_string
+from helper.date_utils import date_range_to_string
 from helper.pandera import pandera_validate
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots

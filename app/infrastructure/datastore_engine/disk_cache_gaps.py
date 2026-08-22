@@ -1,7 +1,7 @@
 import itertools
 from datetime import datetime
 
-from helper.functions import date_range, date_range_to_string
+from helper.date_utils import date_range, date_range_to_string
 from infrastructure.datastore_engine.disk_cache import (
     DATASET_DB,
     CachableDataset,
