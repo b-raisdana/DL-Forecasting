@@ -31,13 +31,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from functools import wraps
 from types import FunctionType
-from typing import cast, get_args, get_origin, get_type_hints, overload
+from typing import TypeVar, cast, get_args, get_origin, get_type_hints, overload
 
 import optree
 import pandas as pd
+import pandera
 import pandera.pandas as pa
 from config import app_config
 from helper.logging.do_log.log_it import log_w
+
+Pandera_DFM_Type = TypeVar("Pandera_DFM_Type", bound=pandera.DataFrameModel)
 
 
 def _contains_legacy_pandas_dataframe(annotation: object) -> bool:
@@ -171,7 +174,7 @@ def _deep_scan_call(
         nan_fill_names=nan_fill_names,
         deep=deep,
         max_depth=max_depth,
-        _chain=_chain + (fn.__qualname__,),
+        _chain=(*_chain, fn.__qualname__),
         _visited=visited,
     )
 
@@ -410,10 +413,10 @@ if __name__ == "__main__":
     class _FakeConfig:
         environment = "development"
 
-    app_config = _FakeConfig()  # type: ignore[assignment]  # noqa: F811 (shadow for standalone smoke test)
+    app_config = _FakeConfig()  # type: ignore[assignment]
 
-    def log_w(message: str, stack_limit: int = 10, stack_offset: int = 2) -> None:  # noqa: F811
-        print(f"[warn] {message}")
+    def log_w(message: str, stack_limit: int = 10, stack_offset: int = 2) -> None:
+        pass
 
     @pandera_validate(allow_pandas_dataframe=True)
     def make_series(length: int, n_return: int | None = None) -> pd.DataFrame:
@@ -424,15 +427,14 @@ if __name__ == "__main__":
 
     # 1) sufficient data -> trimmed to exactly n_return valid rows
     out = make_series(50, n_return=30)
-    print("case 1 (sufficient):", len(out), "rows, starts at", out["atr"].iloc[0])
     assert len(out) == 30
 
     # 2) insufficient data -> raises
     try:
         make_series(15, n_return=30)
         raise AssertionError("expected InsufficientDataError")
-    except InsufficientDataError as e:
-        print("case 2 (insufficient) raised as expected:", e)
+    except InsufficientDataError:
+        pass
 
     # 3) allow_return_nan bypass -> raw output, NaNs included
     # `allow_return_nan`/`discard_n_return` are wrapper-injected kwargs, not
@@ -440,15 +442,14 @@ if __name__ == "__main__":
     # correctly can't see them in `_P` — see the decorator's docstring note
     # on the ParamSpec/kwarg-rewriting seam. Silenced here, not upstream.
     out3 = make_series(15, n_return=30, allow_return_nan=True)  # type: ignore[call-arg]
-    print("case 3 (allow_return_nan):", len(out3), "rows, nan count:", out3["atr"].isna().sum())
     assert len(out3) == 15
 
     # 4) missing n_return without allow_return_nan -> raises
     try:
         make_series(50)
         raise AssertionError("expected TypeError")
-    except TypeError as e:
-        print("case 4 (missing n_return) raised as expected:", e)
+    except TypeError:
+        pass
 
     # 5) nested dict/tuple of DataFrames -> each leaf enforced independently
     @pandera_validate(allow_pandas_dataframe=True)
@@ -461,7 +462,6 @@ if __name__ == "__main__":
     nested: dict[str, object] = make_nested(50, n_return=30)
     main: pd.DataFrame = nested["main"]  # type: ignore[assignment]
     aux: tuple[pd.DataFrame, ...] = nested["aux"]  # type: ignore[assignment]
-    print("case 5 (nested):", len(main), len(aux[0]))
     assert len(main) == 30 and len(aux[0]) == 30
 
     # 6) NaN-fill detected -> warns by default (doesn't block the call)
@@ -470,7 +470,6 @@ if __name__ == "__main__":
         return df.fillna(0)
 
     bad_fill(pd.DataFrame({"x": [1.0, None]}), n_return=1, allow_return_nan=True)  # type: ignore[call-arg]
-    print("case 6 (warn on fillna): see [warn] line above")
 
     # 7) forbid_nan_fill=True -> raises at decoration time, before any call
     try:
@@ -480,8 +479,8 @@ if __name__ == "__main__":
             return df.bfill()
 
         raise AssertionError("expected NanFillDetectedError")
-    except NanFillDetectedError as e:
-        print("case 7 (forbid_nan_fill) raised as expected:", e)
+    except NanFillDetectedError:
+        pass
 
     # 8) deep scan follows a plain-name helper call in the same module
     def _impute_helper(df: pd.DataFrame) -> pd.DataFrame:
@@ -494,7 +493,5 @@ if __name__ == "__main__":
             return _impute_helper(df)
 
         raise AssertionError("expected NanFillDetectedError via deep scan")
-    except NanFillDetectedError as e:
-        print("case 8 (deep scan through helper) raised as expected:", e)
-
-    print("all self-tests passed")
+    except NanFillDetectedError:
+        pass

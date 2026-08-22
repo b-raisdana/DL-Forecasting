@@ -6,7 +6,7 @@ import pandas as pd
 import pytz
 from config import app_config
 from helper.data_preparation import map_symbol
-from helper.functions import date_range
+from helper.date_utils import date_range
 from helper.logging import profile_it
 from helper.logging.do_log import log_i
 

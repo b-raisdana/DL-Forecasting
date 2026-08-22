@@ -54,3 +54,47 @@ per-line baseline file that drifts every time a legacy file is edited (even unre
 line numbers). A single project-wide count per vector is coarser but self-maintaining - no
 regeneration step, no merge conflicts in a baseline file every time two branches touch the same
 legacy file.
+
+## inline commentary
+
+### design
+
+Incremental pre-commit ratchet - see README.md in this folder for the full design.
+
+Blocks a commit only when a vector's project-wide problem count goes UP past its
+recorded baseline (a real regression). Never requires fixing a touched file's
+pre-existing debt just to commit - that's the "chain reaction" this replaces: mypy/
+radon analyze whole files, so a strict per-file gate turns a one-line edit into a
+forced cleanup of every unrelated legacy violation in that file.
+
+As debt gets fixed (by anyone, in any commit), once a vector's improvement reaches
+3% of its recorded baseline, the baseline ratchets down to the new, lower count
+and baseline.json is rewritten + staged - locking the improvement in so it can't
+silently regress later without tripping the check above.
+
+### mypy_count cwd choice
+
+`cwd=app` (not ROOT, target "app") deliberately: this repo's modules import each other
+bare (`from ai_modelling.base import ...`, matching pytest.ini's pythonpath=app - see
+the pytest skill's "Repo config" section), so mypy needs app/ itself as its implicit
+search-path root. Running
+from ROOT with target="app" made every file resolve under two conflicting module names
+(via explicit_package_bases finding repo-root vs app/ as the package base, since
+app/__init__.py exists) and mypy aborted after 1 file ("found twice").
+
+### ruff vector scope
+
+`ruff_count`/`ruff_detail_count` run plain `ruff check` (project config, no `--select`/`--ignore`
+override), so this gate only ever sees whatever `pyproject.toml`'s `[tool.ruff.lint] select`
+includes. `Q`/`RUF`/`T10`/`T20`/`ERA` (quote conventions, Ruff-specific likely-bug checks,
+debugger statements, print() calls, commented-out code) are deliberately left out of that list -
+they're advisory, surfaced instead via precommit_wrapper.py's stdout warning +
+logs/pre-commit/pre-commit.log, not editor squiggles or a commit gate.
+
+### xenon excludes tests and archive
+
+Cyclomatic complexity isn't a meaningful signal for test code (parametrized/assert-heavy
+loops are idiomatic there, not a design smell), so app/tests/ is excluded entirely - see
+docs/infrastructure.md#incremental-ratchet-mypyruffxenon-scope. archive_not_used_trash/ is
+unreachable-from-presentation code kept for reference, not linted - see
+app/archive_not_used_trash/README.md.

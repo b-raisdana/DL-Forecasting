@@ -222,8 +222,6 @@ class Config(BaseSettings):  # type: ignore[explicit-any]
     @computed_field  # type: ignore[prop-decorator]
     @property
     def ohlcv_oldest_fetch_datetime(self) -> datetime:
-        """`ohlcv_oldest_fetch_date` parsed the same way `helper.functions.date_range()` parses each
-        half of a date_range_str."""
         return datetime.strptime(self.ohlcv_oldest_fetch_date, "%y-%m-%d.%H-%M").replace(tzinfo=pytz.UTC)
 
 

@@ -5,7 +5,15 @@ extend-exclude = ["*.ipynb", ".testvenv", "archive_not_used_trash"]
 
 [tool.ruff.lint]
 # Complexity is xenon/radon's job (docs/infrastructure.md#qa) - not duplicated here.
-select = ["E", "F", "I", "UP", "B", "C4", "SIM"]
+# Q/RUF/T10/T20/ERA (quote conventions, Ruff-specific likely-bug checks, debugger statements,
+# print() calls, commented-out code) are deliberately excluded from IDE-facing select - they're
+# surfaced as non-blocking pre-commit log warnings instead, not editor squiggles or a commit
+# gate. See scripts/git-hooks/precommit_wrapper.py / scripts/git-hooks/README.md.
+select = ["E", "F", "I", "UP", "B", "C4", "SIM", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+# Pre-commit hook scripts use print() as their user-facing interface.
+"scripts/git-hooks/incremental-precommit/ratchet_check.py" = ["T201"]
 
 [tool.mypy]
 python_version = "3.12"

@@ -5,7 +5,7 @@ import pandas as pd
 import pytz
 from config import app_config
 from domain.schemas.common.MultiTimeframe import MultiTimeframe, MultiTimeframe_Type
-from helper.functions import date_range
+from helper.date_utils import date_range
 from helper.logging.do_log import log_d, log_w
 from helper.pandera import pandera_validate
 from pandas import DatetimeIndex, Timestamp
@@ -42,7 +42,7 @@ def single_timeframe(
     # else:
     if keep_timeframe:
         single_timeframe_data["timeframe"] = timeframe
-    if "timeframe" in [single_timeframe_data.index.name] + single_timeframe_data.index.names:
+    if "timeframe" in [single_timeframe_data.index.name, *single_timeframe_data.index.names]:
         raise AssertionError(
             "'timeframe' == single_timeframe_data.index.name or 'timeframe' in single_timeframe_data.index.names"
         )

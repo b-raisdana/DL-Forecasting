@@ -4,7 +4,8 @@
 #
 # When Git runs on Windows, this hook delegates to the WSL "tf" conda environment, where
 # the project dependencies live. When Git already runs in WSL/Linux, it executes there
-# directly. Both paths run pre-commit against the same worktree and staged index.
+# directly. Both paths run precommit_wrapper.py (which runs pre-commit itself, then handles
+# failure-snapshot + logging - see that file) against the same worktree and staged index.
 #
 # GIT_INDEX_FILE: for a partial/pathspec commit (`git commit -- <paths>`), Windows git sets
 # this to a temp index (e.g. C:/Code/.../next-index-N.lock) and holds the REAL .git/index.lock
@@ -13,7 +14,7 @@
 # (locked) index and deadlocks against the outer process - deterministically, every partial
 # commit. WSLENV's /p flag forwards *and* translates the path (C:/... -> /mnt/c/...).
 if ! command -v wsl.exe >/dev/null 2>&1; then
-    exec pre-commit run --hook-stage pre-commit
+    exec python scripts/git-hooks/precommit_wrapper.py
 fi
 
 if [ -n "$GIT_INDEX_FILE" ]; then
@@ -34,5 +35,5 @@ exec wsl.exe -d Ubuntu-24.04 -- bash -lc '
     source ~/miniconda3/etc/profile.d/conda.sh &&
     conda activate tf &&
     cd "$DLF_REPO_ROOT" &&
-    pre-commit run --hook-stage pre-commit
+    python scripts/git-hooks/precommit_wrapper.py
 '
