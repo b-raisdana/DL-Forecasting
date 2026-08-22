@@ -2,12 +2,7 @@
 
 ## current role and scope
 
-`scripts/git-hooks/incremental-precommit/ratchet_check.py` is the live gate for every commit.
-It re-measures four project-wide static-analysis vectors (`mypy`, `ruff`, `xenon`, `loc`) and
-blocks only when a vector's count goes **up** past its committed baseline in `baseline.json`.
-It never forces fixing pre-existing debt in touched files — that is the whole point of the
-incremental ratchet design documented in `scripts/git-hooks/incremental-precommit/README.md`
-and `docs/infrastructure.md` § incremental ratchet.
+`scripts/git-hooks/incremental-precommit/ratchet_check.py` is the live gate for every commit. It has two independent layers (current as of the per-file-diff redesign - the sections below still describe the layer/line numbers from the prior single-mechanism version where noted, since most findings still apply): a **blocking gate** that diffs each touched file's own violation/line count before (via a throwaway `git worktree` at `HEAD`) vs. after, blocking only files that got worse; and a **trend-only aggregate** (`mypy`/`ruff` per rule/error code, `xenon`/`loc` single counts) in `baseline.json` that never blocks, resyncing to fresh counts every successful commit. Neither layer forces fixing pre-existing debt in touched files — that is the whole point of the incremental ratchet design documented in `scripts/git-hooks/incremental-precommit/README.md` and `docs/infrastructure.md` § incremental ratchet.
 
 Because this file runs on every commit, correctness, error handling, and testability matter more
 than raw performance. The upgrades below are ordered by risk and impact.
@@ -18,22 +13,21 @@ than raw performance. The upgrades below are ordered by risk and impact.
 
 ```
 main()
-  ├── load baseline.json
-  ├── for each vector in VECTORS:
-  │     ├── project-wide count_fn()              ← mypy_count, ruff_count, xenon_count, loc_count
-  │     ├── compare with baseline
-  │     ├── candidate_regressions  (current > base)
-  │     ├── improved               (current < base)
-  │     └── bootstrapped           (no baseline yet)
-  ├── staged_app_python_files()                    ← git diff --cached
-  ├── for each candidate_regression:
-  │     └── detail_counter(staged_paths)           ← counts problems only in staged files
-  │           ├── regressed       (staged count > 0)
-  │           └── ignored_regression (staged count == 0)
-  ├── block if any regressed
-  ├── ratchet down baselines where improvement >= 3%
-  ├── rewrite baseline.json + git add it
-  └── print summary / characterization-test reminder
+  ├── run ruff/mypy/xenon once each ("after") + loc_line_counts()
+  ├── group each into by-rule dicts -> current_counts (trend layer, unchanged shape from before)
+  │     compare vs. old_baseline: bootstrap / regressed_trend (info only) / improved (info only)
+  ├── touched_app_python_files()                    ← git diff --cached --name-status -M
+  ├── if touched:
+  │     ├── group the same "after" runs into by-file dicts
+  │     ├── _head_worktree()                        ← throwaway checkout at HEAD
+  │     ├── run ruff/mypy/xenon again in the worktree -> by-file "before" dicts
+  │     ├── evaluate_file_gate(touched, after, before):
+  │     │     mypy/ruff/xenon: block if after > before (0 for new files)
+  │     │     loc: block if before>500 and after > before+5; new file must be <=500
+  │     └── remove the worktree
+  ├── block (exit 1) if evaluate_file_gate found anything - this is the ONLY blocking path
+  ├── else: rewrite baseline.json to current_counts if changed + git add it
+  └── print regressed_trend (info) / improved+characterization reminder / OK summary
 ```
 
 ---
@@ -41,6 +35,8 @@ main()
 ## detailed findings
 
 ### F1 — silent tool-failure masking (P0)
+
+**Now also applies to the "before" worktree runs**: `_head_worktree()` silently returns `None` on any `git worktree add` failure, which `main()` treats as "no HEAD to compare against" - i.e. every touched file's `mypy`/`ruff`/`xenon` before-count falls back to 0, meaning a broken worktree setup makes the gate strictly stricter (blocks more, on the file's raw current count) rather than silently passing - the safe failure direction, but still unannounced. `run()`/`run_output()`'s underlying weakness (below) affects both the "after" run and this "before" run identically.
 
 **Location**: `run()` (`ratchet_check.py:39-41`), `run_output()` (`ratchet_check.py:44-46`),
 all count functions (`mypy_count`, `ruff_count`, `xenon_count`, `loc_count`).
@@ -64,7 +60,7 @@ N/A (behavioral fix — wrong answers become loud failures instead of silent pas
 
 ### F2 — duplicate project-wide vs. detail-count logic (P1)
 
-**Partially resolved**: the per-rule-code split (see the README's "keys" section) introduced `_group_ruff`/`_group_mypy`, shared parsing helpers now called by both the project-wide and detail counters for those two tools - the JSON-decode/regex-match duplication F2 flagged for `mypy`/`ruff` is gone. `xenon`/`loc` still have separate project/detail functions, and the `run`/`run_output` split is untouched; the rest of this item still applies to those.
+**Superseded**: the old `*_count`/`*_detail_count` split this item described no longer exists - the per-file-diff redesign replaced "staged-file detail counters" with by-rule/by-file groupings (`_group_ruff_by_rule`/`_group_ruff_by_file`, etc.) derived from a single parsed result per tool (`ruff_run`/`mypy_run`/`xenon_run`), reused for both the trend layer and the blocking gate. The specific duplication F2 flagged is gone; the `run`/`run_output` split (below) is still untouched and still applies.
 
 **Location**: `mypy_count` / `mypy_detail_count` (`ratchet_check.py:49-59` vs. `ratchet_check.py:131-137`),
 `ruff_count` / `ruff_detail_count` (`ratchet_check.py:62-68` vs. `ratchet_check.py:148-156`),
@@ -90,7 +86,7 @@ pending — extract carefully; add regression tests for the helper before collap
 
 ### F3 — zero automated tests for the gate itself (P0)
 
-**Partially covered**: `tests/unit/git_hooks/test_ratchet_check.py` now exists and covers rule-code grouping, bootstrap, pass/block/ignored-regression, baseline resync + key self-pruning, and the characterization-test reminder (cases 1, 2, 5, 6, 10 below, adapted for the per-key/resync-on-success design - cases 3/4 no longer apply since the chunk_size/percentage threshold was removed, see F4). Cases 7-9 (loud failure on tool crash / malformed baseline / unparseable output) are still open - they depend on F1, which hasn't been implemented.
+**Partially covered**: `tests/unit/git_hooks/test_ratchet_check.py` now exists and covers rule-code/by-file grouping, `touched_app_python_files` (including renames), `evaluate_file_gate` (zero-tolerance, new-file handling, the loc slack/cap/already-over-500 scoping, renamed-file before-lookup), bootstrap, the trend layer never blocking on its own, an actual touched-file regression blocking, baseline resync, and the characterization-test reminder. Not covered: `_head_worktree`/`_remove_worktree` against a real git repo (exercised live in this session, not in the suite), and cases 7-9 below (loud failure on tool crash / malformed baseline / unparseable output), which are still open - they depend on F1, which hasn't been implemented.
 
 **Location**: entire file.
 
