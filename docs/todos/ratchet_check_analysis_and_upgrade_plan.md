@@ -64,6 +64,8 @@ N/A (behavioral fix — wrong answers become loud failures instead of silent pas
 
 ### F2 — duplicate project-wide vs. detail-count logic (P1)
 
+**Partially resolved**: the per-rule-code split (see the README's "keys" section) introduced `_group_ruff`/`_group_mypy`, shared parsing helpers now called by both the project-wide and detail counters for those two tools - the JSON-decode/regex-match duplication F2 flagged for `mypy`/`ruff` is gone. `xenon`/`loc` still have separate project/detail functions, and the `run`/`run_output` split is untouched; the rest of this item still applies to those.
+
 **Location**: `mypy_count` / `mypy_detail_count` (`ratchet_check.py:49-59` vs. `ratchet_check.py:131-137`),
 `ruff_count` / `ruff_detail_count` (`ratchet_check.py:62-68` vs. `ratchet_check.py:148-156`),
 `xenon_count` / `xenon_detail_count` (`ratchet_check.py:75-89` vs. `ratchet_check.py:183-195`),
@@ -87,6 +89,8 @@ pending — extract carefully; add regression tests for the helper before collap
 ---
 
 ### F3 — zero automated tests for the gate itself (P0)
+
+**Partially covered**: `tests/unit/git_hooks/test_ratchet_check.py` now exists and covers rule-code grouping, bootstrap, pass/block/ignored-regression, baseline resync + key self-pruning, and the characterization-test reminder (cases 1, 2, 5, 6, 10 below, adapted for the per-key/resync-on-success design - cases 3/4 no longer apply since the chunk_size/percentage threshold was removed, see F4). Cases 7-9 (loud failure on tool crash / malformed baseline / unparseable output) are still open - they depend on F1, which hasn't been implemented.
 
 **Location**: entire file.
 
@@ -120,31 +124,27 @@ required — write these tests before any other refactor (F2, F4, F5).
 
 ### F4 — hardcoded constants that belong in config (P1)
 
+**Resolved by removal, not by wiring config.json in.** `RATCHET_IMPROVEMENT_RATIO`/`chunk_size` are gone: baseline.json now fully resyncs to the fresh counts after every successful commit instead of waiting for a threshold, so there's no ratio/chunk_size left to configure. `config.json` was deleted. See `scripts/git-hooks/incremental-precommit/README.md` § "keeping baseline current". The rest of this item (below) is left for history; `TARGET`/`COMPLEXITY_RANKS`/`max_lines`/`max_absolute` are still hardcoded and the config-extraction idea still applies to those if wanted later.
+
 **Location**: `RATCHET_IMPROVEMENT_RATIO = 0.03` (`ratchet_check.py:30`),
 `TARGET = "app"` (`ratchet_check.py:28`),
 `COMPLEXITY_RANKS = "ABCDEF"` (`ratchet_check.py:29`),
 `max_lines: int = 500` in `loc_count` / `loc_detail_count` (`ratchet_check.py:92,211`),
 `max_absolute: str = "B"` in `xenon_count` / `xenon_detail_count` (`ratchet_check.py:75,183`).
 
-**Weakness**: `config.json` currently holds only `chunk_size: 50`. The ratchet improvement
-threshold, the xenon rank ceiling, the loc line threshold, and the target directory are all
-hardcoded in the script despite being policy decisions that already have prose documentation
-in `infrastructure.md` and the README. Moving them to `config.json` makes them editable without
-touching code and keeps policy and implementation in one place.
+**Weakness**: `config.json` held only `chunk_size: 3` (this doc and the README each cited a different, wrong default before the resolution above). The ratchet improvement threshold, the xenon rank ceiling, the loc line threshold, and the target directory are all hardcoded in the script despite being policy decisions that already have prose documentation in `infrastructure.md` and the README. Moving them to `config.json` makes them editable without touching code and keeps policy and implementation in one place.
 
-**Upgrade**:
-- Extend `config.json` schema:
+**Upgrade** (for the still-hardcoded constants only - `chunk_size`/`ratchet_improvement_ratio` no longer apply, see the resolution note above):
+- Introduce a `config.json` schema, if wanted:
   ```json
   {
-    "chunk_size": 50,
-    "ratchet_improvement_ratio": 0.03,
     "xenon_max_absolute": "B",
     "loc_max_lines": 500,
     "target": "app"
   }
   ```
 - Load these values in `main()` or at module level, falling back to the current defaults when
-  keys are absent (backward-compatible with existing `config.json`).
+  keys are absent.
 - `COMPLEXITY_RANKS` can stay as a constant (it is an enum, not a policy knob), but document
   why it is `"ABCDEF"` and not a longer/shorter string.
 

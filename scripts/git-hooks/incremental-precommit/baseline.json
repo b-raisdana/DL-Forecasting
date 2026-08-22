@@ -1,6 +1,16 @@
 {
   "loc": 0,
-  "mypy": 48,
-  "ruff": 0,
+  "mypy:arg-type": 14,
+  "mypy:assignment": 2,
+  "mypy:attr-defined": 7,
+  "mypy:call-overload": 1,
+  "mypy:misc": 1,
+  "mypy:no-any-return": 1,
+  "mypy:redundant-cast": 2,
+  "mypy:return-value": 2,
+  "mypy:type-arg": 2,
+  "mypy:type-var": 1,
+  "mypy:union-attr": 1,
+  "mypy:unused-ignore": 14,
   "xenon": 9
 }

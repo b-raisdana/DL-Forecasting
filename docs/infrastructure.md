@@ -139,28 +139,13 @@ setup per clone is `bash scripts/git-hooks/install.sh`.
 
 ### incremental ratchet (mypy/ruff/xenon scope)
 
-`mypy` and `radon`/`xenon` analyze whole files, not diff hunks, so an early "must be 100% clean on any
-touched file" design (per-file, strict) turned a one-line edit to a legacy file into a forced cleanup of
-every unrelated pre-existing violation in that file - a chain reaction into a dramatically bigger diff
-than the change called for. A first baseline run found 911 pre-existing strict-mypy errors across
-80/132 files, so that design would've blocked nearly any commit to a legacy file.
+`mypy` and `radon`/`xenon` analyze whole files, not diff hunks, so an early "must be 100% clean on any touched file" design (per-file, strict) turned a one-line edit to a legacy file into a forced cleanup of every unrelated pre-existing violation in that file - a chain reaction into a dramatically bigger diff than the change called for. A first baseline run found 911 pre-existing strict-mypy errors across 80/132 files, so that design would've blocked nearly any commit to a legacy file.
 
-Replaced with `scripts/git-hooks/incremental-precommit/` (full design in that folder's README): track
-each tool's ("vector": `mypy`, `ruff`, `xenon`) total problem count project-wide in a committed
-`baseline.json`. A commit is only blocked if a vector's count goes **up** past its baseline (a real
-regression you introduced) - never for pre-existing debt in a file you happen to touch. As debt gets
-fixed (by anyone), once a vector's improvement reaches `chunk_size` (`config.json`, default 50), the
-baseline ratchets down to the new lower count and is committed - locking the improvement in.
+Replaced with `scripts/git-hooks/incremental-precommit/` (full design in that folder's README): track a project-wide problem count per **key** in a committed `baseline.json` - `mypy`/`ruff` split one key per rule/error code (e.g. `mypy:arg-type`, `ruff:E501`), `xenon`/`loc` stay single counts. A commit is blocked only if a key's count goes **up** past its baseline **and** the staged files contribute a problem of that exact key - never for pre-existing debt in a file you happen to touch, and never masked by unrelated improvement elsewhere (fixing ten of one rule can't hide a new violation of another). `baseline.json` is fully resynced to the fresh counts after every successful commit - no threshold, no accumulation window; a key with zero violations left just drops out of the file.
 
-Mutation-safety note: fixing a real (non-mechanical) violation means hand-editing legacy code, which
-risks silently changing behavior while "just satisfying the linter." No mutation-testing tool for this
-(considered, rejected as too slow to run every commit - see the incremental-precommit README) - the
-safeguard is test discipline instead: `ratchet_check.py` prints a reminder (not a block) when a commit
-ratchets a baseline down without touching `app/tests/{characterization,unit,regression}/`, pointing at
-the `test-strategy` skill's characterization-test discipline.
+Mutation-safety note: fixing a real (non-mechanical) violation means hand-editing legacy code, which risks silently changing behavior while "just satisfying the linter." No mutation-testing tool for this (considered, rejected as too slow to run every commit - see the incremental-precommit README) - the safeguard is test discipline instead: `ratchet_check.py` prints a reminder (not a block) when a commit lowers baseline for any key without touching `app/tests/{characterization,unit,regression}/`, pointing at the `test-strategy` skill's characterization-test discipline.
 
-xenon's own thresholds (used by the `xenon` vector's count): `--max-absolute B --max-modules A
---max-average A` (blocks ranked worse than `B`).
+xenon's own thresholds (used by the `xenon` vector's count): `--max-absolute B --max-modules A --max-average A` (blocks ranked worse than `B`).
 
 `loc` vector: sum of `max(0, line_count - 500)` over every `app/**/*.py` file - a file-length countermeasure `xenon` doesn't cover (cyclomatic complexity per function, not raw file size). Size policy: `<300` lines is normal, and new/generated files should stay below this size; when modifying a file, prefer moving the touched method/function to its proper location if that naturally reduces the file. `300-500` lines is a potential low-priority split todo. `>500` lines is a warning and high-priority split todo. The ratchet's 500-line threshold is stricter than SonarQube's `S104`/pylint's `C0302` default of 1000, deliberately, so it starts counting excess on files already in the 500-1000 range instead of only reacting once they cross 1000.
 
